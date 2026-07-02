@@ -1,7 +1,7 @@
-# AgentKernel
+# autokernel-fsm
 
-AgentKernel is [AutoKernel](https://github.com/RightNow-AI/autokernel) (MIT), an
-existing GPU kernel-optimization harness, remade as a state-machine framework for
+A port of [AutoKernel](https://github.com/RightNow-AI/autokernel) (MIT), an
+existing GPU kernel-optimization harness, into a state-machine framework for
 agentic AI kernel optimization. Its edit -> benchmark -> keep/revert loop is
 reimplemented as an explicit finite state machine (Burr), served to an LLM agent
 over MCP (Theodosia), and driven by the Claude Agent SDK, with a correctness gate
