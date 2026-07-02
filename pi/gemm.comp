@@ -1,0 +1,58 @@
+#version 450
+layout(local_size_x = 16, local_size_y = 16) in;
+layout(std430, binding = 0) readonly buffer BufA { float A[]; };
+layout(std430, binding = 1) readonly buffer BufB { float B[]; };
+layout(std430, binding = 2) writeonly buffer BufC { float C[]; };
+layout(push_constant) uniform PC { uint SZ; } pc;
+
+const uint BM = 32u, BN = 32u, BK = 32u, TM = 2u, TN = 2u, BNH = 16u, BKQ = 8u;
+shared vec4 As[BM * BKQ];
+shared vec2 Bs[BK * BNH];
+
+void main() {
+    uint SZ = pc.SZ;
+    uint tx = gl_LocalInvocationID.x, ty = gl_LocalInvocationID.y;
+    uint bx = gl_WorkGroupID.x, by = gl_WorkGroupID.y;
+    uint tid = ty * 16u + tx;
+    uint rowBase = by * BM + ty * TM;
+    uint colBase = bx * BN + tx * TN;
+    uint a4base0 = (ty * TM) * BKQ;
+    uint a4base1 = (ty * TM + 1u) * BKQ;
+    float p00=0.,p01=0.,p02=0.,p03=0.;
+    float p10=0.,p11=0.,p12=0.,p13=0.;
+    float p20=0.,p21=0.,p22=0.,p23=0.;
+    float p30=0.,p31=0.,p32=0.,p33=0.;
+    for (uint k0 = 0u; k0 < SZ; k0 += BK) {
+        {
+            uint idx = tid;
+            uint r = idx / BKQ, c4 = idx % BKQ;
+            uint g = (by * BM + r) * SZ + k0 + c4 * 4u;
+            As[idx] = vec4(A[g], A[g+1u], A[g+2u], A[g+3u]);
+        }
+        for (uint e = 0u; e < 2u; e++) {
+            uint idx = tid + e * 256u;
+            uint r = idx / BNH, cp = idx % BNH;
+            uint gcol = bx * BN + cp * 2u;
+            Bs[r * BNH + cp] = vec2(B[(k0 + r) * SZ + gcol], B[(k0 + r) * SZ + gcol + 1u]);
+        }
+        barrier();
+        for (uint k = 0u; k < BK; k += 4u) {
+            uint kq = k >> 2u;
+            vec4 arow0 = As[a4base0 + kq];
+            vec4 arow1 = As[a4base1 + kq];
+            vec2 bp0 = Bs[k * BNH + tx];
+            p00 += arow0.x * bp0.x; p01 += arow0.x * bp0.y; p02 += arow1.x * bp0.x; p03 += arow1.x * bp0.y;
+            vec2 bp1 = Bs[(k+1u) * BNH + tx];
+            p10 += arow0.y * bp1.x; p11 += arow0.y * bp1.y; p12 += arow1.y * bp1.x; p13 += arow1.y * bp1.y;
+            vec2 bp2 = Bs[(k+2u) * BNH + tx];
+            p20 += arow0.z * bp2.x; p21 += arow0.z * bp2.y; p22 += arow1.z * bp2.x; p23 += arow1.z * bp2.y;
+            vec2 bp3 = Bs[(k+3u) * BNH + tx];
+            p30 += arow0.w * bp3.x; p31 += arow0.w * bp3.y; p32 += arow1.w * bp3.x; p33 += arow1.w * bp3.y;
+        }
+        barrier();
+    }
+    C[(rowBase + 0u) * SZ + colBase + 0u] = p00 + p10 + p20 + p30;
+    C[(rowBase + 0u) * SZ + colBase + 1u] = p01 + p11 + p21 + p31;
+    C[(rowBase + 1u) * SZ + colBase + 0u] = p02 + p12 + p22 + p32;
+    C[(rowBase + 1u) * SZ + colBase + 1u] = p03 + p13 + p23 + p33;
+}
