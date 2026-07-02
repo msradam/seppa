@@ -1,8 +1,9 @@
-# AgentVoodoo
+# Seppo
 
-AgentVoodoo is [AutoKernel](https://github.com/RightNow-AI/autokernel) (MIT), an
+Seppo is [AutoKernel](https://github.com/RightNow-AI/autokernel) (MIT), an
 existing GPU kernel-optimization harness, ported to a state-machine framework for
-agentic AI kernel optimization. Its edit -> benchmark -> keep/revert loop is
+agentic AI kernel optimization. The name is the Kalevala smith's epithet (seppä,
+"smith") and a backronym: State-machine-Enforced Parallel-Program Optimizer. Its edit -> benchmark -> keep/revert loop is
 reimplemented as an explicit finite state machine (Burr), served to an LLM agent
 over MCP (Theodosia), and driven by the Claude Agent SDK, with a correctness gate
 the agent cannot bypass. It targets the Raspberry Pi 5 integrated GPU (Broadcom

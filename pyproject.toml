@@ -1,5 +1,5 @@
 [project]
-name = "agentvoodoo"
+name = "seppo"
 version = "0.1.0"
 description = "Correctness-gated GPU kernel optimization as a Burr state machine served over MCP, targeting the Raspberry Pi 5 V3D GPU."
 requires-python = ">=3.11"
