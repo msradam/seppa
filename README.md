@@ -1,13 +1,20 @@
-# autokernel-fsm
+# AgentKernel
 
-A correctness-gated GPU kernel optimization loop, structured as an explicit
-finite state machine (Burr), served to an LLM agent over MCP (Theodosia), and
-driven by the Claude Agent SDK. It targets the Raspberry Pi 5 integrated GPU
-(Broadcom VideoCore VII / V3D, Vulkan compute) but the loop is backend-agnostic.
+AgentKernel lifts an existing GPU kernel-optimization harness into a state-machine
+framework for agentic AI kernel optimization. The edit -> benchmark -> keep/revert
+loop from [AutoKernel](https://github.com/RightNow-AI/autokernel) (MIT) is
+reimplemented as an explicit finite state machine (Burr), served to an LLM agent
+over MCP (Theodosia), and driven by the Claude Agent SDK, with a correctness gate
+the agent cannot bypass. It targets the Raspberry Pi 5 integrated GPU (Broadcom
+VideoCore VII / V3D, Vulkan compute); the loop itself is backend-agnostic.
 
-This is a port of the edit -> benchmark -> keep/revert optimization loop from
-[AutoKernel](https://github.com/RightNow-AI/autokernel) (MIT) onto a state
-machine whose transitions enforce a correctness gate: a variant cannot be
+The purpose is enablement: kernels optimized this way are fast enough that the
+otherwise-idle GPU becomes a useful co-processor alongside the CPU. The downstream
+application is [Bonbibi](https://github.com/msradam/bonbibi), a concurrent GPU +
+CPU workload where the GPU runs a flood simulation while the CPU runs routing and
+a language model.
+
+The state machine is the mechanism for the correctness gate: a variant cannot be
 benchmarked or kept unless it first passes an NMSE check against a CPU
 reference. The benchmark state is unreachable from an incorrect kernel, so the
 agent cannot win by producing a fast wrong kernel.
