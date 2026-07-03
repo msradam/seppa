@@ -1,18 +1,18 @@
-"""V3D correctness gate — the load-bearing component of the Phase-1 FSM.
+"""V3D correctness gate, the load-bearing component of the FSM.
 
 Two independent halves, matching the two ways a kernel gets checked on V3D:
 
-1. `parse_test_backend_ops` — read llama.cpp `test-backend-ops -b Vulkan0`'s
+1. parse_test_backend_ops reads llama.cpp `test-backend-ops -b Vulkan0`'s
    verdict. That tool runs each op on Vulkan vs the CPU backend and compares
-   with NMSE internally; it only hands back OK/FAIL text, so here we parse it.
+   with NMSE internally; it only hands back OK/FAIL text, so this parses it.
    Full-output coverage is already enforced by its energy-normalized NMSE.
 
-2. `check_completeness` — the anti-gaming filters for the path where we DO
-   control the output buffer (MNN path, custom dispatch, the Session-10 conv
-   demo). Poison-fill the buffer, run the kernel, then assert every element was
-   written and the output is non-degenerate. This is what catches the Session-10
-   partial-compute (`gws.y = UP_DIV(ocDiv4, K)`) that an unguarded autotuner
-   crowned as a 72% speedup.
+2. check_completeness holds the anti-gaming filters for the path where this
+   code controls the output buffer (MNN path, custom dispatch). Poison-fill the
+   buffer, run the kernel, then assert every element was written and the output
+   is non-degenerate. This catches a partial-compute kernel (for example a
+   dispatch that writes only some output channels) that an unguarded autotuner
+   would crown as a large speedup.
 
 `verify()` combines them into the predicate on the FSM's `VERIFY -> BENCHMARK`
 edge: benchmarking is unreachable unless this returns verify_ok and (when an
@@ -155,7 +155,7 @@ def check_completeness(
     reasons: list[str] = []
     out = np.asarray(output)
 
-    # 1. Full-output coverage: no poison survivors (the Session-10 partial tail).
+    # 1. Full-output coverage: no poison survivors (a partially-written output).
     coverage_ok = not (poison_was_nan and bool(np.isnan(out).any()))
     if not coverage_ok:
         reasons.append(f"coverage: {int(np.isnan(out).sum())} unwritten (NaN) elements")
@@ -251,7 +251,7 @@ def _demo() -> None:
     good = rng.standard_normal((8, 16)).astype(np.float32)
     assert check_completeness(good).complete
 
-    # Session-10 partial compute: bottom half of channels never written (still NaN)
+    # partial compute: bottom half of channels never written (still NaN)
     partial = good.copy()
     partial[4:, :] = np.nan
     c = check_completeness(partial)

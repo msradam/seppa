@@ -10,16 +10,11 @@ over MCP (Theodosia), and driven by the Claude Agent SDK, with a correctness gat
 the agent cannot bypass. It targets the Raspberry Pi 5 integrated GPU (Broadcom
 VideoCore VII / V3D, Vulkan compute); the loop itself is backend-agnostic.
 
-The purpose is enablement: kernels optimized this way are fast enough that the
-otherwise-idle GPU becomes a useful co-processor alongside the CPU. The downstream
-application is [Bonbibi](https://github.com/msradam/bonbibi), a concurrent GPU +
-CPU workload where the GPU runs a flood simulation while the CPU runs routing and
-a language model.
-
-The state machine is the mechanism for the correctness gate: a variant cannot be
-benchmarked or kept unless it first passes an NMSE check against a CPU
-reference. The benchmark state is unreachable from an incorrect kernel, so the
-agent cannot win by producing a fast wrong kernel.
+Optimized kernels run fast enough that the otherwise-idle GPU becomes a useful
+co-processor alongside the CPU. The downstream application is
+[Bonbibi](https://github.com/msradam/bonbibi), a concurrent GPU + CPU workload
+where the GPU runs a flood simulation while the CPU runs routing and a language
+model.
 
 ## How it works
 
@@ -47,19 +42,19 @@ variance, degenerate ranges) so a silent failure cannot read as a pass.
 
 ## Layout
 
-- `v3d_verify.py` — correctness oracle (NMSE parse + completeness checks).
-- `v3d_fsm.py` — single-kernel optimization FSM.
-- `v3d_explore.py` — agentic exploration FSM (agent rewrites the shader each round).
-- `v3d_flood_opt.py` — the same loop applied to a second kernel (a flood stencil),
+- `v3d_verify.py`: correctness oracle (NMSE parse + completeness checks).
+- `v3d_fsm.py`: single-kernel optimization FSM.
+- `v3d_explore.py`: agentic exploration FSM (agent rewrites the shader each round).
+- `v3d_flood_opt.py`: the same loop applied to a second kernel (a flood stencil),
   with a physics gate (NMSE + mass conservation + pooling).
-- `v3d_coproc.py` — thermal-guarded CPU||GPU co-processing measurement FSM.
-- `v3d_live.py` — live-Pi run helpers.
-- `theodosia_server.py` — mounts an FSM as an MCP server (`--explore`, `--flood`).
-- `v3d_drive.py` — drives the FSM over MCP with the Claude Agent SDK.
-- `best_gemm.comp` — best SGEMM shader found by the loop.
-- `pi/` — the on-device evaluator: `vkgemm_nmse.cpp` (random inputs, double CPU
+- `v3d_coproc.py`: thermal-guarded CPU||GPU co-processing measurement FSM.
+- `v3d_live.py`: live-Pi run helpers.
+- `theodosia_server.py`: mounts an FSM as an MCP server (`--explore`, `--flood`).
+- `v3d_drive.py`: drives the FSM over MCP with the Claude Agent SDK.
+- `best_gemm.comp`: best SGEMM shader found by the loop.
+- `pi/`: the on-device evaluator: `vkgemm_nmse.cpp` (random inputs, double CPU
   reference, prints `correct=yes NMSE=...`) and `gemm.comp` (baseline shader).
-- `docs/` — design notes.
+- `docs/`: design notes.
 
 ## Install
 

@@ -1,14 +1,10 @@
-"""Agentic optimization of the V3D flood kernel — the closing loop.
+"""Agentic optimization of the V3D flood kernel.
 
-Same correctness-gated exploration as v3d_explore.py, but the artifact is the
-TWO-shader flux-limited overland-flow simulation (flux.comp + height.comp), and
-the gate is richer: a variant is only VALID if it still matches the CPU
-reference (NMSE < 1e-3) AND conserves mass vs rainfall AND pools water in the
-basin. So the agent may retile/vectorize the implementation for speed, but it
-physically cannot cheat the hydrology — a variant that breaks conservation or
-pooling is rejected even if it's faster. Baseline ~1.44 GFLOP/s (memory-bound,
-2-pass); headroom is shared-memory tiling to raise arithmetic intensity so the
-flood sim becomes a good compute-bound co-processing citizen.
+Reuses the correctness-gated exploration of v3d_explore.py on the two-shader
+flux-limited overland-flow simulation (flux.comp, height.comp). The gate is
+richer: a variant is valid only if it matches the CPU reference (NMSE < 1e-3),
+conserves mass against rainfall, and pools water in the basin, so the agent can
+retile or vectorize for speed but cannot break the hydrology.
 
 Run via: v3d_drive.py --flood   (agent rewrites both shaders over MCP)
 """

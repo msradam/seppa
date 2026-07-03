@@ -1,6 +1,6 @@
-# Deterministic Verification Design — V3D LLM/ML Kernel Optimization
+# Deterministic Verification Design, V3D LLM/ML Kernel Optimization
 
-**Scope:** how the FSM decides that an optimized Vulkan compute kernel — or a full LLM forward pass — on the Pi 5 V3D GPU is *numerically valid*, in a way an autotuner or agent cannot game. This is the load-bearing part of the whole project: without it, every speedup is a Session-10 mirage.
+**Scope:** how the FSM decides that an optimized Vulkan compute kernel, or a full LLM forward pass, on the Pi 5 V3D GPU is *numerically valid*, in a way an autotuner or agent cannot game. This is the load-bearing part of the whole project: without it, every speedup is a plausible but numerically wrong result.
 
 All thresholds and mechanisms below are sourced from the engines' own test harnesses (llama.cpp `test-backend-ops`, MNN `backendTest.out`, NCNN `test_layer`) and the reward-hacking literature (robust-kbench arXiv:2509.14279, CUDA-L1 arXiv:2507.14111, Kevin arXiv:2507.11948). See "Sources" at the end.
 
@@ -8,9 +8,9 @@ All thresholds and mechanisms below are sourced from the engines' own test harne
 
 ## 0. Why this is the hard part (and the actual contribution)
 
-The public state of the art says LLM matmul does **not** run on V3D: stock llama.cpp Vulkan aborts with `ggml_vulkan: Error: Shared memory size too small for matrix multiplication`, because its `mul_mat` kernels assume >16 KB shared memory, fp16 arithmetic, integer dot-product, and cooperative-matrix — V3D has **none** of these (16 KB shared mem, `shaderFloat16=false`, `int dot: 0`, `matrix cores: none`, subgroup 16). Community consensus: disable Vulkan on the Pi 5 ([ramalama #2592](https://github.com/containers/ramalama/issues/2592), [RPi forums t=390565](https://forums.raspberrypi.com/viewtopic.php?t=390565), [llama.cpp #9801](https://github.com/ggml-org/llama.cpp/issues/9801)).
+The public state of the art says LLM matmul does **not** run on V3D: stock llama.cpp Vulkan aborts with `ggml_vulkan: Error: Shared memory size too small for matrix multiplication`, because its `mul_mat` kernels assume >16 KB shared memory, fp16 arithmetic, integer dot-product, and cooperative-matrix, V3D has **none** of these (16 KB shared mem, `shaderFloat16=false`, `int dot: 0`, `matrix cores: none`, subgroup 16). Community consensus: disable Vulkan on the Pi 5 ([ramalama #2592](https://github.com/containers/ramalama/issues/2592), [RPi forums t=390565](https://forums.raspberrypi.com/viewtopic.php?t=390565), [llama.cpp #9801](https://github.com/ggml-org/llama.cpp/issues/9801)).
 
-The `v3d-pi-ai` investigation already got a forward pass running inside that envelope (MNN Qwen2, corrected 4.95 t/s decode ceiling; patched llama.cpp shaders to `local_size 256` / 16 KB). **The novelty is not "we ran an LLM on the GPU" — it is "we ran it inside a hostile compute envelope and proved it was correct."** The Session 10 audit is the cautionary twin: without a correctness gate, MNN's autotuner reported a 72% spurious speedup by crowning a shader that computed 1/K of its output K× faster. Deterministic verification is what separates the real result from that.
+The `v3d-pi-ai` investigation already got a forward pass running inside that envelope (MNN Qwen2, corrected 4.95 t/s decode ceiling; patched llama.cpp shaders to `local_size 256` / 16 KB). **The novelty is not "we ran an LLM on the GPU"; it is "we ran it inside a hostile compute envelope and proved it was correct."** The prior audit is the cautionary twin: without a correctness gate, MNN's autotuner reported a 72% spurious speedup by crowning a shader that computed 1/K of its output K× faster. Deterministic verification is what separates the real result from that.
 
 ---
 
@@ -24,7 +24,7 @@ AutoKernel's oracle is a PyTorch op on CUDA. That does not exist here. The V3D o
 
 Two properties of this oracle matter and are **free on V3D**:
 1. **Reference-copy exploit is structurally impossible.** The exploit that broke Sakana and KernelBench (candidate reuses the reference's output buffer) requires the candidate to *read* the reference result. A Vulkan compute shader receives only its declared **input** bindings; it has no binding to the CPU reference tensor, which lives in host memory in a different process. The class of cheat is unrepresentable, not merely guarded against.
-2. **Partial-output is caught by the metric, not a heuristic.** NMSE is normalized by the *full* reference energy (`Σ(a−b)²/Σa²`), so a kernel that writes 1/K of the output and leaves the rest at zero/poison produces a large normalized error and fails. This is precisely the Session-10 failure mode, and NMSE fails it automatically.
+2. **Partial-output is caught by the metric, not a heuristic.** NMSE is normalized by the *full* reference energy (`Σ(a−b)²/Σa²`), so a kernel that writes 1/K of the output and leaves the rest at zero/poison produces a large normalized error and fails. This is precisely that failure mode, and NMSE fails it automatically.
 
 ---
 
@@ -32,15 +32,15 @@ Two properties of this oracle matter and are **free on V3D**:
 
 Run cheap→expensive; the first rung is the per-experiment gate, the upper rungs run on "keep" candidates and at end-to-end.
 
-### Rung 1 — op-level, per experiment (the gate)
+### Rung 1: op-level, per experiment (the gate)
 **`test-backend-ops test -b Vulkan0 -o <OP>`** on the Pi's patched llama.cpp build.
 - **Metric:** NMSE vs CPU backend. **Default threshold 1e-7**; F16 relaxed to 1e-6; quantized ops looser (sized to ~one quant step). Reject on any NaN/Inf or `NMSE > max_err`.
-- **Coverage:** `MUL_MAT`, `RMS_NORM`, `SOFT_MAX`, `ROPE`, `FLASH_ATTN_EXT`, `IM2COL`/`CONV_2D`, `GET_ROWS` — the operators an LLM forward pass touches.
-- **Inputs:** stock harness seeds with `std::random_device` (fresh every run — good for anti-overfit). **Patch it to log the seed** so a failure is reproducible: fresh inputs each iteration, but a recorded seed. This is the one source change to the harness.
-- **Concrete prior catch:** pre-patch, `test-backend-ops -b Vulkan0` on V3D produced wrong finite numbers (`Vulkan0=-148.95` vs `CPU=inf`) and timed out at 600 s. That is exactly a Rung-1 FAIL — the gate working.
+- **Coverage:** `MUL_MAT`, `RMS_NORM`, `SOFT_MAX`, `ROPE`, `FLASH_ATTN_EXT`, `IM2COL`/`CONV_2D`, `GET_ROWS`, the operators an LLM forward pass touches.
+- **Inputs:** stock harness seeds with `std::random_device` (fresh every run, good for anti-overfit). **Patch it to log the seed** so a failure is reproducible: fresh inputs each iteration, but a recorded seed. This is the one source change to the harness.
+- **Concrete prior catch:** pre-patch, `test-backend-ops -b Vulkan0` on V3D produced wrong finite numbers (`Vulkan0=-148.95` vs `CPU=inf`) and timed out at 600 s. That is exactly a Rung-1 FAIL, the gate working.
 - **MNN equivalent:** `backendTest.out <model.mnn> 7 0.05 1` (Vulkan vs CPU, absolute tol 0.05). Use for the MNN decode path; note MNN uses absolute tolerance, so scale it to tensor magnitude.
 
-### Rung 2 — whole-model distribution, per kept candidate
+### Rung 2: whole-model distribution, per kept candidate
 **`llama-perplexity --kl-divergence`** against golden FP16 logits on a fixed Wikitext-2 slice:
 ```
 llama-perplexity -m model-f16.gguf -f wiki.test.raw --kl-divergence-base logits.kld     # golden, once, on CPU
@@ -49,7 +49,7 @@ llama-perplexity -m model-q4_k.gguf -f wiki.test.raw --kl-divergence-base logits
 - **Metrics:** mean KL divergence (0 = identical distributions), ΔPerplexity, and **"Same top p"** (fraction of tokens where V3D and reference rank the same token first).
 - **Accept:** land near the published per-quant KLD/ΔPPL figures for that quantization; a broken kernel shows a *large* KLD jump, not a marginal one. KLD > PPL as the signal (PPL is "a very rough measurement").
 
-### Rung 3 — end-to-end greedy, at integration
+### Rung 3: end-to-end greedy, at integration
 Fixed prompt, temperature 0 (argmax), compare the V3D token sequence to the CPU reference. Report **Div_Index** (position of first divergence; −1 = never diverged). Small tolerance-driven divergence is acceptable unless kernels are made batch-invariant; a kernel that diverges at token 1 is broken.
 
 ---
@@ -58,8 +58,8 @@ Fixed prompt, temperature 0 (argmax), compare the V3D token sequence to the CPU 
 
 The existing FSM's Stage-4 "same input ×3, bitwise identical" is a *different* check from "matches the reference." Keep both, scoped correctly:
 
-- **Gate A — determinism / structure (device-local).** Same input ×3 → bitwise identical. This asserts the kernel is **order-stable**: atomic-free, fixed hierarchical reduction tree, contraction pinned (`NoContraction`/`precise` or explicit `fma()`), on a **pinned Mesa/V3DV build**. It is legitimate and cheap for the reduction-heavy ML ops here (matmul, rmsnorm, softmax). It is *not* cross-backend equality, and it correctly rejects FP-atomic accumulation. Allow an explicit opt-out label for kernels that are legitimately non-deterministic (atomic histograms) — none of the target ops need it.
-- **Gate B — numerical correctness (vs reference).** Rung 1 NMSE / tolerance vs the CPU oracle. This is what "valid" means.
+- **Gate A, determinism / structure (device-local).** Same input ×3 → bitwise identical. This asserts the kernel is **order-stable**: atomic-free, fixed hierarchical reduction tree, contraction pinned (`NoContraction`/`precise` or explicit `fma()`), on a **pinned Mesa/V3DV build**. It is legitimate and cheap for the reduction-heavy ML ops here (matmul, rmsnorm, softmax). It is *not* cross-backend equality, and it correctly rejects FP-atomic accumulation. Allow an explicit opt-out label for kernels that are legitimately non-deterministic (atomic histograms), none of the target ops need it.
+- **Gate B, numerical correctness (vs reference).** Rung 1 NMSE / tolerance vs the CPU oracle. This is what "valid" means.
 
 A kernel must pass **both** to be kept. Gate A without Gate B passes a deterministic-but-wrong kernel; Gate B without Gate A passes a right-on-average-but-flaky kernel.
 
@@ -74,29 +74,29 @@ The `verify → benchmark` edge is a **conjunction** of predicates; failure rout
 | # | Guard | On V3D |
 |---|---|---|
 | 1 | fresh random inputs each iteration (logged seed) | patch `test-backend-ops` seed logging |
-| 2 | full-output coverage — every element written (poison-fill buffer, no survivors) | **NMSE energy-normalization enforces this automatically** |
+| 2 | full-output coverage, every element written (poison-fill buffer, no survivors) | **NMSE energy-normalization enforces this automatically** |
 | 3 | tolerance/NMSE vs trusted CPU reference | Rung 1 |
 | 4 | output range not clamped to trivial band | robust-kbench Output Range filter |
-| 5 | output std > 0.01 overall and per-axis | robust-kbench Std + Axes filters — **catches the Session-10 constant/partial tail** |
+| 5 | output std > 0.01 overall and per-axis | robust-kbench Std + Axes filters, **catches the prior audit's constant/partial tail** |
 | 6 | input-sensitivity: output changes when input changes | robust-kbench Input Impact |
 | 7 | multi-seed / multi-init: pass over ≥N seeds | re-run Rung 1 N times |
-| 8 | reference-copy impossible | **free — shader binds only inputs** |
+| 8 | reference-copy impossible | **free, shader binds only inputs** |
 | 9 | no-op / dead-compute check | shader must dispatch the full work domain; cross-check against `v3d_workgroup_patch` host constants |
 | 10 | determinism (Gate A) | existing Stage-4 ×3 |
-| 11 | timing gated on correctness | `benchmark` unreachable unless 1–10 hold |
+| 11 | timing gated on correctness | `benchmark` unreachable unless 1-10 hold |
 
-Guards specific to the CUDA reward-hacks (async-stream evasion, `data_ptr()` caching, lazy CUDA tensors) are **not applicable** — there are no CUDA streams and no torch lazy tensors in a Vulkan-shader-over-SSH path. That is a portability *win*: the V3D substrate removes three of the five documented exploit classes by construction.
+Guards specific to the CUDA reward-hacks (async-stream evasion, `data_ptr()` caching, lazy CUDA tensors) are **not applicable**: there are no CUDA streams and no torch lazy tensors in a Vulkan-shader-over-SSH path. That is a portability *win*: the V3D substrate removes three of the five documented exploit classes by construction.
 
 ---
 
-## 5. The Session-10 candidate, re-run through this gate
+## 5. The prior audit's candidate, re-run through this gate
 
-The exact shader that caused the audit failure — `convolution1x1.comp` with `gws.y = UP_DIV(ocDiv4, K)` computing 1/K of the channels — fails **three independent guards**:
+The exact shader that caused the audit failure (`convolution1x1.comp` with `gws.y = UP_DIV(ocDiv4, K)` computing 1/K of the channels) fails **three independent guards**:
 1. **NMSE (Guard 3):** missing channels read as zero/poison → normalized error ≫ threshold → FAIL.
 2. **Per-axis std (Guard 5):** the unwritten output-channel axis has ~zero variation → FAIL.
 3. **Full-output coverage (Guard 2):** poison survivors in the tail → FAIL.
 
-Any one of these blocks the `verify → benchmark` transition. The autotuner's fast time is never recorded. The spurious 72% gain becomes structurally unreachable — that is the paper's core demonstrable claim.
+Any one of these blocks the `verify → benchmark` transition. The autotuner's fast time is never recorded. The spurious 72% gain becomes structurally unreachable. That is the paper's core demonstrable claim.
 
 ---
 

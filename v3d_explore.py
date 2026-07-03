@@ -1,20 +1,14 @@
 """Faithful AutoKernel-style exploration loop for a real V3D shader.
 
-Unlike v3d_fsm.py (which walks a fixed variant table), here the AGENT invents
-each edit: it rewrites `gemm.comp` (a standalone tiled SGEMM for the Pi 5 V3D),
-we compile it with glslangValidator, run it with the self-contained `vkgemm`
-harness (correctness + GFLOP/s), and keep or revert on the real number. This is
-AutoKernel's actual loop -- edit one file, fixed eval, keep/revert, repeat --
-on hardware that fits the 16 KB / 256-invocation envelope.
-
-Baseline: the shipped gemm.comp does ~7 GFLOP/s; the roofline ceiling is
-43.7 GFLOP/s. The agent explores that gap (bigger tiles, wider loads, more
-register blocking) while staying correct and inside 16 KB shared memory.
-
-Correctness note: vkgemm's built-in check is A=B=1 -> every C == SZ. That catches
-partial writes and gross errors but is itself gameable (a kernel that stores SZ
-everywhere passes). ponytail: strengthen to random-input NMSE vs a CPU reference
-once the loop is proven -- that hardening IS the reward-hacking contribution.
+Unlike v3d_fsm.py (which walks a fixed variant table), the agent invents each
+edit: it rewrites gemm.comp (a tiled SGEMM for the Pi 5 V3D), which is compiled
+with glslangValidator and run by the self-contained vkgemm harness (correctness
+plus GFLOP/s), then kept or reverted on the measured number. The shipped
+gemm.comp does about 7 GFLOP/s against a 43.7 GFLOP/s roofline; the agent
+explores that gap (bigger tiles, wider loads, more register blocking) while
+staying correct and inside the 16 KB / 256-invocation envelope. The vkgemm check
+uses random inputs and a double-precision CPU-reference NMSE, so a kernel that
+writes a constant or only part of its output fails the gate.
 """
 
 from __future__ import annotations

@@ -8,7 +8,7 @@ multi-kernel orchestration, no Amdahl), and wired to the v3d_verify gate.
 
 The load-bearing property this file demonstrates: the VERIFY -> BENCHMARK
 edge is guarded by `not (verify_ok and verify_complete)`, so a kernel that
-fails correctness (or writes only part of its output, the Session-10 mirage)
+fails correctness (or writes only part of its output)
 is routed straight to LOG with a revert verdict and is NEVER benchmarked.
 The agent (in the real system) owns HYPOTHESIZE/IMPLEMENT; the machine owns
 COMPILE/VERIFY/BENCHMARK/EVALUATE and the agent cannot skip the gate.
@@ -40,7 +40,7 @@ RunFn = Callable[[dict], dict]
 # Theodosia serializes Burr State to JSON on every step (ledger + step response),
 # so State must stay JSON-clean: no callables, no numpy arrays. The run_fn and the
 # raw output tensor live here as module side-channels instead of in State.
-# ponytail: single-session globals. Per-session isolation (factory/http multi-
+# Single-session globals. Per-session isolation (factory/http multi-
 # client) would key these by app_id; Phase 1 drives one session at a time.
 _RUN_FN: RunFn | None = None
 _LAST_OUTPUT: np.ndarray | None = None
@@ -298,7 +298,7 @@ def build_app(
 
 
 def _replay_demo() -> tuple[RunFn, list[dict]]:
-    """Canned variants exercising every path, including the Session-10 mirage."""
+    """Canned variants exercising every path, including a partial-output kernel."""
     rng = np.random.default_rng(0)
     good = rng.standard_normal((8, 16)).astype(np.float32)
     ok_stdout = (
@@ -309,7 +309,7 @@ def _replay_demo() -> tuple[RunFn, list[dict]]:
     )
 
     partial = good.copy()
-    partial[4:, :] = np.nan  # wrote half the output channels; the Session-10 shape
+    partial[4:, :] = np.nan  # wrote half the output channels; a partial-output kernel
 
     table = {
         # correct + faster -> KEEP, benchmarked

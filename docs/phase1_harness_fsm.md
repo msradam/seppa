@@ -1,6 +1,6 @@
-# Phase 1 — Agent Harness → FSM Mapping (single-kernel V3D optimization)
+# Phase 1, Agent Harness → FSM Mapping (single-kernel V3D optimization)
 
-**Scope:** the smallest complete thing. One V3D kernel, optimized by an *agent* (Claude/Codex) driving AutoKernel's edit→verify→keep/revert loop through a Burr FSM served by Theodosia, correctness-gated by NMSE-vs-CPU. No concurrency, no multi-kernel orchestration, no offload scheduling. Those are later phases and are explicitly out of scope here.
+**Scope:** the smallest complete thing. One V3D kernel, optimized by an *LLM agent* driving AutoKernel's edit→verify→keep/revert loop through a Burr FSM served by Theodosia, correctness-gated by NMSE-vs-CPU. No concurrency, no multi-kernel orchestration, no offload scheduling. Those are later phases and are explicitly out of scope here.
 
 **Why kernel optimization first:** until `mul_mat` runs inside the V3D envelope (256 invocations / 16 KB shared mem / no fp16 / no coop-matrix), *nothing* runs on the GPU. Stock llama.cpp Vulkan aborts on exactly this op. So the first enabling exploration is getting one core op to pass `test-backend-ops -b Vulkan0` and then optimizing it. This is the prerequisite for every downstream ambition.
 
@@ -10,12 +10,12 @@
 
 **In AutoKernel the agent decides keep/revert. In the FSM the machine does.**
 
-AutoKernel's loop is agent-self-reported: `program.md` *asks* the agent to run `bench.py`, parse `run.log`, and honestly `git reset --hard HEAD~1` on failure. Nothing enforces it. That is precisely the surface every reward-hacking incident exploited (Sakana, CUDA-L1, Kevin) and precisely what produced the Session 10 mirage.
+AutoKernel's loop is agent-self-reported: `program.md` *asks* the agent to run `bench.py`, parse `run.log`, and honestly `git reset --hard HEAD~1` on failure. Nothing enforces it. That is precisely the surface every reward-hacking incident exploited (Sakana, CUDA-L1, Kevin) and precisely the failure a correctness-free loop produces: a plausible but numerically wrong result.
 
 The port inverts this:
 
-- **The agent owns the creative states** — `HYPOTHESIZE` (what to try) and `IMPLEMENT` (write the shader edit). This is where "bash head against the wall, read the cryptic error, pivot" lives. The agent is good at this.
-- **The FSM owns the trust-critical states** — `COMPILE`, `VERIFY`, `BENCHMARK`, `EVALUATE`. These run as deterministic Burr actions on the Pi. The agent *cannot* influence them, cannot skip `VERIFY`, cannot read the timing before correctness passes, cannot self-report "keep." It proposes; the machine disposes and records.
+- **The agent owns the creative states**, `HYPOTHESIZE` (what to try) and `IMPLEMENT` (write the shader edit). This is where "bash head against the wall, read the cryptic error, pivot" lives. The agent is good at this.
+- **The FSM owns the trust-critical states**, `COMPILE`, `VERIFY`, `BENCHMARK`, `EVALUATE`. These run as deterministic Burr actions on the Pi. The agent *cannot* influence them, cannot skip `VERIFY`, cannot read the timing before correctness passes, cannot self-report "keep." It proposes; the machine disposes and records.
 
 Theodosia enforces this structurally: the agent only ever calls `step(action, inputs)`, `action` is constrained to a JSON-Schema enum, and `VERIFY → BENCHMARK` is unreachable unless the correctness guard holds. There is no tool the agent can call to fake a pass.
 
@@ -52,13 +52,13 @@ CHARACTERIZE → BASELINE → HYPOTHESIZE → IMPLEMENT → COMPILE → VERIFY �
 
 Guards:
 - `COMPILE → HYPOTHESIZE` if `compile_oom` (agent reads the error, pivots)
-- `VERIFY → LOG` (verdict=revert) if **not** (`verify_ok` and `verify_complete`) — bypasses BENCHMARK, wrong kernel never timed
+- `VERIFY → LOG` (verdict=revert) if **not** (`verify_ok` and `verify_complete`), bypasses BENCHMARK, wrong kernel never timed
 - `VERIFY → BENCHMARK` only if `verify_ok and verify_complete`
 - `BENCHMARK → EVALUATE → LOG`
 - `LOG → HYPOTHESIZE` (loop) unless `should_stop`
 - `should_stop`: `consecutive_no_gain ≥ 3` **on correct variants** (correctness fails don't count), or time budget, or `best ≥ target`
 
-`verify_ok` = NMSE ≤ threshold (1e-7 default, 1e-6 fp16) vs CPU. `verify_complete` = full-output coverage + range/std/axes filters (the Session-10 guard). Both must hold. See `verification_design.md`.
+`verify_ok` = NMSE ≤ threshold (1e-7 default, 1e-6 fp16) vs CPU. `verify_complete` = full-output coverage + range/std/axes filters (the audit-derived guard). Both must hold. See `verification_design.md`.
 
 ---
 
@@ -88,20 +88,20 @@ Every call, success or refusal, is one hash-chained ledger line. That transcript
 
 ## First target and definition of done
 
-**Target op: `MUL_MAT`** (matmul). It is the op that aborts on the 16 KB limit and blocks the entire forward pass, so optimizing it into the envelope is the literal enabling work. `test-backend-ops -o MUL_MAT -b Vulkan0` is the gate. (The Session-10 `convolution1x1.comp` is the better *correctness-demo* kernel and comes second, once the loop itself is proven.)
+**Target op: `MUL_MAT`** (matmul). It is the op that aborts on the 16 KB limit and blocks the entire forward pass, so optimizing it into the envelope is the literal enabling work. `test-backend-ops -o MUL_MAT -b Vulkan0` is the gate. (The `convolution1x1.comp` shader from the prior audit is the better *correctness-demo* kernel and comes second, once the loop itself is proven.)
 
 **Phase 1 is done when:**
 1. The agent, over MCP, runs ≥1 full `HYPOTHESIZE→…→LOG` cycle that is **kept** (correct + improved) and ≥1 that is **refused/reverted**, both recorded in the ledger.
-2. A deliberately-broken variant (partial-output) is **refused at VERIFY** and never reaches BENCHMARK — the ungameability proof.
+2. A deliberately-broken variant (partial-output) is **refused at VERIFY** and never reaches BENCHMARK, the ungameability proof.
 3. The run reproduces from the ledger + pinned Mesa build + logged seeds + git SHAs.
 
 No concurrency, no second kernel, no offload. That is Phase 2+.
 
 ---
 
-## Concrete build order (for a future implementation session, not now)
+## Build order
 
-1. `verify` action wrapping `test-backend-ops -b Vulkan0` with NMSE parse + the `verify_complete` filters. *(highest risk, build first — it's the gate everything depends on)*
+1. `verify` action wrapping `test-backend-ops -b Vulkan0` with NMSE parse + the `verify_complete` filters. *(highest risk, build first, it's the gate everything depends on)*
 2. `compile` action: `glslangValidator` + offline repack + stale-bytecode assertion.
 3. `kernel.comp` + `kernel.meta.json` for `MUL_MAT` (extracted from the patched llama.cpp shader).
 4. Trim `burr_fsm/fsm.py` to the single-kernel graph above; wire the four FSM-owned actions to Pi subprocess calls.
