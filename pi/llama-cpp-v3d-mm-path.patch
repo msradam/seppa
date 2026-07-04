@@ -1,7 +1,7 @@
 From 57998d59ebf4d17d954c4e65957b5c92efd7de0a Mon Sep 17 00:00:00 2001
 From: Adam Munawar Rahman <msrahmanadam@gmail.com>
 Date: Sat, 4 Jul 2026 15:20:13 +0000
-Subject: [PATCH] vulkan: route n>8 matmuls to the mm tile path on V3D
+Subject: [PATCH 1/2] vulkan: route n>8 matmuls to the mm tile path on V3D
 
 The GGML_VK_MMV_MAX_COLS gate rejected every n>1 matmul. Only the
 multi-column mul_mat_vec variants (ncols 2..8) hit the never-terminating
@@ -30,6 +30,51 @@ index 542af62..d35d00c 100644
 +                // through the fallback ladder and passes test-backend-ops.
 +                if (max_mmv_cols > 0 && op->ne[1] > max_mmv_cols &&
 +                    op->ne[1] <= (int64_t) mul_mat_vec_max_cols) {
+                     return false;
+                 }
+                 ggml_type src0_type = op->src[0]->type;
+-- 
+2.47.3
+
+
+From 3f2dcc12efde1a2be34d9d929dd539944d3dfe3d Mon Sep 17 00:00:00 2001
+From: Adam Munawar Rahman <msrahmanadam@gmail.com>
+Date: Sat, 4 Jul 2026 15:59:13 +0000
+Subject: [PATCH 2/2] vulkan: make the V3D mm tile path opt-in
+ (GGML_VK_ALLOW_MM)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Per-op the mm pipelines pass test-backend-ops NMSE (49/49 on the granite
+model graph with GGML_VK_ALLOW_MM=1), but composed into a real forward
+pass they corrupt the output even at -ngl 6 with a short prompt — the
+same upstream composition defect that breaks full offload, engaged by
+the larger GPU graphs. Default (GGML_VK_MMV_MAX_COLS=1 alone) returns to
+CPU fallback for all n>1, which restores the verified coherent decode at
+5.5 t/s.
+---
+ ggml/src/ggml-vulkan/ggml-vulkan.cpp | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/ggml/src/ggml-vulkan/ggml-vulkan.cpp b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+index d35d00c..1d3cdfc 100644
+--- a/ggml/src/ggml-vulkan/ggml-vulkan.cpp
++++ b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+@@ -15949,9 +15949,14 @@ static bool ggml_backend_vk_device_supports_op(ggml_backend_dev_t dev, const ggm
+                 // Only the multi-column mul_mat_vec variants (ncols
+                 // 2..mul_mat_vec_max_cols) hit the unbounded v3dv compile;
+                 // wider matmuls route to the mm tile path, which compiles
+-                // through the fallback ladder and passes test-backend-ops.
++                // through the fallback ladder and passes test-backend-ops
++                // per op. Composed into a real forward pass it still
++                // produces wrong results (the same upstream defect that
++                // breaks full offload), so the mm path is opt-in via
++                // GGML_VK_ALLOW_MM until that is fixed.
+                 if (max_mmv_cols > 0 && op->ne[1] > max_mmv_cols &&
+-                    op->ne[1] <= (int64_t) mul_mat_vec_max_cols) {
++                    (op->ne[1] <= (int64_t) mul_mat_vec_max_cols ||
++                     getenv("GGML_VK_ALLOW_MM") == nullptr)) {
                      return false;
                  }
                  ggml_type src0_type = op->src[0]->type;

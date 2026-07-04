@@ -241,6 +241,57 @@ encoder (all n~1500 GEMMs). Repro:
 `GGML_VK_MMV_MAX_COLS=1 GGML_VK_DISABLE_FLASH_ATTN=1 ./test-backend-ops test -b Vulkan0 -o "MUL_MAT(type_a=f32,type_b=f32,m=16,n=9,k=256,bs=[1,1],nr=[1,1],per=[0,1,2,3],k_v=0,o=1)"`
 (first run ~7 min while the ladder runs; subsequent runs instant).
 
+With the mm path enabled (`GGML_VK_ALLOW_MM=1`, commit 3f2dcc1 makes it
+opt-in) the full granite model-graph gate is **49/49 passed** (was 43/43 +
+11 unsupported): the n=512 q4_0/q6_K prompt matmuls run and verify ON THE
+GPU. Remaining principled CPU fallbacks: 2 FLASH_ATTN (env-gated), the 2
+permuted-f16 kq/kqv n=512 layouts (the numerically broken ones — correctly
+rejected by contiguity checks), 1 oversized SOFT_MAX. First cold run of
+this gate takes ~36 min (new pipeline ladders plus a 210-GFLOP CPU
+reference for the q6_K output head). Do not run two GPU jobs at once when
+timing anything.
+
+BUT: composed into a real forward pass the mm path corrupts decode even at
+-ngl 6 with the short prompt (temp-0 output "/?????" instead of "Paris").
+Per-op green + composition garbage = the same upstream defect that breaks
+full offload, engaged by the larger GPU graphs. Hence opt-in only; the
+default (GGML_VK_MMV_MAX_COLS=1 alone) rejects all n>1 and restores the
+verified decode (re-measured tg32 = 5.51 ± 0.02 after the change).
+
+## Envelope correction: the coherent-decode claim only covers SHORT prompts
+
+A ~30-token prompt at -ngl 6 decodes to garbage in EVERY configuration of
+this llama.cpp commit (mm on or off): temp-0 reply to the Eiffel-Tower
+geography prompt is "GGGG..." while "The capital of France is" gives
+"...city named Paris". The session-1 verification used only the short
+prompt, so the honest statement is: decode is coherent at ngl<=6 for short
+prompts; the upstream composition bug scales with total per-graph GPU work
+(tokens x layers), not layer count alone. Any usability claim must name the
+prompt length. Repro: same llama-completion command, prompt
+"Geography quiz. France is a country in Europe. Its capital city, famous
+for the Eiffel Tower and the Louvre, is called", -n 10 --temp 0.
+
+## whisper.cpp on V3D: stood up, builds, runs — output blocked by the same upstream bug
+
+Deployed to /root/v3d-research/whisper.cpp (master, shallow clone), with
+the vendored ggml REPLACED by the patched llama.cpp ggml (API-compatible;
+`rm -rf ggml && cp -r ../llama.cpp/ggml ggml`, then
+`cmake -B build-vulkan -DGGML_VULKAN=1` + build whisper-cli). tiny.en
+downloaded via models/download-ggml-model.sh.
+- CPU (`-ng`): correct JFK transcript, encode 985 ms. Repro:
+  `./build-vulkan/bin/whisper-cli -m models/ggml-tiny.en.bin -f samples/jfk.wav -ng`
+- Vulkan (`GGML_VK_MMV_MAX_COLS=1 GGML_VK_DISABLE_FLASH_ATTN=1`, mm path
+  active for the encoder GEMMs): runs end-to-end but the transcript is
+  repetition garbage ("WITH WITH WITH... anananan") — the encoder is
+  all-GPU, i.e. the full-offload composition regime. Attribution to the
+  upstream bug is inferred from the identical signature and shared ggml
+  code, NOT llvmpipe-proven for whisper specifically (llama's llvmpipe
+  proof is in an earlier entry). First-run encode wall time (875 s) is
+  meaningless: pipeline-ladder compiles plus GPU contention with a
+  concurrently running gate.
+Conclusion: whisper GPU is one upstream fix away, not blocked by V3D. The
+per-op foundation (256-cap, mm tiles, gates) is already in its tree.
+
 ## Sonnet independent verification (2026-07-04): mostly confirmed, one real gap found
 
 Reproduced independently: `llama-bench -ngl 6` gives tg32 ≈ 5.5 t/s (matches
