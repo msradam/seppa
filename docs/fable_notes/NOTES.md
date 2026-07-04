@@ -134,3 +134,67 @@ is still available with `--explore` (best 12.56 GFLOPS, unchanged).
 3. Attention on GPU: kq/kqv/SOFT_MAX n=1 all verify green already; the
    -nkvo requirement comes from the upstream composition bug, not from
    those ops.
+
+## Root cause: the llama-cli abort was a stale binary; beneath it, llama-cli itself is broken upstream
+
+Two layers, both closed:
+
+**Layer 1 — the abort Sonnet reproduced.** "Shared memory size too small for
+matrix multiplication" is the exact line commit 428df1d deletes. The string
+occurs 0 times in the patched source but 2 times in the llama-cli binary,
+which was dated May 21 (the original stock build): ggml-vulkan is a STATIC
+library and every `cmake --build --target ...` in the first session listed
+only test-backend-ops/llama-bench/llama-completion, so llama-cli was never
+relinked and silently carried the unpatched backend. Rebuilding it
+(`cmake --build build-vulkan --target llama-cli -j4`) removes the abort;
+the binary now loads and decodes on V3D at the expected ~6.2 t/s (ngl 6).
+Lesson recorded for every future claim: with a static ggml, name the binary
+you tested AND check it postdates the patches
+(`strings bin/<tool> | grep -c "Shared memory size too small"` must be 0).
+
+**Layer 2 — what the rebuild exposed.** llama-cli at bb28c1f is a rewritten
+frontend over the llama-server slot machinery (verbose log shows
+`slot get_availabl ... selected by LRU`, prompt cache, non-unified KV,
+graph reservations with n_outputs=16/512), while llama-completion is the
+classic decode loop — that is the real "different path". With the patched
+backend, llama-cli output is garbage at ANY ngl (even 1) on BOTH v3dv and
+llvmpipe (`GGGGGGGG` / `-Identifier-Identifier`), and on pure CPU (-ngl 0)
+it generates ZERO tokens (`Generation: 0.0 t/s`, empty reply, two different
+prompts, temp 0, `-st < /dev/null`). Control: llama-server — the SAME slot
+infrastructure, same build — is coherent on CPU (" Paris. France is known
+for its art") and partially degraded on V3D at ngl 6 (" Paris cityscape
+amidst clouds/cloud/cloud"). So: the slot infra is fine, the cli frontend
+is broken at this commit independent of any GPU, and its Vulkan incoherence
+is the same driver-independent upstream composition bug already documented
+(server-style graphs just trigger it at lower ngl than llama-completion's).
+It cannot be "fixed the same way" because nothing V3D-side is wrong: per-op
+NMSE green, slot-infra-on-CPU green, stock llvmpipe reproduces. The fix is
+an upstream llama.cpp update/bisect.
+
+Verified entry points on this build, in order of trust: `llama-completion`,
+`llama-bench` (coherent/verified at ngl<=6); `llama-server` (works, quality
+degrades earlier than llama-completion on GPU); `llama-cli` (do not use at
+this commit, broken even on CPU).
+
+Repro:
+- `strings build-vulkan/bin/llama-cli | grep -c "Shared memory size too small"` → 0 after rebuild, 2 before.
+- cli GPU garbage: `GGML_VK_MMV_MAX_COLS=1 GGML_VK_DISABLE_FLASH_ATTN=1 ./llama-cli -m <granite Q4_0> -ngl 1 -c 4096 -fa 0 -n 8 --temp 0 -st -p "The capital of France is" < /dev/null` → "GGGGGGGG".
+- cli CPU empty: same with `-ngl 0` → empty reply, 0.0 t/s.
+- server CPU coherent: `./llama-server -m <model> -ngl 0 -c 4096 -fa 0 --port 8081` then `curl -s localhost:8081/completion -d '{"prompt": "The capital of France is", "n_predict": 8, "temperature": 0}'` → " Paris. France is known for its art".
+
+## Sonnet independent verification (2026-07-04): mostly confirmed, one real gap found
+
+Reproduced independently: `llama-bench -ngl 6` gives tg32 ≈ 5.5 t/s (matches
+5.55-5.56 claim). `llama-completion` with the documented flags
+(`-ngl 6 -c 4096 -fa 0 --temp 0`) loads and generates coherently ("the
+capital of France is city named Paris", 5.48 t/s eval) — the end-to-end
+claim holds.
+
+One real gap, not previously flagged: **`llama-cli` fails where
+`llama-completion` succeeds**, same model/flags/env vars/`-ngl`, including
+with `-fa 0` explicit on the CLI (not just the env var). `llama-cli` throws
+"Shared memory size too small for matrix multiplication" at model load;
+`llama-completion` does not. Not yet root-caused — worth understanding
+before calling this generally "usable," since `llama-cli` is the standard
+interactive entry point most people (and any future Bonbibi integration)
+would reach for first.
