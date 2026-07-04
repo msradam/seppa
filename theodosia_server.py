@@ -30,10 +30,20 @@ from v3d_fsm import build_app
 
 
 def make_server(
-    name: str = "v3d", live: bool = False, explore: bool = False, flood: bool = False
+    name: str = "v3d",
+    live: bool = False,
+    explore: bool = False,
+    flood: bool = False,
+    llama_mmv: bool = False,
 ):
     # Factory (not a built app) so each MCP session gets isolated state and
     # fork/reset stay enabled.
+    if llama_mmv:
+        # Agent rewrites llama.cpp's mul_mat_vec.comp; gate = model-graph
+        # test-backend-ops vs CPU oracle; benchmark = llama-bench GPU decode.
+        import v3d_llama_mmv
+
+        return mount(v3d_llama_mmv.build_llama_mmv_app, name=name)
     if flood:
         # Agent optimizes the two-shader flood sim under the physics gate.
         import v3d_flood_opt
@@ -60,21 +70,27 @@ def make_server(
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Theodosia MCP server for the V3D FSM")
-    ap.add_argument(
-        "--http", action="store_true", help="serve streamable-http instead of stdio"
-    )
+    ap.add_argument("--http", action="store_true", help="serve streamable-http instead of stdio")
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--live", action="store_true", help="drive the real Pi over SSH")
-    ap.add_argument(
-        "--explore", action="store_true", help="agent rewrites gemm.comp on the Pi"
-    )
+    ap.add_argument("--explore", action="store_true", help="agent rewrites gemm.comp on the Pi")
     ap.add_argument(
         "--flood", action="store_true", help="agent optimizes the flood sim (2 shaders)"
     )
+    ap.add_argument(
+        "--llama-mmv",
+        action="store_true",
+        help="agent optimizes llama.cpp's mul_mat_vec.comp under the model-graph gate",
+    )
     args = ap.parse_args()
 
-    server = make_server(live=args.live, explore=args.explore, flood=args.flood)
+    server = make_server(
+        live=args.live,
+        explore=args.explore,
+        flood=args.flood,
+        llama_mmv=args.llama_mmv,
+    )
     if args.http:
         server.run(transport="streamable-http", host=args.host, port=args.port)
     else:

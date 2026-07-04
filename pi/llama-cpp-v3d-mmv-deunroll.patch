@@ -1,0 +1,81 @@
+From bc4d3006ae1d8f70c86099315c3029753236b1d4 Mon Sep 17 00:00:00 2001
+From: Adam Munawar Rahman <msrahmanadam@gmail.com>
+Date: Sat, 4 Jul 2026 05:59:35 +0000
+Subject: [PATCH] vulkan: remove manual unrolling from mul_mat_vec for V3D
+
+The 4x/2x manual unrolling makes v3dv register allocation fail at 4
+QPU threads and fall back through strategies that disable general TMU
+scheduling, GCM, and finally loop unrolling itself. A plain rolled
+loop compiles on the default strategy and speeds up GPU decode of
+granite-4.0-1b Q4_0 from 4.32 to 5.55 t/s (-ngl 6, +28%), with all
+43 model-graph ops passing test-backend-ops NMSE vs the CPU backend.
+
+Found by the Seppa FSM loop (experiment 1 of 3; a software-pipelined
+B-prefetch variant verified correct but was performance-neutral and
+was reverted).
+---
+ .../vulkan-shaders/mul_mat_vec.comp           | 46 ++++---------------
+ 1 file changed, 9 insertions(+), 37 deletions(-)
+
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/mul_mat_vec.comp b/ggml/src/ggml-vulkan/vulkan-shaders/mul_mat_vec.comp
+index 2271be4..b495eac 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/mul_mat_vec.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/mul_mat_vec.comp
+@@ -102,45 +102,17 @@ void compute_outputs(const uint32_t first_row, const uint32_t num_rows) {
+     if (num_iters * K_PER_ITER * BLOCK_SIZE + K_PER_ITER*tid < p.ncols) {
+         num_iters++;
+     }
+-    int unroll_count = 4;
+-    uint unrolled_iters = num_iters & ~(unroll_count - 1);
+-
+-#if K_PER_ITER == 2
+-    // If the K dimension is odd, we need lastiter==true on the last iteration
+-    // so OOB is computed correctly. Skip some unrolling to make that happen.
+-    if ((p.ncols & 1) != 0 &&
+-        unrolled_iters == num_iters &&
+-        unrolled_iters > 0) {
+-        unrolled_iters -= unroll_count;
+-    }
+-#endif
+ 
++    // No manual unrolling: the v3dv register allocator fails on the unrolled
++    // bodies and retries with progressively worse strategies ('disable
++    // general TMU sched', 'disable gcm', 'disable loop unrolling'). A plain
++    // rolled loop keeps register pressure low enough to compile with the
++    // default strategy at 4 QPU threads. Per-thread accumulation order is
++    // unchanged, so results are bit-identical to the unrolled version.
+     uint i = 0;
+-    while (i < unrolled_iters) {
+-        // Manually partially unroll the loop
+-        [[unroll]] for (uint k = 0; k < unroll_count; ++k) {
+-            iter(temp, first_row, num_rows, tid, i*K_PER_ITER, false);
+-            i++;
+-        }
+-    }
+-
+-    unroll_count = 2;
+-    unrolled_iters = num_iters & ~(unroll_count - 1);
+-
+-#if K_PER_ITER == 2
+-    if ((p.ncols & 1) != 0 &&
+-        unrolled_iters == num_iters &&
+-        unrolled_iters > 0) {
+-        unrolled_iters -= unroll_count;
+-    }
+-#endif
+-
+-    while (i < unrolled_iters) {
+-        // Manually partially unroll the loop
+-        [[unroll]] for (uint k = 0; k < unroll_count; ++k) {
+-            iter(temp, first_row, num_rows, tid, i*K_PER_ITER, false);
+-            i++;
+-        }
++    while (i + 1 < num_iters) {
++        iter(temp, first_row, num_rows, tid, i*K_PER_ITER, false);
++        i++;
+     }
+     while (i < num_iters) {
+         iter(temp, first_row, num_rows, tid, i*K_PER_ITER, true);
+-- 
+2.47.3
+

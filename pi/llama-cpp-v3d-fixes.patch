@@ -1,0 +1,1241 @@
+From 428df1d46a3d1041ba8073c04e52b8081060aede Mon Sep 17 00:00:00 2001
+From: Adam Munawar Rahman <msrahmanadam@gmail.com>
+Date: Sat, 4 Jul 2026 05:37:59 +0000
+Subject: [PATCH] vulkan: V3D (Pi 5) support: cap workgroups at 256, gate
+ pathological pipeline compiles
+
+- Cap all hardcoded 512/1024-invocation workgroups to 256 (V3D
+  maxComputeWorkGroupInvocations); keep host wg_denoms and the
+  SET_ROWS elements-per-workgroup divisor in sync.
+- GGML_VK_MMV_MAX_COLS=N: report MUL_MAT with more than N result
+  columns unsupported so it falls back to CPU. v3dv register
+  allocation never terminates compiling the multi-column
+  mul_mat_vec pipelines (>9 min per pipeline); n=1 compiles and
+  passes test-backend-ops.
+- GGML_VK_DISABLE_FLASH_ATTN: v3dv aborts on subgroup reduce fmin
+  in the FA shaders (unimplemented NIR intrinsic).
+- GGML_VK_NODES_PER_SUBMIT: cap command buffer size (diagnostic).
+- test-backend-ops: GGML_TEST_PRINT_ERR=1 prints the measured NMSE
+  for every case, not just failures.
+
+All 45 GPU-runnable ops of granite-4.0-1b Q4_0 (exported real graph
+shapes) pass the NMSE gate vs the CPU backend on V3D 7.1.10.2.
+Decode at -ngl 6 is temp-0 coherent; full offload is incoherent on
+both v3dv and llvmpipe with stock bb28c1f as well (pre-existing
+upstream defect, not V3D-specific).
+---
+ ggml/src/ggml-vulkan/ggml-vulkan.cpp          | 278 ++++++++++--------
+ ggml/src/ggml-vulkan/vulkan-shaders/abs.comp  |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/acc.comp  |   2 +-
+ .../ggml-vulkan/vulkan-shaders/add_id.comp    |   2 +-
+ .../ggml-vulkan/vulkan-shaders/arange.comp    |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/ceil.comp |   2 +-
+ .../src/ggml-vulkan/vulkan-shaders/clamp.comp |   2 +-
+ .../ggml-vulkan/vulkan-shaders/concat.comp    |   2 +-
+ .../ggml-vulkan/vulkan-shaders/conv2d_dw.comp |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/copy.comp |   2 +-
+ .../vulkan-shaders/copy_to_quant.comp         |   4 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/cos.comp  |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/diag.comp |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/elu.comp  |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/exp.comp  |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/fill.comp |   2 +-
+ .../src/ggml-vulkan/vulkan-shaders/floor.comp |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/gelu.comp |   2 +-
+ .../ggml-vulkan/vulkan-shaders/gelu_erf.comp  |   2 +-
+ .../vulkan-shaders/gelu_quick.comp            |   2 +-
+ .../ggml-vulkan/vulkan-shaders/get_rows.comp  |   2 +-
+ .../vulkan-shaders/get_rows_quant.comp        |   2 +-
+ .../ggml-vulkan/vulkan-shaders/glu_head.glsl  |   2 +-
+ .../vulkan-shaders/group_norm.comp            |   2 +-
+ .../vulkan-shaders/hardsigmoid.comp           |   2 +-
+ .../ggml-vulkan/vulkan-shaders/hardswish.comp |   2 +-
+ .../ggml-vulkan/vulkan-shaders/l2_norm.comp   |   2 +-
+ .../vulkan-shaders/leaky_relu.comp            |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/log.comp  |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/neg.comp  |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/norm.comp |   2 +-
+ .../vulkan-shaders/opt_step_adamw.comp        |   2 +-
+ .../vulkan-shaders/opt_step_sgd.comp          |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/pad.comp  |   2 +-
+ .../ggml-vulkan/vulkan-shaders/pool2d.comp    |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/relu.comp |   2 +-
+ .../ggml-vulkan/vulkan-shaders/repeat.comp    |   2 +-
+ .../vulkan-shaders/repeat_back.comp           |   2 +-
+ .../ggml-vulkan/vulkan-shaders/rms_norm.comp  |   2 +-
+ .../vulkan-shaders/rms_norm_back.comp         |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/roll.comp |   2 +-
+ .../src/ggml-vulkan/vulkan-shaders/round.comp |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/sgn.comp  |   2 +-
+ .../ggml-vulkan/vulkan-shaders/sigmoid.comp   |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/silu.comp |   2 +-
+ .../ggml-vulkan/vulkan-shaders/silu_back.comp |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/sin.comp  |   2 +-
+ .../ggml-vulkan/vulkan-shaders/softplus.comp  |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/sqrt.comp |   2 +-
+ .../ggml-vulkan/vulkan-shaders/square.comp    |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/step.comp |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/tanh.comp |   2 +-
+ ggml/src/ggml-vulkan/vulkan-shaders/tri.comp  |   2 +-
+ .../src/ggml-vulkan/vulkan-shaders/trunc.comp |   2 +-
+ .../ggml-vulkan/vulkan-shaders/upscale.comp   |   2 +-
+ .../src/ggml-vulkan/vulkan-shaders/xielu.comp |   2 +-
+ tests/test-backend-ops.cpp                    |   3 +
+ 57 files changed, 210 insertions(+), 183 deletions(-)
+
+diff --git a/ggml/src/ggml-vulkan/ggml-vulkan.cpp b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+index aa28922..542af62 100644
+--- a/ggml/src/ggml-vulkan/ggml-vulkan.cpp
++++ b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+@@ -3524,8 +3524,9 @@ static void ggml_vk_load_shaders(vk_device& device) {
+             // Check mmq warptiles as the largest configuration
+             // Throw an error if not enough for any matrix multiplication is available
+             if (!ggml_vk_matmul_shmem_support(device, s_warptile_mmq, false, t)) {
+-                std::cerr << "ggml_vulkan: Error: Shared memory size too small for matrix multiplication." << std::endl;
+-                throw std::runtime_error("Shared memory size too small for matrix multiplication.");
++                device->mul_mat_s[i] = false;
++                device->mul_mat_m[i] = false;
++                device->mul_mat_l[i] = false;
+             } else if (!ggml_vk_matmul_shmem_support(device, m_warptile_mmq, false, t)) {
+                 device->mul_mat_m[i] = false;
+                 device->mul_mat_l[i] = false;
+@@ -4489,58 +4490,58 @@ static void ggml_vk_load_shaders(vk_device& device) {
+     ggml_vk_create_pipeline(device, device->pipeline_dequant[GGML_TYPE_NVFP4],   "dequant_nvfp4",   dequant_nvfp4_len,   dequant_nvfp4_data,   "main", 2, 5 * sizeof(uint32_t), {256 * 16, 1, 1}, {}, 1);
+ 
+     // get_rows
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_F32 ], "get_rows_f32",  get_rows_f32_len,  get_rows_f32_data,  "main", 3, sizeof(vk_op_binary_push_constants), { 512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_F16 ], "get_rows_f16",  get_rows_f16_len,  get_rows_f16_data,  "main", 3, sizeof(vk_op_binary_push_constants), { 512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_BF16], "get_rows_bf16", get_rows_bf16_len, get_rows_bf16_data, "main", 3, sizeof(vk_op_binary_push_constants), { 512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q1_0], "get_rows_q1_0", get_rows_q1_0_len, get_rows_q1_0_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q4_0], "get_rows_q4_0", get_rows_q4_0_len, get_rows_q4_0_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q4_1], "get_rows_q4_1", get_rows_q4_1_len, get_rows_q4_1_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q5_0], "get_rows_q5_0", get_rows_q5_0_len, get_rows_q5_0_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q5_1], "get_rows_q5_1", get_rows_q5_1_len, get_rows_q5_1_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q8_0], "get_rows_q8_0", get_rows_q8_0_len, get_rows_q8_0_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q2_K], "get_rows_q2_k", get_rows_q2_k_len, get_rows_q2_k_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q3_K], "get_rows_q3_k", get_rows_q3_k_len, get_rows_q3_k_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q4_K], "get_rows_q4_k", get_rows_q4_k_len, get_rows_q4_k_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q5_K], "get_rows_q5_k", get_rows_q5_k_len, get_rows_q5_k_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q6_K], "get_rows_q6_k", get_rows_q6_k_len, get_rows_q6_k_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ1_S],   "get_rows_iq1_s",   get_rows_iq1_s_len,   get_rows_iq1_s_data,   "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ1_M],   "get_rows_iq1_m",   get_rows_iq1_m_len,   get_rows_iq1_m_data,   "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ2_XXS], "get_rows_iq2_xxs", get_rows_iq2_xxs_len, get_rows_iq2_xxs_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ2_XS],  "get_rows_iq2_xs",  get_rows_iq2_xs_len,  get_rows_iq2_xs_data,  "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ2_S],   "get_rows_iq2_s",   get_rows_iq2_s_len,   get_rows_iq2_s_data,   "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ3_XXS], "get_rows_iq3_xxs", get_rows_iq3_xxs_len, get_rows_iq3_xxs_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ3_S],   "get_rows_iq3_s",   get_rows_iq3_s_len,   get_rows_iq3_s_data,   "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ4_XS],  "get_rows_iq4_xs",  get_rows_iq4_xs_len,  get_rows_iq4_xs_data,  "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ4_NL],  "get_rows_iq4_nl",  get_rows_iq4_nl_len,  get_rows_iq4_nl_data,  "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_MXFP4],   "get_rows_mxfp4",   get_rows_mxfp4_len,   get_rows_mxfp4_data,   "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_NVFP4],   "get_rows_nvfp4",   get_rows_nvfp4_len,   get_rows_nvfp4_data,   "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_I32],     "get_rows_i32",     get_rows_i32_len,     get_rows_i32_data,     "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_F32 ], "get_rows_f32_f32",  get_rows_f32_f32_len,  get_rows_f32_f32_data,  "main", 3, sizeof(vk_op_binary_push_constants), { 512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_F16 ], "get_rows_f16_f32",  get_rows_f16_f32_len,  get_rows_f16_f32_data,  "main", 3, sizeof(vk_op_binary_push_constants), { 512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_BF16], "get_rows_bf16_f32", get_rows_bf16_f32_len, get_rows_bf16_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), { 512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q1_0], "get_rows_q1_0_f32", get_rows_q1_0_f32_len, get_rows_q1_0_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q4_0], "get_rows_q4_0_f32", get_rows_q4_0_f32_len, get_rows_q4_0_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q4_1], "get_rows_q4_1_f32", get_rows_q4_1_f32_len, get_rows_q4_1_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q5_0], "get_rows_q5_0_f32", get_rows_q5_0_f32_len, get_rows_q5_0_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q5_1], "get_rows_q5_1_f32", get_rows_q5_1_f32_len, get_rows_q5_1_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q8_0], "get_rows_q8_0_f32", get_rows_q8_0_f32_len, get_rows_q8_0_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q2_K], "get_rows_q2_k_f32", get_rows_q2_k_f32_len, get_rows_q2_k_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q3_K], "get_rows_q3_k_f32", get_rows_q3_k_f32_len, get_rows_q3_k_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q4_K], "get_rows_q4_k_f32", get_rows_q4_k_f32_len, get_rows_q4_k_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q5_K], "get_rows_q5_k_f32", get_rows_q5_k_f32_len, get_rows_q5_k_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q6_K], "get_rows_q6_k_f32", get_rows_q6_k_f32_len, get_rows_q6_k_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ1_S],   "get_rows_iq1_s_f32",   get_rows_iq1_s_f32_len,   get_rows_iq1_s_f32_data,   "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ1_M],   "get_rows_iq1_m_f32",   get_rows_iq1_m_f32_len,   get_rows_iq1_m_f32_data,   "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ2_XXS], "get_rows_iq2_xxs_f32", get_rows_iq2_xxs_f32_len, get_rows_iq2_xxs_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ2_XS],  "get_rows_iq2_xs_f32",  get_rows_iq2_xs_f32_len,  get_rows_iq2_xs_f32_data,  "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ2_S],   "get_rows_iq2_s_f32",   get_rows_iq2_s_f32_len,   get_rows_iq2_s_f32_data,   "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ3_XXS], "get_rows_iq3_xxs_f32", get_rows_iq3_xxs_f32_len, get_rows_iq3_xxs_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ3_S],   "get_rows_iq3_s_f32",   get_rows_iq3_s_f32_len,   get_rows_iq3_s_f32_data,   "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ4_XS],  "get_rows_iq4_xs_f32",  get_rows_iq4_xs_f32_len,  get_rows_iq4_xs_f32_data,  "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ4_NL],  "get_rows_iq4_nl_f32",  get_rows_iq4_nl_f32_len,  get_rows_iq4_nl_f32_data,  "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_MXFP4],   "get_rows_mxfp4_f32",   get_rows_mxfp4_f32_len,   get_rows_mxfp4_f32_data,   "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_NVFP4],   "get_rows_nvfp4_f32",   get_rows_nvfp4_f32_len,   get_rows_nvfp4_f32_data,   "main", 3, sizeof(vk_op_binary_push_constants), {1024, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_F32 ], "get_rows_f32",  get_rows_f32_len,  get_rows_f32_data,  "main", 3, sizeof(vk_op_binary_push_constants), { 256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_F16 ], "get_rows_f16",  get_rows_f16_len,  get_rows_f16_data,  "main", 3, sizeof(vk_op_binary_push_constants), { 256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_BF16], "get_rows_bf16", get_rows_bf16_len, get_rows_bf16_data, "main", 3, sizeof(vk_op_binary_push_constants), { 256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q1_0], "get_rows_q1_0", get_rows_q1_0_len, get_rows_q1_0_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q4_0], "get_rows_q4_0", get_rows_q4_0_len, get_rows_q4_0_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q4_1], "get_rows_q4_1", get_rows_q4_1_len, get_rows_q4_1_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q5_0], "get_rows_q5_0", get_rows_q5_0_len, get_rows_q5_0_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q5_1], "get_rows_q5_1", get_rows_q5_1_len, get_rows_q5_1_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q8_0], "get_rows_q8_0", get_rows_q8_0_len, get_rows_q8_0_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q2_K], "get_rows_q2_k", get_rows_q2_k_len, get_rows_q2_k_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q3_K], "get_rows_q3_k", get_rows_q3_k_len, get_rows_q3_k_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q4_K], "get_rows_q4_k", get_rows_q4_k_len, get_rows_q4_k_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q5_K], "get_rows_q5_k", get_rows_q5_k_len, get_rows_q5_k_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_Q6_K], "get_rows_q6_k", get_rows_q6_k_len, get_rows_q6_k_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ1_S],   "get_rows_iq1_s",   get_rows_iq1_s_len,   get_rows_iq1_s_data,   "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ1_M],   "get_rows_iq1_m",   get_rows_iq1_m_len,   get_rows_iq1_m_data,   "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ2_XXS], "get_rows_iq2_xxs", get_rows_iq2_xxs_len, get_rows_iq2_xxs_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ2_XS],  "get_rows_iq2_xs",  get_rows_iq2_xs_len,  get_rows_iq2_xs_data,  "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ2_S],   "get_rows_iq2_s",   get_rows_iq2_s_len,   get_rows_iq2_s_data,   "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ3_XXS], "get_rows_iq3_xxs", get_rows_iq3_xxs_len, get_rows_iq3_xxs_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ3_S],   "get_rows_iq3_s",   get_rows_iq3_s_len,   get_rows_iq3_s_data,   "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ4_XS],  "get_rows_iq4_xs",  get_rows_iq4_xs_len,  get_rows_iq4_xs_data,  "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_IQ4_NL],  "get_rows_iq4_nl",  get_rows_iq4_nl_len,  get_rows_iq4_nl_data,  "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_MXFP4],   "get_rows_mxfp4",   get_rows_mxfp4_len,   get_rows_mxfp4_data,   "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_NVFP4],   "get_rows_nvfp4",   get_rows_nvfp4_len,   get_rows_nvfp4_data,   "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows[GGML_TYPE_I32],     "get_rows_i32",     get_rows_i32_len,     get_rows_i32_data,     "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_F32 ], "get_rows_f32_f32",  get_rows_f32_f32_len,  get_rows_f32_f32_data,  "main", 3, sizeof(vk_op_binary_push_constants), { 256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_F16 ], "get_rows_f16_f32",  get_rows_f16_f32_len,  get_rows_f16_f32_data,  "main", 3, sizeof(vk_op_binary_push_constants), { 256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_BF16], "get_rows_bf16_f32", get_rows_bf16_f32_len, get_rows_bf16_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), { 256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q1_0], "get_rows_q1_0_f32", get_rows_q1_0_f32_len, get_rows_q1_0_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q4_0], "get_rows_q4_0_f32", get_rows_q4_0_f32_len, get_rows_q4_0_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q4_1], "get_rows_q4_1_f32", get_rows_q4_1_f32_len, get_rows_q4_1_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q5_0], "get_rows_q5_0_f32", get_rows_q5_0_f32_len, get_rows_q5_0_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q5_1], "get_rows_q5_1_f32", get_rows_q5_1_f32_len, get_rows_q5_1_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q8_0], "get_rows_q8_0_f32", get_rows_q8_0_f32_len, get_rows_q8_0_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q2_K], "get_rows_q2_k_f32", get_rows_q2_k_f32_len, get_rows_q2_k_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q3_K], "get_rows_q3_k_f32", get_rows_q3_k_f32_len, get_rows_q3_k_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q4_K], "get_rows_q4_k_f32", get_rows_q4_k_f32_len, get_rows_q4_k_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q5_K], "get_rows_q5_k_f32", get_rows_q5_k_f32_len, get_rows_q5_k_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_Q6_K], "get_rows_q6_k_f32", get_rows_q6_k_f32_len, get_rows_q6_k_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ1_S],   "get_rows_iq1_s_f32",   get_rows_iq1_s_f32_len,   get_rows_iq1_s_f32_data,   "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ1_M],   "get_rows_iq1_m_f32",   get_rows_iq1_m_f32_len,   get_rows_iq1_m_f32_data,   "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ2_XXS], "get_rows_iq2_xxs_f32", get_rows_iq2_xxs_f32_len, get_rows_iq2_xxs_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ2_XS],  "get_rows_iq2_xs_f32",  get_rows_iq2_xs_f32_len,  get_rows_iq2_xs_f32_data,  "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ2_S],   "get_rows_iq2_s_f32",   get_rows_iq2_s_f32_len,   get_rows_iq2_s_f32_data,   "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ3_XXS], "get_rows_iq3_xxs_f32", get_rows_iq3_xxs_f32_len, get_rows_iq3_xxs_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ3_S],   "get_rows_iq3_s_f32",   get_rows_iq3_s_f32_len,   get_rows_iq3_s_f32_data,   "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ4_XS],  "get_rows_iq4_xs_f32",  get_rows_iq4_xs_f32_len,  get_rows_iq4_xs_f32_data,  "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_IQ4_NL],  "get_rows_iq4_nl_f32",  get_rows_iq4_nl_f32_len,  get_rows_iq4_nl_f32_data,  "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_MXFP4],   "get_rows_mxfp4_f32",   get_rows_mxfp4_f32_len,   get_rows_mxfp4_f32_data,   "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_get_rows_f32[GGML_TYPE_NVFP4],   "get_rows_nvfp4_f32",   get_rows_nvfp4_f32_len,   get_rows_nvfp4_f32_data,   "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
+ 
+     ggml_vk_create_pipeline(device, device->pipeline_matmul_split_k_reduce, "split_k_reduce", split_k_reduce_len, split_k_reduce_data, "main", 2, 2 * sizeof(uint32_t), {256 * 4, 1, 1}, {}, 1);
+     ggml_vk_create_pipeline(device, device->pipeline_flash_attn_split_k_reduce, "fa_split_k_reduce", fa_split_k_reduce_len, fa_split_k_reduce_data, "main", 3, sizeof(vk_op_flash_attn_split_k_reduce_push_constants), {1, device->subgroup_size, 1}, {device->subgroup_size}, 1, true);
+@@ -4581,23 +4582,23 @@ static void ggml_vk_load_shaders(vk_device& device) {
+     ggml_vk_create_pipeline(device, device->pipeline_rms_norm_back_f32, "rms_norm_back_f32", rms_norm_back_f32_len, rms_norm_back_f32_data, "main", 3, sizeof(vk_op_push_constants), {1, 1, 1}, {}, 1);
+     ggml_vk_create_pipeline(device, device->pipeline_l2_norm_f32, "l2_norm_f32", l2_norm_f32_len, l2_norm_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {1, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_cpy_f32_f32, "cpy_f32_f32", cpy_f32_f32_len, cpy_f32_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_cpy_f32_f16, "cpy_f32_f16", cpy_f32_f16_len, cpy_f32_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_cpy_f16_f16, "cpy_f16_f16", cpy_f16_f16_len, cpy_f16_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_cpy_f16_f32, "cpy_f16_f32", cpy_f16_f32_len, cpy_f16_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_cpy_f32_bf16,"cpy_f32_bf16",cpy_f32_bf16_len,cpy_f32_bf16_data,"main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_cpy_bf16_f32,"cpy_bf16_f32",cpy_bf16_f32_len,cpy_bf16_f32_data,"main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_cpy_i32_f32, "cpy_i32_f32", cpy_i32_f32_len, cpy_i32_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_cpy_f32_i32, "cpy_f32_i32", cpy_f32_i32_len, cpy_f32_i32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-
+-    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_f32_f32, "contig_cpy_f32_f32", contig_cpy_f32_f32_len, contig_cpy_f32_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_f32_f16, "contig_cpy_f32_f16", contig_cpy_f32_f16_len, contig_cpy_f32_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_f16_f16, "contig_cpy_f16_f16", contig_cpy_f16_f16_len, contig_cpy_f16_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_f16_f32, "contig_cpy_f16_f32", contig_cpy_f16_f32_len, contig_cpy_f16_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_f32_bf16,"contig_cpy_f32_bf16",contig_cpy_f32_bf16_len,contig_cpy_f32_bf16_data,"main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_bf16_f32,"contig_cpy_bf16_f32",contig_cpy_bf16_f32_len,contig_cpy_bf16_f32_data,"main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_i32_f32, "contig_cpy_i32_f32", contig_cpy_i32_f32_len, contig_cpy_i32_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_f32_i32, "contig_cpy_f32_i32", contig_cpy_f32_i32_len, contig_cpy_f32_i32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_cpy_f32_f32, "cpy_f32_f32", cpy_f32_f32_len, cpy_f32_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_cpy_f32_f16, "cpy_f32_f16", cpy_f32_f16_len, cpy_f32_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_cpy_f16_f16, "cpy_f16_f16", cpy_f16_f16_len, cpy_f16_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_cpy_f16_f32, "cpy_f16_f32", cpy_f16_f32_len, cpy_f16_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_cpy_f32_bf16,"cpy_f32_bf16",cpy_f32_bf16_len,cpy_f32_bf16_data,"main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_cpy_bf16_f32,"cpy_bf16_f32",cpy_bf16_f32_len,cpy_bf16_f32_data,"main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_cpy_i32_f32, "cpy_i32_f32", cpy_i32_f32_len, cpy_i32_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_cpy_f32_i32, "cpy_f32_i32", cpy_f32_i32_len, cpy_f32_i32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++
++    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_f32_f32, "contig_cpy_f32_f32", contig_cpy_f32_f32_len, contig_cpy_f32_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_f32_f16, "contig_cpy_f32_f16", contig_cpy_f32_f16_len, contig_cpy_f32_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_f16_f16, "contig_cpy_f16_f16", contig_cpy_f16_f16_len, contig_cpy_f16_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_f16_f32, "contig_cpy_f16_f32", contig_cpy_f16_f32_len, contig_cpy_f16_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_f32_bf16,"contig_cpy_f32_bf16",contig_cpy_f32_bf16_len,contig_cpy_f32_bf16_data,"main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_bf16_f32,"contig_cpy_bf16_f32",contig_cpy_bf16_f32_len,contig_cpy_bf16_f32_data,"main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_i32_f32, "contig_cpy_i32_f32", contig_cpy_i32_f32_len, contig_cpy_i32_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_contig_cpy_f32_i32, "contig_cpy_f32_i32", contig_cpy_f32_i32_len, contig_cpy_f32_i32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
+ 
+     ggml_vk_create_pipeline(device, device->pipeline_cpy_transpose_32, "cpy_transpose_32", cpy_transpose_32_len, cpy_transpose_32_data, "main", 2, sizeof(vk_op_unary_push_constants), {1, 1, 1}, {}, 1);
+     ggml_vk_create_pipeline(device, device->pipeline_cpy_transpose_16, "cpy_transpose_16", cpy_transpose_16_len, cpy_transpose_16_data, "main", 2, sizeof(vk_op_unary_push_constants), {1, 1, 1}, {}, 1);
+@@ -4647,7 +4648,7 @@ static void ggml_vk_load_shaders(vk_device& device) {
+     for (int s0 : {0,1}) for (int s1 : {0,1}) for (int d : {0,1}) \
+         ggml_vk_create_pipeline2(device, device->pipeline_ ## name ## namemod[s0][s1][d], \
+                                 #name + get_suffix(s0, s1, d) + #namemod, name ## _len[s0][s1][d], name ## _data[s0][s1][d], \
+-                                "main", (bindings), sizeof(vk_op_binary_push_constants), {512, 1, 1}, spec, 1);
++                                "main", (bindings), sizeof(vk_op_binary_push_constants), {256, 1, 1}, spec, 1);
+ 
+     CREATE_BINARY(add, , {0}, 4)
+     CREATE_BINARY(add, _norepeat, {1}, 4)
+@@ -4663,53 +4664,53 @@ static void ggml_vk_load_shaders(vk_device& device) {
+ 
+     if (device->multi_add) {
+         for (uint32_t i = 0; i < MAX_FUSED_ADDS; ++i) {
+-            ggml_vk_create_pipeline2(device, device->pipeline_multi_add[i],     "multi_add_f32_"     + std::to_string(i+1), multi_add_f32_len,     multi_add_f32_data,     "main", MAX_PARAMETER_COUNT, sizeof(vk_op_multi_add_push_constants), {512, 1, 1}, {i+2}, 1);
+-            ggml_vk_create_pipeline2(device, device->pipeline_multi_add_rms[i], "multi_add_rms_f32_" + std::to_string(i+1), multi_add_rms_f32_len, multi_add_rms_f32_data, "main", MAX_PARAMETER_COUNT, sizeof(vk_op_multi_add_push_constants), {512, 1, 1}, {i+2}, 1);
++            ggml_vk_create_pipeline2(device, device->pipeline_multi_add[i],     "multi_add_f32_"     + std::to_string(i+1), multi_add_f32_len,     multi_add_f32_data,     "main", MAX_PARAMETER_COUNT, sizeof(vk_op_multi_add_push_constants), {256, 1, 1}, {i+2}, 1);
++            ggml_vk_create_pipeline2(device, device->pipeline_multi_add_rms[i], "multi_add_rms_f32_" + std::to_string(i+1), multi_add_rms_f32_len, multi_add_rms_f32_data, "main", MAX_PARAMETER_COUNT, sizeof(vk_op_multi_add_push_constants), {256, 1, 1}, {i+2}, 1);
+         }
+     }
+ 
+     ggml_vk_create_pipeline(device, device->pipeline_add_id_f32, "add_id_f32", add_id_f32_len, add_id_f32_data, "main", 4, sizeof(vk_op_add_id_push_constants), {1, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_acc_f32, "acc_f32", acc_f32_len, acc_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {512, 1, 1}, {0, 1}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_set_f32, "set_f32", acc_f32_len, acc_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {512, 1, 1}, {0, 0}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_acc_f32, "acc_f32", acc_f32_len, acc_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {0, 1}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_set_f32, "set_f32", acc_f32_len, acc_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {0, 0}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_concat_f32, "concat_f32", concat_f32_len, concat_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_concat_f16, "concat_f16", concat_f16_len, concat_f16_data, "main", 3, sizeof(vk_op_binary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_concat_i32, "concat_i32", concat_i32_len, concat_i32_data, "main", 3, sizeof(vk_op_binary_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_concat_f32, "concat_f32", concat_f32_len, concat_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_concat_f16, "concat_f16", concat_f16_len, concat_f16_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_concat_i32, "concat_i32", concat_i32_len, concat_i32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_upscale_nearest_f32, "upscale_f32", upscale_f32_len, upscale_f32_data, "main", 2, sizeof(vk_op_upscale_push_constants), {512, 1, 1}, {GGML_SCALE_MODE_NEAREST}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_upscale_bilinear_f32, "upscale_f32", upscale_f32_len, upscale_f32_data, "main", 2, sizeof(vk_op_upscale_push_constants), {512, 1, 1}, {GGML_SCALE_MODE_BILINEAR}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_upscale_bicubic_f32, "upscale_f32", upscale_f32_len, upscale_f32_data, "main", 2, sizeof(vk_op_upscale_push_constants), {512, 1, 1}, {GGML_SCALE_MODE_BICUBIC}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_upscale_bilinear_antialias_f32, "upscale_f32", upscale_f32_len, upscale_f32_data, "main", 2, sizeof(vk_op_upscale_push_constants), {512, 1, 1}, {GGML_SCALE_MODE_BILINEAR | GGML_SCALE_FLAG_ANTIALIAS}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_upscale_nearest_f32, "upscale_f32", upscale_f32_len, upscale_f32_data, "main", 2, sizeof(vk_op_upscale_push_constants), {256, 1, 1}, {GGML_SCALE_MODE_NEAREST}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_upscale_bilinear_f32, "upscale_f32", upscale_f32_len, upscale_f32_data, "main", 2, sizeof(vk_op_upscale_push_constants), {256, 1, 1}, {GGML_SCALE_MODE_BILINEAR}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_upscale_bicubic_f32, "upscale_f32", upscale_f32_len, upscale_f32_data, "main", 2, sizeof(vk_op_upscale_push_constants), {256, 1, 1}, {GGML_SCALE_MODE_BICUBIC}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_upscale_bilinear_antialias_f32, "upscale_f32", upscale_f32_len, upscale_f32_data, "main", 2, sizeof(vk_op_upscale_push_constants), {256, 1, 1}, {GGML_SCALE_MODE_BILINEAR | GGML_SCALE_FLAG_ANTIALIAS}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_scale_f32, "scale_f32", scale_f32_len, scale_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_scale_f32, "scale_f32", scale_f32_len, scale_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_sqr_f32, "sqr_f32", sqr_f32_len, sqr_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_sqrt_f32, "sqrt_f32", sqrt_f32_len, sqrt_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_sin_f32, "sin_f32", sin_f32_len, sin_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_cos_f32, "cos_f32", cos_f32_len, cos_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_sqr_f32, "sqr_f32", sqr_f32_len, sqr_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_sqrt_f32, "sqrt_f32", sqrt_f32_len, sqrt_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_sin_f32, "sin_f32", sin_f32_len, sin_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_cos_f32, "cos_f32", cos_f32_len, cos_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_log[0], "log_f32", log_f32_len, log_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_log[1], "log_f16", log_f16_len, log_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_log[0], "log_f32", log_f32_len, log_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_log[1], "log_f16", log_f16_len, log_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_tri[0], "tri_f32", tri_f32_len, tri_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_tri[1], "tri_f16", tri_f16_len, tri_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_tri[0], "tri_f32", tri_f32_len, tri_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_tri[1], "tri_f16", tri_f16_len, tri_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_diag[0], "diag_f32", diag_f32_len, diag_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_diag[1], "diag_f16", diag_f16_len, diag_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_diag[0], "diag_f32", diag_f32_len, diag_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_diag[1], "diag_f16", diag_f16_len, diag_f16_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_clamp_f32, "clamp_f32", clamp_f32_len, clamp_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_clamp_f32, "clamp_f32", clamp_f32_len, clamp_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_pad_f32, "pad_f32", pad_f32_len, pad_f32_data, "main", 2, sizeof(vk_op_pad_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_pad_f32, "pad_f32", pad_f32_len, pad_f32_data, "main", 2, sizeof(vk_op_pad_push_constants), {256, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_roll_f32, "roll_f32", roll_f32_len, roll_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_roll_f32, "roll_f32", roll_f32_len, roll_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_repeat_f32, "repeat_f32", repeat_f32_len, repeat_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_repeat_back_f32, "repeat_back_f32", repeat_back_f32_len, repeat_back_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_repeat_f32, "repeat_f32", repeat_f32_len, repeat_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_repeat_back_f32, "repeat_back_f32", repeat_back_f32_len, repeat_back_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {256, 1, 1}, {}, 1);
+ 
+ #define CREATE_UNARY(name)  \
+-    ggml_vk_create_pipeline(device, device->pipeline_ ## name [0], #name "_f32", name ## _f32_len, name ## _f32_data, "main", 2, sizeof(vk_op_push_constants), {512, 1, 1}, {}, 1);  \
+-    ggml_vk_create_pipeline(device, device->pipeline_ ## name [1], #name "_f16", name ## _f16_len, name ## _f16_data, "main", 2, sizeof(vk_op_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_ ## name [0], #name "_f32", name ## _f32_len, name ## _f32_data, "main", 2, sizeof(vk_op_push_constants), {256, 1, 1}, {}, 1);  \
++    ggml_vk_create_pipeline(device, device->pipeline_ ## name [1], #name "_f16", name ## _f16_len, name ## _f16_data, "main", 2, sizeof(vk_op_push_constants), {256, 1, 1}, {}, 1);
+ 
+     CREATE_UNARY(elu)
+     CREATE_UNARY(gelu)
+@@ -4734,18 +4735,18 @@ static void ggml_vk_load_shaders(vk_device& device) {
+     CREATE_UNARY(exp)
+ #undef CREATE_UNARY
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_add1_f16_f16, "add1_f16_f16", add1_f16_f16_len, add1_f16_f16_data, "main", 3, sizeof(vk_op_binary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_add1_f16_f32, "add1_f16_f32", add1_f16_f32_len, add1_f16_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_add1_f32_f32, "add1_f32_f32", add1_f32_f32_len, add1_f32_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_add1_f16_f16, "add1_f16_f16", add1_f16_f16_len, add1_f16_f16_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_add1_f16_f32, "add1_f16_f32", add1_f16_f32_len, add1_f16_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_add1_f32_f32, "add1_f32_f32", add1_f32_f32_len, add1_f32_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_arange_f32, "arange_f32", arange_f32_len, arange_f32_data, "main", 1, sizeof(vk_op_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_arange_f32, "arange_f32", arange_f32_len, arange_f32_data, "main", 1, sizeof(vk_op_push_constants), {256, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_fill_f32, "fill_f32", fill_f32_len, fill_f32_data, "main", 1, sizeof(vk_op_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_fill_f16, "fill_f16", fill_f16_len, fill_f16_data, "main", 1, sizeof(vk_op_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_fill_f32, "fill_f32", fill_f32_len, fill_f32_data, "main", 1, sizeof(vk_op_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_fill_f16, "fill_f16", fill_f16_len, fill_f16_data, "main", 1, sizeof(vk_op_push_constants), {256, 1, 1}, {}, 1);
+ 
+ #define CREATE_GLU(name)  \
+-    ggml_vk_create_pipeline(device, device->pipeline_ ## name [0], #name "_f32", name ## _f32_len, name ## _f32_data, "main", 3, sizeof(vk_op_glu_push_constants), {512, 1, 1}, {}, 1, true);   \
+-    ggml_vk_create_pipeline(device, device->pipeline_ ## name [1], #name "_f16", name ## _f16_len, name ## _f16_data, "main", 3, sizeof(vk_op_glu_push_constants), {512, 1, 1}, {}, 1, true);
++    ggml_vk_create_pipeline(device, device->pipeline_ ## name [0], #name "_f32", name ## _f32_len, name ## _f32_data, "main", 3, sizeof(vk_op_glu_push_constants), {256, 1, 1}, {}, 1, true);   \
++    ggml_vk_create_pipeline(device, device->pipeline_ ## name [1], #name "_f16", name ## _f16_len, name ## _f16_data, "main", 3, sizeof(vk_op_glu_push_constants), {256, 1, 1}, {}, 1, true);
+ 
+     CREATE_GLU(geglu)
+     CREATE_GLU(reglu)
+@@ -4755,15 +4756,15 @@ static void ggml_vk_load_shaders(vk_device& device) {
+     CREATE_GLU(geglu_quick)
+ #undef CREATE_GLU
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_leaky_relu_f32, "leaky_relu_f32", leaky_relu_f32_len, leaky_relu_f32_data, "main", 2, sizeof(vk_op_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_silu_back_f32, "silu_back_f32", silu_back_f32_len, silu_back_f32_data, "main", 3, sizeof(vk_op_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_leaky_relu_f32, "leaky_relu_f32", leaky_relu_f32_len, leaky_relu_f32_data, "main", 2, sizeof(vk_op_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_silu_back_f32, "silu_back_f32", silu_back_f32_len, silu_back_f32_data, "main", 3, sizeof(vk_op_push_constants), {256, 1, 1}, {}, 1);
+ 
+     ggml_vk_create_pipeline(device, device->pipeline_diag_mask_inf_f32, "diag_mask_inf_f32", diag_mask_inf_f32_len, diag_mask_inf_f32_data, "main", 2, sizeof(vk_op_diag_mask_push_constants), {1, 512, 1}, {}, 1, true);
+ 
+     ggml_vk_create_pipeline(device, device->pipeline_soft_max_f32, "soft_max_f32", soft_max_f32_len, soft_max_f32_data, "main", 4, sizeof(vk_op_soft_max_push_constants), {1, 1, 1}, { device->subgroup_size }, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_soft_max_f32_wg512, "soft_max_f32_wg512", soft_max_f32_len, soft_max_f32_data, "main", 4, sizeof(vk_op_soft_max_push_constants), {1, 1, 1}, { 512 }, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_soft_max_f32_wg512, "soft_max_f32_wg512", soft_max_f32_len, soft_max_f32_data, "main", 4, sizeof(vk_op_soft_max_push_constants), {1, 1, 1}, { 256 }, 1);
+     ggml_vk_create_pipeline(device, device->pipeline_soft_max_f32_f16, "soft_max_f32_f16", soft_max_f32_f16_len, soft_max_f32_f16_data, "main", 4, sizeof(vk_op_soft_max_push_constants), {1, 1, 1}, { device->subgroup_size }, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_soft_max_f32_f16_wg512, "soft_max_f32_f16_wg512", soft_max_f32_f16_len, soft_max_f32_f16_data, "main", 4, sizeof(vk_op_soft_max_push_constants), {1, 1, 1}, { 512 }, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_soft_max_f32_f16_wg512, "soft_max_f32_f16_wg512", soft_max_f32_f16_len, soft_max_f32_f16_data, "main", 4, sizeof(vk_op_soft_max_push_constants), {1, 1, 1}, { 256 }, 1);
+     ggml_vk_create_pipeline(device, device->pipeline_soft_max_back_f32, "soft_max_back_f32", soft_max_back_f32_len, soft_max_back_f32_data, "main", 3, sizeof(vk_op_push_constants), {1, 1, 1}, { device->subgroup_size }, 1, true);
+ 
+     ggml_vk_create_pipeline(device, device->pipeline_soft_max_large1_f32,     "soft_max_large1_f32",     soft_max_large1_f32_len,     soft_max_large1_f32_data,     "main", 6, sizeof(vk_op_soft_max_push_constants), {1, 1, 1}, { 128, 4 }, 1, true);
+@@ -4826,7 +4827,7 @@ static void ggml_vk_load_shaders(vk_device& device) {
+     ggml_vk_create_pipeline(device, device->pipeline_cumsum_multipass1_f32, "cumsum_multipass1_f32", cumsum_multipass1_f32_len, cumsum_multipass1_f32_data, "main", 3, sizeof(vk_op_sum_rows_push_constants), {256, 1, 1}, { 256, device->subgroup_size }, 1, true, true, device->subgroup_size);
+     ggml_vk_create_pipeline(device, device->pipeline_cumsum_multipass2_f32, "cumsum_multipass2_f32", cumsum_multipass2_f32_len, cumsum_multipass2_f32_data, "main", 3, sizeof(vk_op_sum_rows_push_constants), {256, 1, 1}, { 256, device->subgroup_size }, 1, true, true, device->subgroup_size);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_count_equal_i32, "count_equal_i32", count_equal_i32_len, count_equal_i32_data, "main", 3, sizeof(vk_op_push_constants), {512, 1, 1}, { device->subgroup_size }, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_count_equal_i32, "count_equal_i32", count_equal_i32_len, count_equal_i32_data, "main", 3, sizeof(vk_op_push_constants), {256, 1, 1}, { device->subgroup_size }, 1);
+ 
+     ggml_vk_create_pipeline(device, device->pipeline_count_experts, "count_experts", count_experts_len, count_experts_data, "main", 2, sizeof(vk_op_count_experts_push_constants), {1, 1, 1}, {}, 1, true);
+ 
+@@ -4845,10 +4846,10 @@ static void ggml_vk_load_shaders(vk_device& device) {
+     }
+ 
+ #define IM2COL(bda) \
+-    ggml_vk_create_pipeline(device, device->pipeline_im2col_f32, "im2col_f32", im2col_f32 ## bda ## _len, im2col_f32 ## bda ## _data, "main", 2, sizeof(vk_op_im2col_push_constants), {512, 1, 1}, { device->subgroup_size }, 1, true);   \
+-    ggml_vk_create_pipeline(device, device->pipeline_im2col_3d_f32, "im2col_3d_f32", im2col_3d_f32 ## bda ## _len, im2col_3d_f32 ## bda ## _data, "main", 2, sizeof(vk_op_im2col_3d_push_constants), {512, 1, 1}, { 512 }, 1, true);      \
+-    ggml_vk_create_pipeline(device, device->pipeline_im2col_f32_f16, "im2col_f32_f16", im2col_f32_f16 ## bda ## _len, im2col_f32_f16 ## bda ## _data, "main", 2, sizeof(vk_op_im2col_push_constants), {512, 1, 1}, { device->subgroup_size }, 1, true);   \
+-    ggml_vk_create_pipeline(device, device->pipeline_im2col_3d_f32_f16, "im2col_3d_f32_f16", im2col_3d_f32_f16 ## bda ## _len, im2col_3d_f32_f16 ## bda ## _data, "main", 2, sizeof(vk_op_im2col_3d_push_constants), {512, 1, 1}, { 512 }, 1, true);
++    ggml_vk_create_pipeline(device, device->pipeline_im2col_f32, "im2col_f32", im2col_f32 ## bda ## _len, im2col_f32 ## bda ## _data, "main", 2, sizeof(vk_op_im2col_push_constants), {256, 1, 1}, { device->subgroup_size }, 1, true);   \
++    ggml_vk_create_pipeline(device, device->pipeline_im2col_3d_f32, "im2col_3d_f32", im2col_3d_f32 ## bda ## _len, im2col_3d_f32 ## bda ## _data, "main", 2, sizeof(vk_op_im2col_3d_push_constants), {256, 1, 1}, { 256 }, 1, true);      \
++    ggml_vk_create_pipeline(device, device->pipeline_im2col_f32_f16, "im2col_f32_f16", im2col_f32_f16 ## bda ## _len, im2col_f32_f16 ## bda ## _data, "main", 2, sizeof(vk_op_im2col_push_constants), {256, 1, 1}, { device->subgroup_size }, 1, true);   \
++    ggml_vk_create_pipeline(device, device->pipeline_im2col_3d_f32_f16, "im2col_3d_f32_f16", im2col_3d_f32_f16 ## bda ## _len, im2col_3d_f32_f16 ## bda ## _data, "main", 2, sizeof(vk_op_im2col_3d_push_constants), {256, 1, 1}, { 256 }, 1, true);
+     if (device->shader_int64 && device->buffer_device_address) {
+         IM2COL(_bda)
+     } else {
+@@ -4863,7 +4864,7 @@ static void ggml_vk_load_shaders(vk_device& device) {
+     ggml_vk_create_pipeline(device, device->pipeline_snake_f16,  "snake_f16",  snake_f16_len,  snake_f16_data,  "main", 4, sizeof(vk_op_snake_push_constants), {256, 1, 1}, {}, 1);
+     ggml_vk_create_pipeline(device, device->pipeline_snake_bf16, "snake_bf16", snake_bf16_len, snake_bf16_data, "main", 4, sizeof(vk_op_snake_push_constants), {256, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_pool2d_f32, "pool2d_f32", pool2d_f32_len, pool2d_f32_data, "main", 2, sizeof(vk_op_pool2d_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_pool2d_f32, "pool2d_f32", pool2d_f32_len, pool2d_f32_data, "main", 2, sizeof(vk_op_pool2d_push_constants), {256, 1, 1}, {}, 1);
+ 
+     ggml_vk_create_pipeline(device, device->pipeline_rwkv_wkv6_f32, "rwkv_wkv6_f32", rwkv_wkv6_f32_len, rwkv_wkv6_f32_data, "main", 7, sizeof(vk_op_rwkv_wkv6_push_constants), {1, 1, 1}, {device->subgroup_size}, 1);
+ 
+@@ -4928,9 +4929,9 @@ static void ggml_vk_load_shaders(vk_device& device) {
+     ggml_vk_create_pipeline(device, device->pipeline_ssm_conv_silu_f32,      "ssm_conv_silu_f32",      ssm_conv_f32_len, ssm_conv_f32_data, "main", 4, sizeof(vk_op_ssm_conv_push_constants), {32, 16, 1}, {32, 16, 0, 1}, 1);
+     ggml_vk_create_pipeline(device, device->pipeline_ssm_conv_bias_silu_f32, "ssm_conv_bias_silu_f32", ssm_conv_f32_len, ssm_conv_f32_data, "main", 4, sizeof(vk_op_ssm_conv_push_constants), {32, 16, 1}, {32, 16, 1, 1}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_opt_step_adamw_f32, "opt_step_adamw_f32", opt_step_adamw_f32_len, opt_step_adamw_f32_data, "main", 5, sizeof(vk_op_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_opt_step_adamw_f32, "opt_step_adamw_f32", opt_step_adamw_f32_len, opt_step_adamw_f32_data, "main", 5, sizeof(vk_op_push_constants), {256, 1, 1}, {}, 1);
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_opt_step_sgd_f32, "opt_step_sgd_f32", opt_step_sgd_f32_len, opt_step_sgd_f32_data, "main", 3, sizeof(vk_op_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_opt_step_sgd_f32, "opt_step_sgd_f32", opt_step_sgd_f32_len, opt_step_sgd_f32_data, "main", 3, sizeof(vk_op_push_constants), {256, 1, 1}, {}, 1);
+ 
+     // conv2d, conv_transpose_2d
+     for (uint32_t s = 0; s < CONV_SHAPE_COUNT; ++s) {
+@@ -5021,10 +5022,10 @@ static void ggml_vk_load_shaders(vk_device& device) {
+ #undef CREATE_CONVS
+     }
+ 
+-    ggml_vk_create_pipeline(device, device->pipeline_conv2d_dw_whcn_f32, "conv2d_dw_whcn_f32", conv2d_dw_whcn_f32_len, conv2d_dw_whcn_f32_data, "main", 3, sizeof(vk_op_conv2d_dw_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_conv2d_dw_cwhn_f32, "conv2d_dw_cwhn_f32", conv2d_dw_cwhn_f32_len, conv2d_dw_cwhn_f32_data, "main", 3, sizeof(vk_op_conv2d_dw_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_conv2d_dw_whcn_f16_f32, "conv2d_dw_whcn_f16_f32", conv2d_dw_whcn_f16_f32_len, conv2d_dw_whcn_f16_f32_data, "main", 3, sizeof(vk_op_conv2d_dw_push_constants), {512, 1, 1}, {}, 1);
+-    ggml_vk_create_pipeline(device, device->pipeline_conv2d_dw_cwhn_f16_f32, "conv2d_dw_cwhn_f16_f32", conv2d_dw_cwhn_f16_f32_len, conv2d_dw_cwhn_f16_f32_data, "main", 3, sizeof(vk_op_conv2d_dw_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_conv2d_dw_whcn_f32, "conv2d_dw_whcn_f32", conv2d_dw_whcn_f32_len, conv2d_dw_whcn_f32_data, "main", 3, sizeof(vk_op_conv2d_dw_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_conv2d_dw_cwhn_f32, "conv2d_dw_cwhn_f32", conv2d_dw_cwhn_f32_len, conv2d_dw_cwhn_f32_data, "main", 3, sizeof(vk_op_conv2d_dw_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_conv2d_dw_whcn_f16_f32, "conv2d_dw_whcn_f16_f32", conv2d_dw_whcn_f16_f32_len, conv2d_dw_whcn_f16_f32_data, "main", 3, sizeof(vk_op_conv2d_dw_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_conv2d_dw_cwhn_f16_f32, "conv2d_dw_cwhn_f16_f32", conv2d_dw_cwhn_f16_f32_len, conv2d_dw_cwhn_f16_f32_data, "main", 3, sizeof(vk_op_conv2d_dw_push_constants), {256, 1, 1}, {}, 1);
+ 
+     for (uint32_t use_push = 0; use_push < 2; ++use_push) {
+         for (uint32_t i = 0; i < num_topk_moe_pipelines; ++i) {
+@@ -10444,8 +10445,9 @@ static void ggml_vk_op_f32(ggml_backend_vk_context * ctx, vk_context& subctx, co
+                 // quants run 32 threads each doing QUANT_K elements
+                 ne = CEIL_DIV(ne, 32 * ggml_blck_size(dst->type));
+             } else {
+-                // scalar types do one element per thread, running 512 threads
+-                ne = CEIL_DIV(ne, 512);
++                // scalar types do one element per thread, running 256 threads
++                // (copy_to_quant.comp BLOCK_SIZE, capped for V3D)
++                ne = CEIL_DIV(ne, 256);
+             }
+             if (ne > 262144) {
+                 elements = { 512, 512, CEIL_DIV(ne, 262144) };
+@@ -15013,6 +15015,10 @@ static ggml_status ggml_backend_vk_graph_compute(ggml_backend_t backend, ggml_cg
+     // (and scaled down based on model size, so smaller models submit earlier).
+     // Also submit at least every 100 nodes, in case there are workloads without as much matmul.
+     int nodes_per_submit = 100;
++    // GGML_VK_NODES_PER_SUBMIT=N: cap command-buffer size in graph nodes.
++    if (const char * s = getenv("GGML_VK_NODES_PER_SUBMIT")) {
++        nodes_per_submit = std::max(1, atoi(s));
++    }
+     int submitted_nodes = 0;
+     int submit_count = 0;
+     uint64_t mul_mat_bytes = 0;
+@@ -15930,6 +15936,19 @@ static bool ggml_backend_vk_device_supports_op(ggml_backend_dev_t dev, const ggm
+         case GGML_OP_MUL_MAT:
+         case GGML_OP_MUL_MAT_ID:
+             {
++                // GGML_VK_MMV_MAX_COLS=N: report MUL_MAT with more than N result
++                // columns unsupported so the scheduler falls back to CPU. On V3D
++                // (Pi 5) the multi-column mul_mat_vec and mm tile pipelines exceed
++                // the v3dv compiler register budget and vkCreateComputePipelines
++                // never returns; single-column matvec compiles and passes
++                // test-backend-ops.
++                static const long max_mmv_cols = [] {
++                    const char * s = getenv("GGML_VK_MMV_MAX_COLS");
++                    return s ? atol(s) : 0L;
++                }();
++                if (max_mmv_cols > 0 && op->ne[1] > max_mmv_cols) {
++                    return false;
++                }
+                 ggml_type src0_type = op->src[0]->type;
+                 if (op->op == GGML_OP_MUL_MAT_ID) {
+                     if (!device->mul_mat_id_s[src0_type] && !device->mul_mat_id_m[src0_type] && !device->mul_mat_id_l[src0_type]) {
+@@ -15993,6 +16012,11 @@ static bool ggml_backend_vk_device_supports_op(ggml_backend_dev_t dev, const ggm
+             }
+         case GGML_OP_FLASH_ATTN_EXT:
+             {
++                // GGML_VK_DISABLE_FLASH_ATTN: v3dv (Pi 5) aborts compiling the
++                // FA shaders (unimplemented subgroup reduce fmin intrinsic).
++                if (getenv("GGML_VK_DISABLE_FLASH_ATTN")) {
++                    return false;
++                }
+                 bool coopmat2 = device->coopmat2;
+                 uint32_t HSK = op->src[1]->ne[0];
+                 uint32_t HSV = op->src[2]->ne[0];
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/abs.comp b/ggml/src/ggml-vulkan/vulkan-shaders/abs.comp
+index 07bd1c1..4e851d0 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/abs.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/abs.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/acc.comp b/ggml/src/ggml-vulkan/vulkan-shaders/acc.comp
+index 6ba3d1d..6fa0f87 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/acc.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/acc.comp
+@@ -6,7 +6,7 @@
+ // false for SET, true for ACC
+ layout(constant_id = 1) const bool ACC = true;
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint idx = gl_GlobalInvocationID.x;
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/add_id.comp b/ggml/src/ggml-vulkan/vulkan-shaders/add_id.comp
+index 495249d..ee7afe4 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/add_id.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/add_id.comp
+@@ -14,7 +14,7 @@ layout (push_constant) uniform parameter
+     uint s21;
+ } p;
+ 
+-#define BLOCK_SIZE 512
++#define BLOCK_SIZE 256
+ 
+ layout(local_size_x = BLOCK_SIZE, local_size_y = 1, local_size_z = 1) in;
+ 
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/arange.comp b/ggml/src/ggml-vulkan/vulkan-shaders/arange.comp
+index f4936ee..5aa09bd 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/arange.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/arange.comp
+@@ -3,7 +3,7 @@
+ #include "generic_head.glsl"
+ #include "types.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) writeonly buffer D {D_TYPE data_d[];};
+ 
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/ceil.comp b/ggml/src/ggml-vulkan/vulkan-shaders/ceil.comp
+index 0028d37..bd8d7ca 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/ceil.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/ceil.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/clamp.comp b/ggml/src/ggml-vulkan/vulkan-shaders/clamp.comp
+index 6534318..25d3f61 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/clamp.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/clamp.comp
+@@ -3,7 +3,7 @@
+ #include "types.glsl"
+ #include "generic_unary_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint idx = get_idx();
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/concat.comp b/ggml/src/ggml-vulkan/vulkan-shaders/concat.comp
+index e404698..da6b656 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/concat.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/concat.comp
+@@ -3,7 +3,7 @@
+ #include "types.glsl"
+ #include "generic_binary_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint idx = gl_GlobalInvocationID.z * 262144 + gl_GlobalInvocationID.y * 512 + gl_GlobalInvocationID.x;
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/conv2d_dw.comp b/ggml/src/ggml-vulkan/vulkan-shaders/conv2d_dw.comp
+index 70a3014..fe44104 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/conv2d_dw.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/conv2d_dw.comp
+@@ -25,7 +25,7 @@ layout (binding = 0) readonly buffer A {A_TYPE knl_data[];};
+ layout (binding = 1) readonly buffer B {B_TYPE src_data[];};
+ layout (binding = 2) writeonly buffer D {D_TYPE dst_data[];};
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ FLOAT_TYPE conv_2d_dw_whcn(uint idx) {
+     uint i0 = idx / p.dst_w;
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/copy.comp b/ggml/src/ggml-vulkan/vulkan-shaders/copy.comp
+index d55e132..5bc56d6 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/copy.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/copy.comp
+@@ -3,7 +3,7 @@
+ #include "types.glsl"
+ #include "generic_unary_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint idx = get_idx();
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/copy_to_quant.comp b/ggml/src/ggml-vulkan/vulkan-shaders/copy_to_quant.comp
+index 710c152..6e76bcc 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/copy_to_quant.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/copy_to_quant.comp
+@@ -3,8 +3,8 @@
+ #include "types.glsl"
+ 
+ #if defined(SET_ROWS) && QUANT_K == 1
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
+-const uint BLOCK_SIZE = 512;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
++const uint BLOCK_SIZE = 256;
+ #else
+ layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+ const uint BLOCK_SIZE = 32;
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/cos.comp b/ggml/src/ggml-vulkan/vulkan-shaders/cos.comp
+index db6865d..30191c0 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/cos.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/cos.comp
+@@ -3,7 +3,7 @@
+ #include "types.glsl"
+ #include "generic_unary_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint idx = get_idx();
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/diag.comp b/ggml/src/ggml-vulkan/vulkan-shaders/diag.comp
+index 7976132..84cf709 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/diag.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/diag.comp
+@@ -3,7 +3,7 @@
+ #include "types.glsl"
+ #include "generic_unary_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint idx = get_idx();
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/elu.comp b/ggml/src/ggml-vulkan/vulkan-shaders/elu.comp
+index 84dcbd8..7ebb80b 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/elu.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/elu.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/exp.comp b/ggml/src/ggml-vulkan/vulkan-shaders/exp.comp
+index c7cf5ec..1aab739 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/exp.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/exp.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/fill.comp b/ggml/src/ggml-vulkan/vulkan-shaders/fill.comp
+index a56be76..d174fe6 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/fill.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/fill.comp
+@@ -3,7 +3,7 @@
+ #include "generic_head.glsl"
+ #include "types.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) writeonly buffer D {D_TYPE data_d[];};
+ 
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/floor.comp b/ggml/src/ggml-vulkan/vulkan-shaders/floor.comp
+index 20017eb..cdd4fd1 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/floor.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/floor.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/gelu.comp b/ggml/src/ggml-vulkan/vulkan-shaders/gelu.comp
+index a95c252..b674b7d 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/gelu.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/gelu.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/gelu_erf.comp b/ggml/src/ggml-vulkan/vulkan-shaders/gelu_erf.comp
+index 58375ab..b92767d 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/gelu_erf.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/gelu_erf.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/gelu_quick.comp b/ggml/src/ggml-vulkan/vulkan-shaders/gelu_quick.comp
+index bfdfe21..894b8d6 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/gelu_quick.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/gelu_quick.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/get_rows.comp b/ggml/src/ggml-vulkan/vulkan-shaders/get_rows.comp
+index e88bdd0..ffedd0d 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/get_rows.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/get_rows.comp
+@@ -3,7 +3,7 @@
+ #include "types.glsl"
+ #include "generic_binary_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint i00 = gl_GlobalInvocationID.x;
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/get_rows_quant.comp b/ggml/src/ggml-vulkan/vulkan-shaders/get_rows_quant.comp
+index 9dba437..5afcd49 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/get_rows_quant.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/get_rows_quant.comp
+@@ -6,7 +6,7 @@
+ #include "generic_binary_head.glsl"
+ #include "dequant_funcs.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint i00 = (gl_GlobalInvocationID.x)*2;
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/glu_head.glsl b/ggml/src/ggml-vulkan/vulkan-shaders/glu_head.glsl
+index d8fdd8f..a9330e9 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/glu_head.glsl
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/glu_head.glsl
+@@ -1,7 +1,7 @@
+ #extension GL_EXT_shader_16bit_storage : require
+ 
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer A {A_TYPE data_a[];};
+ layout (binding = 1) readonly buffer B {A_TYPE data_b[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/group_norm.comp b/ggml/src/ggml-vulkan/vulkan-shaders/group_norm.comp
+index bdf97db..8901db8 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/group_norm.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/group_norm.comp
+@@ -4,7 +4,7 @@
+ #include "types.glsl"
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+-#define BLOCK_SIZE 512
++#define BLOCK_SIZE 256
+ 
+ layout(local_size_x = BLOCK_SIZE, local_size_y = 1, local_size_z = 1) in;
+ 
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/hardsigmoid.comp b/ggml/src/ggml-vulkan/vulkan-shaders/hardsigmoid.comp
+index b4dbdf3..0a484dc 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/hardsigmoid.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/hardsigmoid.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/hardswish.comp b/ggml/src/ggml-vulkan/vulkan-shaders/hardswish.comp
+index 1ec3159..7eedbfc 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/hardswish.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/hardswish.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/l2_norm.comp b/ggml/src/ggml-vulkan/vulkan-shaders/l2_norm.comp
+index f9af467..34b5d39 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/l2_norm.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/l2_norm.comp
+@@ -4,7 +4,7 @@
+ #include "types.glsl"
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+-#define BLOCK_SIZE 512
++#define BLOCK_SIZE 256
+ 
+ layout(local_size_x = BLOCK_SIZE, local_size_y = 1, local_size_z = 1) in;
+ 
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/leaky_relu.comp b/ggml/src/ggml-vulkan/vulkan-shaders/leaky_relu.comp
+index b281e85..335ddd8 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/leaky_relu.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/leaky_relu.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/log.comp b/ggml/src/ggml-vulkan/vulkan-shaders/log.comp
+index 3cda6a6..98608e7 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/log.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/log.comp
+@@ -3,7 +3,7 @@
+ #include "types.glsl"
+ #include "generic_unary_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint idx = get_idx();
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/neg.comp b/ggml/src/ggml-vulkan/vulkan-shaders/neg.comp
+index 7f9b1bc..0125082 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/neg.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/neg.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/norm.comp b/ggml/src/ggml-vulkan/vulkan-shaders/norm.comp
+index cc3ea0b..4f752cf 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/norm.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/norm.comp
+@@ -4,7 +4,7 @@
+ #include "types.glsl"
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+-#define BLOCK_SIZE 512
++#define BLOCK_SIZE 256
+ 
+ layout(local_size_x = BLOCK_SIZE, local_size_y = 1, local_size_z = 1) in;
+ 
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/opt_step_adamw.comp b/ggml/src/ggml-vulkan/vulkan-shaders/opt_step_adamw.comp
+index 1f05f92..c06c234 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/opt_step_adamw.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/opt_step_adamw.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) buffer X {A_TYPE x[];};
+ layout (binding = 1) readonly buffer G {A_TYPE grad[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/opt_step_sgd.comp b/ggml/src/ggml-vulkan/vulkan-shaders/opt_step_sgd.comp
+index 1251f9c..9e84931 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/opt_step_sgd.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/opt_step_sgd.comp
+@@ -2,7 +2,7 @@
+ 
+ #include "generic_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) buffer X {A_TYPE data_x[];};
+ layout (binding = 1) readonly buffer G {A_TYPE data_grad[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/pad.comp b/ggml/src/ggml-vulkan/vulkan-shaders/pad.comp
+index 5abd2f6..b433740 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/pad.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/pad.comp
+@@ -26,7 +26,7 @@ uint wrap_around(int coord, uint size) {
+ layout (binding = 0) readonly buffer A {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint idx = gl_GlobalInvocationID.z * 262144 + gl_GlobalInvocationID.y * 512 + gl_GlobalInvocationID.x;
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/pool2d.comp b/ggml/src/ggml-vulkan/vulkan-shaders/pool2d.comp
+index d9d7166..837950d 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/pool2d.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/pool2d.comp
+@@ -15,7 +15,7 @@ layout(push_constant) uniform parameter {
+     int p0; int p1;
+ } p;
+ 
+-#define BLOCK_SIZE 512
++#define BLOCK_SIZE 256
+ #define FLT_MAX 3.402823466e+38F
+ #define OP_POOL_MAX 0u
+ #define OP_POOL_AVG 1u
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/relu.comp b/ggml/src/ggml-vulkan/vulkan-shaders/relu.comp
+index 5725cef..737526e 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/relu.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/relu.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/repeat.comp b/ggml/src/ggml-vulkan/vulkan-shaders/repeat.comp
+index 8f4b9a8..517ea79 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/repeat.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/repeat.comp
+@@ -3,7 +3,7 @@
+ #include "types.glsl"
+ #include "generic_unary_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ uint src0_idx_mod(uint idx) {
+     const uint i13 = idx / (p.ne12*p.ne11*p.ne10);
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/repeat_back.comp b/ggml/src/ggml-vulkan/vulkan-shaders/repeat_back.comp
+index 87df782..7dd5ae4 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/repeat_back.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/repeat_back.comp
+@@ -3,7 +3,7 @@
+ #include "types.glsl"
+ #include "generic_unary_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint idx = get_idx();
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/rms_norm.comp b/ggml/src/ggml-vulkan/vulkan-shaders/rms_norm.comp
+index 55b89f1..5223364 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/rms_norm.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/rms_norm.comp
+@@ -30,7 +30,7 @@ layout (binding = 6) readonly buffer R_I {uvec2 rope_data_i[];}; // indices for
+ #endif
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+-#define BLOCK_SIZE 512
++#define BLOCK_SIZE 256
+ 
+ layout (constant_id = 1) const bool do_multiply = false;
+ 
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/rms_norm_back.comp b/ggml/src/ggml-vulkan/vulkan-shaders/rms_norm_back.comp
+index 87707fc..dc229bc 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/rms_norm_back.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/rms_norm_back.comp
+@@ -4,7 +4,7 @@
+ #include "types.glsl"
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+-#define BLOCK_SIZE 512
++#define BLOCK_SIZE 256
+ 
+ layout(local_size_x = BLOCK_SIZE, local_size_y = 1, local_size_z = 1) in;
+ 
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/roll.comp b/ggml/src/ggml-vulkan/vulkan-shaders/roll.comp
+index 68fbd0c..7a598fd 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/roll.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/roll.comp
+@@ -3,7 +3,7 @@
+ #include "types.glsl"
+ #include "generic_unary_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ uint wrap_idx(int i, uint ne) {
+     if (i < 0) {
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/round.comp b/ggml/src/ggml-vulkan/vulkan-shaders/round.comp
+index e6155dc..07525e3 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/round.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/round.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/sgn.comp b/ggml/src/ggml-vulkan/vulkan-shaders/sgn.comp
+index a9c147b..654b923 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/sgn.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/sgn.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/sigmoid.comp b/ggml/src/ggml-vulkan/vulkan-shaders/sigmoid.comp
+index 32298d4..9c233fe 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/sigmoid.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/sigmoid.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/silu.comp b/ggml/src/ggml-vulkan/vulkan-shaders/silu.comp
+index 7d1cc6f..9b1e174 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/silu.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/silu.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/silu_back.comp b/ggml/src/ggml-vulkan/vulkan-shaders/silu_back.comp
+index e5d949f..d22376d 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/silu_back.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/silu_back.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer G {A_TYPE data_g[];};
+ layout (binding = 1) readonly buffer X {B_TYPE data_x[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/sin.comp b/ggml/src/ggml-vulkan/vulkan-shaders/sin.comp
+index 61f17b2..cc08489 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/sin.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/sin.comp
+@@ -3,7 +3,7 @@
+ #include "types.glsl"
+ #include "generic_unary_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint idx = get_idx();
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/softplus.comp b/ggml/src/ggml-vulkan/vulkan-shaders/softplus.comp
+index 323e3cd..6044eff 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/softplus.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/softplus.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/sqrt.comp b/ggml/src/ggml-vulkan/vulkan-shaders/sqrt.comp
+index 70daad6..b4c9631 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/sqrt.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/sqrt.comp
+@@ -3,7 +3,7 @@
+ #include "types.glsl"
+ #include "generic_unary_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint idx = get_idx();
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/square.comp b/ggml/src/ggml-vulkan/vulkan-shaders/square.comp
+index 4eb56af..3b1d010 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/square.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/square.comp
+@@ -3,7 +3,7 @@
+ #include "types.glsl"
+ #include "generic_unary_head.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint idx = get_idx();
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/step.comp b/ggml/src/ggml-vulkan/vulkan-shaders/step.comp
+index 654a212..992109e 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/step.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/step.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/tanh.comp b/ggml/src/ggml-vulkan/vulkan-shaders/tanh.comp
+index 7b5eb41..1f16d98 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/tanh.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/tanh.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/tri.comp b/ggml/src/ggml-vulkan/vulkan-shaders/tri.comp
+index f9b78f9..fbf2368 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/tri.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/tri.comp
+@@ -8,7 +8,7 @@
+ #define GGML_TRI_TYPE_LOWER_DIAG 2
+ #define GGML_TRI_TYPE_LOWER      3
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ void main() {
+     const uint idx = get_idx();
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/trunc.comp b/ggml/src/ggml-vulkan/vulkan-shaders/trunc.comp
+index cf1b76d..2111fdb 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/trunc.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/trunc.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/upscale.comp b/ggml/src/ggml-vulkan/vulkan-shaders/upscale.comp
+index f7d12a8..ca42f90 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/upscale.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/upscale.comp
+@@ -12,7 +12,7 @@ layout (push_constant) uniform parameter
+ 
+ #include "types.glsl"
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer A {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/ggml/src/ggml-vulkan/vulkan-shaders/xielu.comp b/ggml/src/ggml-vulkan/vulkan-shaders/xielu.comp
+index 35d463b..3ecd57a 100644
+--- a/ggml/src/ggml-vulkan/vulkan-shaders/xielu.comp
++++ b/ggml/src/ggml-vulkan/vulkan-shaders/xielu.comp
+@@ -5,7 +5,7 @@
+ 
+ #extension GL_EXT_control_flow_attributes : enable
+ 
+-layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
++layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+ 
+ layout (binding = 0) readonly buffer X {A_TYPE data_a[];};
+ layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+index 303f5a4..c92193a 100644
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -1430,6 +1430,9 @@ struct test_case {
+             }
+ 
+             double err = ud->tc->err(f1.data(), f2.data(), f1.size());
++            if (getenv("GGML_TEST_PRINT_ERR")) {
++                printf("[%s] err = %.3e (max %.0e) ", ggml_op_desc(t1), err, ud->tc->max_err(ud->backend1));
++            }
+             if (err > ud->tc->max_err(ud->backend1)) {
+                 printf("[%s] ERR = %.9f > %.9f ", ggml_op_desc(t1), err, ud->tc->max_err(ud->backend1));
+                 //for (int i = 0; i < (int) f1.size(); i++) {
+-- 
+2.47.3
+
