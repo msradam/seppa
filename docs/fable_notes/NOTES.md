@@ -116,12 +116,19 @@ block-buffered: the last line of a log is NOT where a process died.
 
 ## State of the MCP server
 
-`theodosia_server.py --http --llama-mmv` on the Pi (port 8000) serves the
-`v3d_llama_mmv` FSM. Ledger from this session (app 9466169f):
-baseline 4.32 → exp1 keep 5.55 → exp2 revert (compile fail) → exp3 revert
-(correct, no gain). `best_mul_mat_vec.comp` in this repo = the kept shader
-= what is on disk and committed on the Pi. The old gemm.comp explore mode
-is still available with `--explore` (best 12.56 GFLOPS, unchanged).
+The server on the Pi (port 8000) serves whichever mode `/tmp/serve.sh`
+launches; as of the second Fable session it is `--explore` (GEMM). Switch by
+editing /tmp/serve.sh (or launching `.venv/bin/python theodosia_server.py
+--http --llama-mmv|--explore` from /root/seppa) — kill the old server with
+`pkill -f "theodosia_[s]erver"` from a command line that does NOT itself
+contain the unescaped server name, then `setsid /tmp/serve.sh ... &`.
+Ledgers so far:
+- llama-mmv (app 9466169f): baseline 4.32 → exp1 keep 5.55 → exp2 revert
+  (compile fail) → exp3 revert (correct, no gain).
+- gemm explore round 2 (app 74876a65): baseline 12.56 → exp1 keep 13.42 →
+  exp2 revert (8.60, transposed B) → exp3 revert (12.57, BK=64).
+`best_mul_mat_vec.comp` and `best_gemm.comp` in this repo are the kept
+shaders and match what is on the Pi.
 
 ## Next ideas, in order of expected value
 
@@ -181,6 +188,58 @@ Repro:
 - cli GPU garbage: `GGML_VK_MMV_MAX_COLS=1 GGML_VK_DISABLE_FLASH_ATTN=1 ./llama-cli -m <granite Q4_0> -ngl 1 -c 4096 -fa 0 -n 8 --temp 0 -st -p "The capital of France is" < /dev/null` → "GGGGGGGG".
 - cli CPU empty: same with `-ngl 0` → empty reply, 0.0 t/s.
 - server CPU coherent: `./llama-server -m <model> -ngl 0 -c 4096 -fa 0 --port 8081` then `curl -s localhost:8081/completion -d '{"prompt": "The capital of France is", "n_predict": 8, "temperature": 0}'` → " Paris. France is known for its art".
+
+## Win (GEMM FSM round 2, kept): fewer accumulators -> 12.56 -> 13.42 GFLOP/s
+
+The register-allocator insight transfers to the standalone GEMM. Diagnostic
+first (MESA_SHADER_CACHE_DISABLE=true V3D_DEBUG=perf ./vkgemm_nmse): the
+12.56 shader fails RA at 2 threads and lands on 'disable loop unrolling'.
+Collapsing its 16 partial accumulators (4 software-ILP chains per output)
+to 4 direct accumulators freed ~12 registers: 13.42 GFLOP/s @ SZ=512,
+NMSE 4.5e-14 (also 13.08 @ 256, 13.43 @ 1024). Kept via the --explore FSM
+(app 74876a65, exp 1). `best_gemm.comp` in this repo = the kept shader;
+`/root/v3d-research/gemm.comp` on the Pi matches and re-measures 13.42.
+Repro: `cd /root/v3d-research && glslangValidator -V gemm.comp -o gemm.spv && ./vkgemm_nmse`.
+
+## Dead ends (GEMM FSM round 2, reverted, both verified-correct)
+
+- Transposed k-major vec4 B tile (fewer shared reads per FLOP): 8.60
+  GFLOP/s, a 36% LOSS. The old layout had all 16 lanes of a subgroup
+  reading adjacent elements; the transpose strides lanes 8 vec4s apart and
+  makes the loader's global reads non-coalesced. V3D lesson: per-subgroup
+  lane contiguity in shared memory beats per-thread TMU-op count.
+- BK 32 -> 64 (half the barriers, full 16 KB shared): 12.57 GFLOP/s, a 6%
+  loss. Occupancy (2 resident workgroups at 8 KB each) is worth more than
+  halving barrier count. Quirk: v3d_explore's log_variant does NOT restore
+  the best shader to disk after a revert (v3d_llama_mmv does) — restore
+  gemm.comp from best_gemm.comp manually after a session.
+
+## Audit: which llama.cpp shaders still hit the RA fallback ladder (cold-cache, model shapes)
+
+`MESA_SHADER_CACHE_DISABLE=true V3D_DEBUG=perf test-backend-ops --test-file granite_ops.txt`:
+- RMS_NORM: full ladder through 'disable TMU pipelining' (rms_norm.comp has
+  six [[unroll]]s) — next de-unroll candidate, same recipe as mul_mat_vec.
+- f16 kq matvec: deepest fallback observed, 'lower thread count' — the
+  attention pipelines are the most register-starved.
+- ROPE and SOFT_MAX: compile clean, no fallback; no hidden win there.
+All 43/43 still pass; these are performance candidates, not correctness bugs.
+
+## Breakthrough: the mm (tiled matmul, n>1) path WORKS on V3D
+
+The famous "Shared memory size too small for matrix multiplication" abort
+was an over-broad device-init check: it loops over ALL quant types and
+throws because iq1's 12 KB LUT overflows 16 KB. The mainstream s-warptile
+needs only (32+32)x(32+1)x4 = 8448 bytes with fp32 staging — it fits. With
+the per-type disable (commit 428df1d) plus the refined column gate (reject
+only ncols 2..8, the pathological mul_mat_vec variants; let n>8 route to
+mm), `MUL_MAT n=9` compiles through the ladder (several minutes one-time,
+then Mesa-disk-cached) and passes NMSE for f32, q4_0, q6_K, f16 (quantized
+types reuse the f32 mm via dequant, so they warm instantly). The l and m
+warptiles genuinely do not fit (33792 / 16896 bytes) and stay disabled.
+This un-blocks GPU prompt processing and, in principle, whisper.cpp's
+encoder (all n~1500 GEMMs). Repro:
+`GGML_VK_MMV_MAX_COLS=1 GGML_VK_DISABLE_FLASH_ATTN=1 ./test-backend-ops test -b Vulkan0 -o "MUL_MAT(type_a=f32,type_b=f32,m=16,n=9,k=256,bs=[1,1],nr=[1,1],per=[0,1,2,3],k_v=0,o=1)"`
+(first run ~7 min while the ladder runs; subsequent runs instant).
 
 ## Sonnet independent verification (2026-07-04): mostly confirmed, one real gap found
 

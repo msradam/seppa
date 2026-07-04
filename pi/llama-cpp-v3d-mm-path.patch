@@ -1,0 +1,38 @@
+From 57998d59ebf4d17d954c4e65957b5c92efd7de0a Mon Sep 17 00:00:00 2001
+From: Adam Munawar Rahman <msrahmanadam@gmail.com>
+Date: Sat, 4 Jul 2026 15:20:13 +0000
+Subject: [PATCH] vulkan: route n>8 matmuls to the mm tile path on V3D
+
+The GGML_VK_MMV_MAX_COLS gate rejected every n>1 matmul. Only the
+multi-column mul_mat_vec variants (ncols 2..8) hit the never-terminating
+v3dv register allocation; the small mmq warptile fits V3D shared memory
+((32+32)x(32+1)x4 = 8448 bytes with fp32 staging) and its pipeline
+compiles through the driver fallback ladder and passes test-backend-ops
+NMSE for f32, q4_0, q6_K and f16. The historic device-init abort came
+from iq1 LUTs (12 KB) overflowing the 16 KB budget, which 428df1d already
+scoped per type. Reject only ncols 2..8; let wider matmuls run on the GPU.
+---
+ ggml/src/ggml-vulkan/ggml-vulkan.cpp | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/ggml/src/ggml-vulkan/ggml-vulkan.cpp b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+index 542af62..d35d00c 100644
+--- a/ggml/src/ggml-vulkan/ggml-vulkan.cpp
++++ b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+@@ -15946,7 +15946,12 @@ static bool ggml_backend_vk_device_supports_op(ggml_backend_dev_t dev, const ggm
+                     const char * s = getenv("GGML_VK_MMV_MAX_COLS");
+                     return s ? atol(s) : 0L;
+                 }();
+-                if (max_mmv_cols > 0 && op->ne[1] > max_mmv_cols) {
++                // Only the multi-column mul_mat_vec variants (ncols
++                // 2..mul_mat_vec_max_cols) hit the unbounded v3dv compile;
++                // wider matmuls route to the mm tile path, which compiles
++                // through the fallback ladder and passes test-backend-ops.
++                if (max_mmv_cols > 0 && op->ne[1] > max_mmv_cols &&
++                    op->ne[1] <= (int64_t) mul_mat_vec_max_cols) {
+                     return false;
+                 }
+                 ggml_type src0_type = op->src[0]->type;
+-- 
+2.47.3
+
