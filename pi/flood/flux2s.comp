@@ -1,0 +1,47 @@
+#version 450
+layout(local_size_x = 16, local_size_y = 16) in;
+layout(std430, binding = 0) readonly buffer Terrain { float H[]; };
+layout(std430, binding = 1) readonly buffer PIn { vec2 P[]; };
+layout(std430, binding = 2) writeonly buffer Flux { vec4 F[]; };
+layout(push_constant) uniform PC { uint SZ; float k; float rain; } pc;
+
+// Strip-of-2 flux pass: each invocation computes two vertically adjacent
+// cells, sharing the overlapping neighbour loads (8 vec2 loads for 2 cells
+// instead of 10) and halving the invocation count. Dispatch with
+// gy = SZ/32.
+void main() {
+    int SZ = int(pc.SZ);
+    int x = int(gl_GlobalInvocationID.x);
+    int ya = int(gl_GlobalInvocationID.y) * 2;
+    if (x >= SZ || ya >= SZ) return;
+    int yb = ya + 1;
+    int xl = max(x - 1, 0), xr = min(x + 1, SZ - 1);
+    int yu = max(ya - 1, 0), yd = min(yb + 1, SZ - 1);
+    uint iA = uint(ya) * uint(SZ) + uint(x);
+    uint iB = uint(yb) * uint(SZ) + uint(x);
+
+    vec2 pA = P[iA];
+    vec2 pB = P[iB];
+    float sU = P[uint(yu) * uint(SZ) + uint(x)].y;
+    float sD = P[uint(yd) * uint(SZ) + uint(x)].y;
+    float sAL = P[uint(ya) * uint(SZ) + uint(xl)].y;
+    float sAR = P[uint(ya) * uint(SZ) + uint(xr)].y;
+    float sBL = P[uint(yb) * uint(SZ) + uint(xl)].y;
+    float sBR = P[uint(yb) * uint(SZ) + uint(xr)].y;
+
+    float fL = max(0.0, pc.k * (pA.y - sAL));
+    float fR = max(0.0, pc.k * (pA.y - sAR));
+    float fU = max(0.0, pc.k * (pA.y - sU));
+    float fD = max(0.0, pc.k * (pA.y - pB.y));
+    float tot = fL + fR + fU + fD;
+    float s = pA.x / max(tot, max(pA.x, 1e-20));
+    F[iA] = vec4(fL, fR, fU, fD) * s;
+
+    fL = max(0.0, pc.k * (pB.y - sBL));
+    fR = max(0.0, pc.k * (pB.y - sBR));
+    fU = max(0.0, pc.k * (pB.y - pA.y));
+    fD = max(0.0, pc.k * (pB.y - sD));
+    tot = fL + fR + fU + fD;
+    s = pB.x / max(tot, max(pB.x, 1e-20));
+    F[iB] = vec4(fL, fR, fU, fD) * s;
+}

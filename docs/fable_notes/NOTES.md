@@ -334,6 +334,21 @@ saturates the cores read ~3x low (1.85 t/s) — always bench solo.
   architectures, both May and July commits, falsified-knob list). Not
   posted anywhere — review and post it as an issue/comment on #20029.
 
+## Win: flood stencil 1.59x (pi/flood/, fused + strip-2), and the REAL bound identified
+
+The 2026-07-08 optimization pass, after the earlier "no headroom" read was
+challenged: the stencil is bound by fixed PER-INVOCATION cost, not memory
+ops, bytes, dispatches, or barriers — each falsified by a gated variant
+(packed vec2 state: no change; fused single-dispatch: +5%; 2 cells per
+invocation: +23%; 4 cells: regression from register pressure; fused +
+strip-2: +59%). Shipped kernel `fused2s.comp`: 256^2 x 400 steps in
+0.187 s (3.08 GF/s, 2140 steps/s) vs 0.297 s baseline; 1.41x at 512^2,
+1.18x at 1024^2; 4000-step run holds all gates (NMSE 1.3e-9, mass
+conserved). Full sweep, repro commands, and bonbibi integration notes in
+`pi/flood/README.md`. Residual headroom: fused2s still walks the RA ladder
+(CSE'd neighbourhood loads); shared-tile or reload-for-registers trades
+are the next search space, via v3d_flood_opt.
+
 ## Flood stencil (bonbibi): the optimization playbook does not transfer, by measurement
 
 flux.comp/height.comp compile with ZERO fallback-ladder lines

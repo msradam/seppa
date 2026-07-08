@@ -1,0 +1,52 @@
+#version 450
+layout(local_size_x = 16, local_size_y = 16) in;
+layout(std430, binding = 0) readonly buffer Terrain { float H[]; };
+layout(std430, binding = 1) readonly buffer PIn { vec2 P[]; };
+layout(std430, binding = 3) writeonly buffer POut { vec2 Q[]; };
+layout(push_constant) uniform PC { uint SZ; float k; float rain; } pc;
+
+// Single-pass step: flux and height fused. Each cell recomputes its four
+// neighbours' fluxes from the radius-2 diamond of surface heights instead
+// of reading them from a flux buffer. Roughly 4x the arithmetic of the
+// two-pass scheme, but the ALUs idle at ~2 of 43.7 GFLOP/s while the flux
+// round-trip (16 B written + 32 B re-read per cell per step through a
+// cache-flushing barrier) is the traffic this removes, along with one of
+// the two dispatch+barrier pairs per step.
+
+// Scaled outflow fluxes (L,R,U,D) of the cell at clamped coords (cx,cy),
+// exactly as flux.comp computes them.
+vec4 flux4(int cx, int cy, int SZ) {
+    uint i = uint(cy) * uint(SZ) + uint(cx);
+    int xl = max(cx - 1, 0), xr = min(cx + 1, SZ - 1);
+    int yu = max(cy - 1, 0), yd = min(cy + 1, SZ - 1);
+    vec2 p = P[i];
+    float hi = p.y;
+    float fL = max(0.0, pc.k * (hi - P[uint(cy) * uint(SZ) + uint(xl)].y));
+    float fR = max(0.0, pc.k * (hi - P[uint(cy) * uint(SZ) + uint(xr)].y));
+    float fU = max(0.0, pc.k * (hi - P[uint(yu) * uint(SZ) + uint(cx)].y));
+    float fD = max(0.0, pc.k * (hi - P[uint(yd) * uint(SZ) + uint(cx)].y));
+    float tot = fL + fR + fU + fD;
+    float s = p.x / max(tot, max(p.x, 1e-20));
+    return vec4(fL, fR, fU, fD) * s;
+}
+
+void main() {
+    int SZ = int(pc.SZ);
+    int x = int(gl_GlobalInvocationID.x), y = int(gl_GlobalInvocationID.y);
+    if (x >= SZ || y >= SZ) return;
+    uint i = uint(y) * uint(SZ) + uint(x);
+    int xl = max(x - 1, 0), xr = min(x + 1, SZ - 1);
+    int yu = max(y - 1, 0), yd = min(y + 1, SZ - 1);
+    float mL = float(x > 0), mR = float(x < SZ - 1);
+    float mU = float(y > 0), mD = float(y < SZ - 1);
+
+    vec4 mine = flux4(x, y, SZ);
+    float outflow = mine.x + mine.y + mine.z + mine.w;
+    float inflow = flux4(xl, y, SZ).y * mL
+                 + flux4(xr, y, SZ).x * mR
+                 + flux4(x, yu, SZ).w * mU
+                 + flux4(x, yd, SZ).z * mD;
+
+    float w = P[i].x + pc.rain - outflow + inflow;
+    Q[i] = vec2(w, H[i] + w);
+}

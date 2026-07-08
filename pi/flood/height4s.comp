@@ -1,0 +1,40 @@
+#version 450
+layout(local_size_x = 16, local_size_y = 16) in;
+layout(std430, binding = 0) readonly buffer Terrain { float H[]; };
+layout(std430, binding = 1) readonly buffer PIn { vec2 P[]; };
+layout(std430, binding = 2) readonly buffer Flux { vec4 F[]; };
+layout(std430, binding = 3) writeonly buffer POut { vec2 Q[]; };
+layout(push_constant) uniform PC { uint SZ; float k; float rain; } pc;
+
+// Strip-of-4 height pass, paired with flux4s.comp. The column of own
+// fluxes is loaded once; vertical exchange between the strip's cells
+// reuses those registers. Dispatch with gy = SZ/64.
+void main() {
+    int SZ = int(pc.SZ);
+    int x = int(gl_GlobalInvocationID.x);
+    int y0 = int(gl_GlobalInvocationID.y) * 4;
+    if (x >= SZ || y0 >= SZ) return;
+    int xl = max(x - 1, 0), xr = min(x + 1, SZ - 1);
+    float mL = float(x > 0), mR = float(x < SZ - 1);
+    uint row = uint(SZ);
+
+    vec4 fA = F[uint(y0)     * row + uint(x)];
+    vec4 fB = F[uint(y0 + 1) * row + uint(x)];
+    vec4 fC = F[uint(y0 + 2) * row + uint(x)];
+    vec4 fD4 = F[uint(y0 + 3) * row + uint(x)];
+    float fromAbove = F[uint(max(y0 - 1, 0)) * row + uint(x)].w * float(y0 > 0);
+    float fromBelow = F[uint(min(y0 + 4, SZ - 1)) * row + uint(x)].z * float(y0 + 4 <= SZ - 1);
+
+    for (int j = 0; j < 4; j++) {
+        int y = y0 + j;
+        uint i = uint(y) * row + uint(x);
+        vec4 fi = (j == 0) ? fA : (j == 1) ? fB : (j == 2) ? fC : fD4;
+        float inU = (j == 0) ? fromAbove : ((j == 1) ? fA.w : (j == 2) ? fB.w : fC.w);
+        float inD = (j == 3) ? fromBelow : ((j == 0) ? fB.z : (j == 1) ? fC.z : fD4.z);
+        float inflow = F[i - uint(x) + uint(xl)].y * mL
+                     + F[i - uint(x) + uint(xr)].x * mR
+                     + inU + inD;
+        float w = P[i].x + pc.rain - (fi.x + fi.y + fi.z + fi.w) + inflow;
+        Q[i] = vec2(w, H[i] + w);
+    }
+}

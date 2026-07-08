@@ -1,0 +1,61 @@
+#version 450
+layout(local_size_x = 16, local_size_y = 16) in;
+layout(std430, binding = 0) readonly buffer Terrain { float H[]; };
+layout(std430, binding = 1) readonly buffer PIn { vec2 P[]; };
+layout(std430, binding = 3) writeonly buffer POut { vec2 Q[]; };
+layout(push_constant) uniform PC { uint SZ; float k; float rain; } pc;
+
+// Fused step, strip of 2: one dispatch per step AND two cells per
+// invocation. Eight flux evaluations per invocation instead of ten for two
+// separate cells (the pair reuses each other's fluxes for their vertical
+// exchange); overlapping P[] loads are CSE'd by the compiler. Dispatch with
+// gy = SZ/32 and no flux buffer.
+vec4 flux4(int cx, int cy, int SZ) {
+    uint i = uint(cy) * uint(SZ) + uint(cx);
+    int xl = max(cx - 1, 0), xr = min(cx + 1, SZ - 1);
+    int yu = max(cy - 1, 0), yd = min(cy + 1, SZ - 1);
+    vec2 p = P[i];
+    float hi = p.y;
+    float fL = max(0.0, pc.k * (hi - P[uint(cy) * uint(SZ) + uint(xl)].y));
+    float fR = max(0.0, pc.k * (hi - P[uint(cy) * uint(SZ) + uint(xr)].y));
+    float fU = max(0.0, pc.k * (hi - P[uint(yu) * uint(SZ) + uint(cx)].y));
+    float fD = max(0.0, pc.k * (hi - P[uint(yd) * uint(SZ) + uint(cx)].y));
+    float tot = fL + fR + fU + fD;
+    float s = p.x / max(tot, max(p.x, 1e-20));
+    return vec4(fL, fR, fU, fD) * s;
+}
+
+void main() {
+    int SZ = int(pc.SZ);
+    int x = int(gl_GlobalInvocationID.x);
+    int ya = int(gl_GlobalInvocationID.y) * 2;
+    if (x >= SZ || ya >= SZ) return;
+    int yb = ya + 1;
+    int xl = max(x - 1, 0), xr = min(x + 1, SZ - 1);
+    float mL = float(x > 0), mR = float(x < SZ - 1);
+    uint iA = uint(ya) * uint(SZ) + uint(x);
+    uint iB = uint(yb) * uint(SZ) + uint(x);
+
+    // Hold only four scalars from the pair's own fluxes (their sums and the
+    // one lane each exchanges with the other); everything else is consumed
+    // as soon as it is produced. The full-vec4 version of this body fails
+    // v3dv register allocation and falls down the strategy ladder.
+    vec4 t = flux4(x, ya, SZ);
+    float outA = t.x + t.y + t.z + t.w, aW = t.w;
+    t = flux4(x, yb, SZ);
+    float outB = t.x + t.y + t.z + t.w, bZ = t.z;
+
+    float inA = flux4(xl, ya, SZ).y * mL
+              + flux4(xr, ya, SZ).x * mR
+              + flux4(x, max(ya - 1, 0), SZ).w * float(ya > 0)
+              + bZ;
+    float wA = P[iA].x + pc.rain - outA + inA;
+    Q[iA] = vec2(wA, H[iA] + wA);
+
+    float inB = flux4(xl, yb, SZ).y * mL
+              + flux4(xr, yb, SZ).x * mR
+              + aW
+              + flux4(x, min(yb + 1, SZ - 1), SZ).z * float(yb < SZ - 1);
+    float wB = P[iB].x + pc.rain - outB + inB;
+    Q[iB] = vec2(wB, H[iB] + wB);
+}

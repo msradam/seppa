@@ -1,0 +1,39 @@
+#version 450
+layout(local_size_x = 16, local_size_y = 16) in;
+layout(std430, binding = 0) readonly buffer Terrain { float H[]; };
+layout(std430, binding = 1) readonly buffer PIn { vec2 P[]; };
+layout(std430, binding = 2) readonly buffer Flux { vec4 F[]; };
+layout(std430, binding = 3) writeonly buffer POut { vec2 Q[]; };
+layout(push_constant) uniform PC { uint SZ; float k; float rain; } pc;
+
+// Strip-of-2 height pass, paired with flux2s.comp. The two cells share the
+// vertical flux exchange between them (fiA.w and fiB.z read once each).
+void main() {
+    int SZ = int(pc.SZ);
+    int x = int(gl_GlobalInvocationID.x);
+    int ya = int(gl_GlobalInvocationID.y) * 2;
+    if (x >= SZ || ya >= SZ) return;
+    int yb = ya + 1;
+    int xl = max(x - 1, 0), xr = min(x + 1, SZ - 1);
+    int yu = max(ya - 1, 0), yd = min(yb + 1, SZ - 1);
+    uint iA = uint(ya) * uint(SZ) + uint(x);
+    uint iB = uint(yb) * uint(SZ) + uint(x);
+    float mL = float(x > 0), mR = float(x < SZ - 1);
+    float mUA = float(ya > 0), mDB = float(yb < SZ - 1);
+
+    vec4 fiA = F[iA];
+    vec4 fiB = F[iB];
+    float inA = F[uint(ya) * uint(SZ) + uint(xl)].y * mL
+              + F[uint(ya) * uint(SZ) + uint(xr)].x * mR
+              + F[uint(yu) * uint(SZ) + uint(x)].w * mUA
+              + fiB.z;
+    float inB = F[uint(yb) * uint(SZ) + uint(xl)].y * mL
+              + F[uint(yb) * uint(SZ) + uint(xr)].x * mR
+              + fiA.w
+              + F[uint(yd) * uint(SZ) + uint(x)].z * mDB;
+
+    float wA = P[iA].x + pc.rain - (fiA.x + fiA.y + fiA.z + fiA.w) + inA;
+    float wB = P[iB].x + pc.rain - (fiB.x + fiB.y + fiB.z + fiB.w) + inB;
+    Q[iA] = vec2(wA, H[iA] + wA);
+    Q[iB] = vec2(wB, H[iB] + wB);
+}

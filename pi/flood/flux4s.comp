@@ -1,0 +1,40 @@
+#version 450
+layout(local_size_x = 16, local_size_y = 16) in;
+layout(std430, binding = 0) readonly buffer Terrain { float H[]; };
+layout(std430, binding = 1) readonly buffer PIn { vec2 P[]; };
+layout(std430, binding = 2) writeonly buffer Flux { vec4 F[]; };
+layout(push_constant) uniform PC { uint SZ; float k; float rain; } pc;
+
+// Strip-of-4 flux pass: 14 vec2 loads for 4 cells (vs 20 unshared) and a
+// quarter of the invocations. Vertical strips keep the 16 lanes of a
+// subgroup on adjacent x addresses. Dispatch with gy = SZ/64.
+void main() {
+    int SZ = int(pc.SZ);
+    int x = int(gl_GlobalInvocationID.x);
+    int y0 = int(gl_GlobalInvocationID.y) * 4;
+    if (x >= SZ || y0 >= SZ) return;
+    int xl = max(x - 1, 0), xr = min(x + 1, SZ - 1);
+    uint row = uint(SZ);
+
+    // Column of surface heights y0-1 .. y0+4 (clamped at both ends).
+    float s0 = P[uint(max(y0 - 1, 0)) * row + uint(x)].y;
+    vec2 pA = P[uint(y0)     * row + uint(x)];
+    vec2 pB = P[uint(y0 + 1) * row + uint(x)];
+    vec2 pC = P[uint(y0 + 2) * row + uint(x)];
+    vec2 pD = P[uint(y0 + 3) * row + uint(x)];
+    float s5 = P[uint(min(y0 + 4, SZ - 1)) * row + uint(x)].y;
+
+    for (int j = 0; j < 4; j++) {
+        int y = y0 + j;
+        vec2 p = (j == 0) ? pA : (j == 1) ? pB : (j == 2) ? pC : pD;
+        float sUp = (j == 0) ? s0 : ((j == 1) ? pA.y : (j == 2) ? pB.y : pC.y);
+        float sDn = (j == 3) ? s5 : ((j == 0) ? pB.y : (j == 1) ? pC.y : pD.y);
+        float fL = max(0.0, pc.k * (p.y - P[uint(y) * row + uint(xl)].y));
+        float fR = max(0.0, pc.k * (p.y - P[uint(y) * row + uint(xr)].y));
+        float fU = max(0.0, pc.k * (p.y - sUp));
+        float fD = max(0.0, pc.k * (p.y - sDn));
+        float tot = fL + fR + fU + fD;
+        float s = p.x / max(tot, max(p.x, 1e-20));
+        F[uint(y) * row + uint(x)] = vec4(fL, fR, fU, fD) * s;
+    }
+}

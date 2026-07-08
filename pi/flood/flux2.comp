@@ -1,0 +1,29 @@
+#version 450
+layout(local_size_x = 16, local_size_y = 16) in;
+layout(std430, binding = 0) readonly buffer Terrain { float H[]; };
+layout(std430, binding = 1) readonly buffer PIn { vec2 P[]; };
+layout(std430, binding = 2) writeonly buffer Flux { vec4 F[]; };
+layout(push_constant) uniform PC { uint SZ; float k; float rain; } pc;
+
+// Packed-state flux pass: P[i] = (water, surface = terrain + water), so the
+// 10 scalar loads of the split-buffer version become 5 vec2 loads. Physics
+// identical to flux.comp.
+void main() {
+    int SZ = int(pc.SZ);
+    int x = int(gl_GlobalInvocationID.x), y = int(gl_GlobalInvocationID.y);
+    if (x >= SZ || y >= SZ) return;
+    uint i = uint(y) * uint(SZ) + uint(x);
+    int xl = max(x - 1, 0), xr = min(x + 1, SZ - 1);
+    int yu = max(y - 1, 0), yd = min(y + 1, SZ - 1);
+    vec2 pc_i = P[i];
+    float hi = pc_i.y;
+    float fL = max(0.0, pc.k * (hi - P[uint(y) * uint(SZ) + uint(xl)].y));
+    float fR = max(0.0, pc.k * (hi - P[uint(y) * uint(SZ) + uint(xr)].y));
+    float fU = max(0.0, pc.k * (hi - P[uint(yu) * uint(SZ) + uint(x)].y));
+    float fD = max(0.0, pc.k * (hi - P[uint(yd) * uint(SZ) + uint(x)].y));
+    float tot = fL + fR + fU + fD;
+    float wi = pc_i.x;
+    float s = wi / max(tot, max(wi, 1e-20));
+    fL *= s; fR *= s; fU *= s; fD *= s;
+    F[i] = vec4(fL, fR, fU, fD);
+}
