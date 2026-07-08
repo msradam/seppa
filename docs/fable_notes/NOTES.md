@@ -347,7 +347,20 @@ strip-2: +59%). Shipped kernel `fused2s.comp`: 256^2 x 400 steps in
 conserved). Full sweep, repro commands, and bonbibi integration notes in
 `pi/flood/README.md`. Residual headroom: fused2s still walks the RA ladder
 (CSE'd neighbourhood loads); shared-tile or reload-for-registers trades
-are the next search space, via v3d_flood_opt.
+are the next search space.
+
+FSM lesson from this: the ORIGINAL flood FSM could never have found the
+win — every kept change (vec2 packing, fusion, strip dispatch) lived in
+the HOST CONTRACT, outside its shader-only action space. That is why the
+earlier flood-FSM session measured flat. Fixed by `v3d_flood2_opt.py`
+(serve with `--flood2`): implement takes {shader, height_shader, strip},
+making fusion and dispatch geometry legal FSM moves. `replay_flood2.py`
+steps the mounted app through the full cycle and the machine independently
+re-judges the kernel: baseline 1351 steps/s -> fused strip-2 verified
+(all three physics gates) -> 2116 steps/s -> keep; `best_flood.comp` is
+the FSM-persisted artifact. General rule for future targets: when a
+search plateaus, ask whether the winning move is expressible in the
+implement step's inputs before concluding there is no headroom.
 
 ## Flood stencil (bonbibi): the optimization playbook does not transfer, by measurement
 
