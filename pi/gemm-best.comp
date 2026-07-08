@@ -1,0 +1,63 @@
+// best: 13.42 GFLOP/s (SZ=512)
+#version 450
+layout(local_size_x = 16, local_size_y = 16) in;
+layout(std430, binding = 0) readonly buffer BufA { float A[]; };
+layout(std430, binding = 1) readonly buffer BufB { float B[]; };
+layout(std430, binding = 2) writeonly buffer BufC { float C[]; };
+layout(push_constant) uniform PC { uint SZ; } pc;
+
+const uint BM = 32u, BN = 32u, BK = 32u, TM = 2u, TN = 2u, BNH = 16u, BKQ = 8u;
+shared vec4 As[BM * BKQ];
+shared vec2 Bs[BK * BNH];
+
+// Same tiling as the 12.56 GFLOP/s best, but 4 accumulators instead of 16
+// partials. The 16-partial version fails v3dv register allocation at 2
+// threads and lands on the 'disable loop unrolling' strategy; freeing ~12
+// registers targets a compile at 4 QPU threads with default scheduling,
+// trading software ILP chains for hardware thread-level latency hiding.
+void main() {
+    uint SZ = pc.SZ;
+    uint tx = gl_LocalInvocationID.x, ty = gl_LocalInvocationID.y;
+    uint bx = gl_WorkGroupID.x, by = gl_WorkGroupID.y;
+    uint tid = ty * 16u + tx;
+    uint rowBase = by * BM + ty * TM;
+    uint colBase = bx * BN + tx * TN;
+    uint a4base0 = (ty * TM) * BKQ;
+    uint a4base1 = (ty * TM + 1u) * BKQ;
+    float c00 = 0., c01 = 0., c10 = 0., c11 = 0.;
+    for (uint k0 = 0u; k0 < SZ; k0 += BK) {
+        {
+            uint idx = tid;
+            uint r = idx / BKQ, c4 = idx % BKQ;
+            uint g = (by * BM + r) * SZ + k0 + c4 * 4u;
+            As[idx] = vec4(A[g], A[g+1u], A[g+2u], A[g+3u]);
+        }
+        for (uint e = 0u; e < 2u; e++) {
+            uint idx = tid + e * 256u;
+            uint r = idx / BNH, cp = idx % BNH;
+            uint gcol = bx * BN + cp * 2u;
+            Bs[r * BNH + cp] = vec2(B[(k0 + r) * SZ + gcol], B[(k0 + r) * SZ + gcol + 1u]);
+        }
+        barrier();
+        for (uint k = 0u; k < BK; k += 4u) {
+            uint kq = k >> 2u;
+            vec4 arow0 = As[a4base0 + kq];
+            vec4 arow1 = As[a4base1 + kq];
+            vec2 bp0 = Bs[k * BNH + tx];
+            vec2 bp1 = Bs[(k+1u) * BNH + tx];
+            vec2 bp2 = Bs[(k+2u) * BNH + tx];
+            vec2 bp3 = Bs[(k+3u) * BNH + tx];
+            vec4 b0 = vec4(bp0.x, bp1.x, bp2.x, bp3.x);
+            vec4 b1 = vec4(bp0.y, bp1.y, bp2.y, bp3.y);
+            c00 += dot(arow0, b0);
+            c01 += dot(arow0, b1);
+            c10 += dot(arow1, b0);
+            c11 += dot(arow1, b1);
+        }
+        barrier();
+    }
+    C[(rowBase + 0u) * SZ + colBase + 0u] = c00;
+    C[(rowBase + 0u) * SZ + colBase + 1u] = c01;
+    C[(rowBase + 1u) * SZ + colBase + 0u] = c10;
+    C[(rowBase + 1u) * SZ + colBase + 1u] = c11;
+}

@@ -292,6 +292,51 @@ downloaded via models/download-ggml-model.sh.
 Conclusion: whisper GPU is one upstream fix away, not blocked by V3D. The
 per-op foundation (256-cap, mm tiles, gates) is already in its tree.
 
+## Deliverable: pi/ is a self-contained deploy kit, proven end-to-end
+
+`pi/setup-llama-v3d.sh` takes a bare Pi 5 from clone to GPU llama.cpp:
+shallow-fetches the pinned commit (bb28c1fe246b), `git am`s the three
+patches, builds with `-DLLAMA_BUILD_UI=OFF` (the embedded server web UI
+needs a prebuilt bundle absent from the tree — the API works without it),
+and builds the standalone GEMM demo. Proven by running it in a fresh
+directory on the Pi: SETUP-EXIT=0, GEMM 13.42 GFLOP/s correct=yes,
+llama-bench tg32 = 5.54 ± 0.02, temp-0 "Paris" with the kit-built
+llama-completion. `pi/README.md` states the verified envelope. Caveat
+learned during the proof: benchmark numbers taken while another build
+saturates the cores read ~3x low (1.85 t/s) — always bench solo.
+
+## Upstream status (2026-07-07 lookup): nobody is fixing our bug; the known-good endpoint was a mirage
+
+- llama.cpp master (bec4772, July) still decodes garbage at -ngl 99 on
+  llvmpipe — the composition bug is alive upstream.
+- The open upstream reports with our GPU profile (int dot 0, no coopmat):
+  #20029 / #20465 bisect to aa6f918c (Scalar Flash Attention Refactor),
+  which postdates bb28c1f and is NOT in our tree — theirs is a different,
+  later regression in the same neglected path.
+- Mesa 26.0/26.1 relnotes contain no v3d compiler work: upgrading Mesa
+  will not fix the unbounded register-allocation compile.
+- The 871b0b7-was-good assumption does not hold for this bug: only 35
+  commits (2 Vulkan: snake fusion, IM2COL) separate it from bb28c1f, none
+  plausibly relevant, so the defect predates the range. The old "good"
+  evidence was TinyLlama + the 49-file patch set, a different model and
+  different shaders. Next discriminator (running): SmolLM2-360M (vanilla
+  llama arch) at -ngl 99 on llvmpipe — coherent means the bug is
+  arch-specific to granite/lfm2-style graphs; garbage means the
+  non-coopmat path is generically broken and old.
+
+## Flood stencil (bonbibi): the optimization playbook does not transfer, by measurement
+
+flux.comp/height.comp compile with ZERO fallback-ladder lines
+(MESA_SHADER_CACHE_DISABLE=true V3D_DEBUG=perf ./vkflood): they are too
+small to stress the register allocator, so the de-unroll family of wins
+has nothing to act on — which also explains why the earlier flood
+optimization session measured flat. Current: 256^2 grid, 400 steps in
+0.383 s (1045 steps/s, 1.51 GFLOP/s, mass conserved). The only real lever
+is TMU-op reduction (pack terrain+water into one vec2 buffer: flux drops
+10 loads to 5), which needs a vkflood.cpp buffer-layout change — not
+worth it, flood speed is not a Bonbibi bottleneck (its gaps are physics
+and data plumbing per its own README).
+
 ## Sonnet independent verification (2026-07-04): mostly confirmed, one real gap found
 
 Reproduced independently: `llama-bench -ngl 6` gives tg32 ≈ 5.5 t/s (matches
