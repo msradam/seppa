@@ -323,6 +323,16 @@ saturates the cores read ~3x low (1.85 t/s) — always bench solo.
   llama arch) at -ngl 99 on llvmpipe — coherent means the bug is
   arch-specific to granite/lfm2-style graphs; garbage means the
   non-coopmat path is generically broken and old.
+- VERDICT: garbage. SmolLM2-360M-Instruct Q8_0 (vanilla llama arch, the
+  most CI-exercised path) also decodes to garbage at -ngl 99 on llvmpipe
+  ("user user user assistant..."). The composition bug is generic to the
+  non-coopmat Vulkan path, model-agnostic, and predates our whole range.
+  Likely why it survives: CI runs per-op tests on llvmpipe, not
+  end-to-end generation, and real-GPU users are mostly on coopmat paths.
+  Decision: stop the archaeology; the evidence is packaged for upstream
+  in `upstream-report-draft.md` (llvmpipe two-command repro, three
+  architectures, both May and July commits, falsified-knob list). Not
+  posted anywhere — review and post it as an issue/comment on #20029.
 
 ## Flood stencil (bonbibi): the optimization playbook does not transfer, by measurement
 
