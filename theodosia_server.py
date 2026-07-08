@@ -35,6 +35,7 @@ def make_server(
     explore: bool = False,
     flood: bool = False,
     llama_mmv: bool = False,
+    flood2: bool = False,
 ):
     # Factory (not a built app) so each MCP session gets isolated state and
     # fork/reset stay enabled.
@@ -44,6 +45,12 @@ def make_server(
         import v3d_llama_mmv
 
         return mount(v3d_llama_mmv.build_llama_mmv_app, name=name)
+    if flood2:
+        # Flood stencil over the parameterized vkflood2 harness: the host
+        # contract (fused, strip) is part of the agent's action space.
+        import v3d_flood2_opt
+
+        return mount(v3d_flood2_opt.build_flood2_app, name=name)
     if flood:
         # Agent optimizes the two-shader flood sim under the physics gate.
         import v3d_flood_opt
@@ -83,6 +90,11 @@ def main() -> None:
         action="store_true",
         help="agent optimizes llama.cpp's mul_mat_vec.comp under the model-graph gate",
     )
+    ap.add_argument(
+        "--flood2",
+        action="store_true",
+        help="agent optimizes the flood stencil incl. host contract (fused/strip)",
+    )
     args = ap.parse_args()
 
     server = make_server(
@@ -90,6 +102,7 @@ def main() -> None:
         explore=args.explore,
         flood=args.flood,
         llama_mmv=args.llama_mmv,
+        flood2=args.flood2,
     )
     if args.http:
         server.run(transport="streamable-http", host=args.host, port=args.port)
