@@ -161,7 +161,7 @@ proposes GPU kernel and host-contract changes, and a finite-state
 machine, not the model, owns compilation, correctness verification,
 benchmarking, and the keep-or-revert verdict. The machine refuses
 out-of-order transitions, so a variant that fails verification can never
-reach a benchmark. Applied to the flood-simulation stencil of bonbibi,
+reach a benchmark. Applied to the flood-simulation stencil of Bonbibi,
 an offline flood-aware routing system for the Raspberry Pi 5, the
 agent-and-gate process produced a fused, strip-mined kernel that is
 1.59x faster at 256x256 (about 1,345 to about 2,140 simulation steps per
@@ -204,7 +204,7 @@ memory, a fixed subgroup width of 16, no usable fp16 arithmetic, and no
 cooperative-matrix hardware. It is also, for a workload that does not
 need the CPU, free.
 
-bonbibi, the motivating application, is an offline flood-aware
+Bonbibi, the motivating application, is an offline flood-aware
 accessible-routing system for exactly this board \[7\]. Its division of
 labor is deliberate: the GPU simulates surface flooding over real
 terrain with a weighted cellular-automata model (WCA2D \[1\]), while the
@@ -322,7 +322,7 @@ the threshold (1.3e-9 at 4,000 steps).
 <case-study-the-flood-stencil>
 === 4.1 The workload
 <the-workload>
-bonbibi's simulation is a two-pass stencil per time step: a flux pass
+Bonbibi's simulation is a two-pass stencil per time step: a flux pass
 computes limited inter-cell flows from water-surface-height differences,
 and a height pass applies net flow plus rainfall to each cell's depth.
 On the original harness this ran 400 steps at 256x256 in 0.383 s (about
@@ -385,7 +385,7 @@ glslangValidator -V fused2s.comp -o fused2s.spv
 STRIP=2 FUSED=1 FLUX_SPV=fused2s.spv ./vkflood2 256 400
 ```
 
-Integrating it into bonbibi is three host-side changes: the packed vec2
+Integrating it into Bonbibi is three host-side changes: the packed vec2
 state buffer, one pipeline and one dispatch per step, and a halved
 dispatch height (`pi/flood/README.md`).
 
@@ -459,7 +459,7 @@ baseline 1,346.8 and kept 2,105.3 steps/s.
 == 6. The point: concurrent CPU and GPU work
 <the-point-concurrent-cpu-and-gpu-work>
 The optimization exists to make a CPU-plus-GPU split worth having, so
-the last measurement is interference. bonbibi's deployment shape is: the
+the last measurement is interference. Bonbibi's deployment shape is: the
 GPU loops flood simulation while the CPU runs street routing and Granite
 4.0 1B decode (llama.cpp, `-ngl 0`, 4 threads; the GGUF reports 1.63 B
 parameters under llama.cpp's granite-3B architecture label, which is
@@ -474,7 +474,7 @@ weights in the GPU's host-pinned, write-combined memory even at
 the CPU reads that dominate decode. Hiding the device
 (`GGML_VK_VISIBLE_DEVICES=99`) moves decode from 9.40 ± 0.36 to 11.44 ±
 0.20 tokens/s: 22% from one environment variable, same binary, same
-flags (A/B at cool start, r=5). bonbibi's launch scripts already hid the
+flags (A/B at cool start, r=5). Bonbibi's launch scripts already hid the
 device, so the deployment always had this; an earlier revision of this
 study did not, and its CPU figures were correspondingly low. Every
 number below uses the corrected, deployment-matching configuration. The
@@ -603,7 +603,7 @@ sustained phase). Cool-throughout sustained measurements are not
 reliably attainable on this cooling, so the numbers above are
 steady-state, thermally governed figures rather than cold-silicon peaks.
 For the deployment question this paper asks, that is the right
-measurement: it is what bonbibi actually gets. The flood-alone
+measurement: it is what Bonbibi actually gets. The flood-alone
 measurements, which complete before heat accumulates, are thermally
 clean, and the earlier isolated measurements (Section 4) agree with
 them. The CPU-counterfactual phases behave the same way: every sustained
@@ -648,7 +648,7 @@ Mesa v3dv 25.0.7), one grid family, and speedups that shrink as the grid
 grows (1.18x at 1024x1024). The optimized kernel still compiles through
 part of the v3dv fallback ladder, so headroom likely remains. The
 concurrency measurement uses llama-bench decode as the CPU load and the
-raster router as the latency probe; bonbibi's street-graph CCH
+raster router as the latency probe; Bonbibi's street-graph CCH
 re-customization (about 14 ms per flood update on this board) was not
 separately measured under load. The CPU counterfactual was measured at
 256x256 only, where the roughly 2 MB working set is cache-resident and
@@ -662,14 +662,14 @@ established that per-op correctness does not compose into end-to-end
 correctness at full offload due to an upstream driver-independent
 llama.cpp Vulkan defect we isolated on llvmpipe, so GPU LLM inference on
 this board currently holds only for a small-offload envelope; that is
-why bonbibi keeps inference on the CPU and gives the GPU to physics.
+why Bonbibi keeps inference on the CPU and gives the GPU to physics.
 
 == 9. Reproducibility and availability
 <reproducibility-and-availability>
 Everything is in two repositories: seppa (harness, FSM definitions, MCP
 server, driver scripts, kernels, and the running notes file
 `docs/fable_notes/NOTES.md` with one entry per confirmed win and dead
-end) and bonbibi (the application). The flood kit is `pi/flood/`:
+end) and Bonbibi (the application). The flood kit is `pi/flood/`:
 kernels, parameterized harness `vkflood2.cpp`, the falsification-sweep
 variants, and `concurrency_bench.sh`. The FSM target is
 `v3d_flood2_opt.py`, served by `theodosia_server.py --http --flood2`\;
@@ -710,7 +710,7 @@ https:/\/github.com/DAGWorks-Inc/burr
 
 \[6\] Model Context Protocol. https:/\/modelcontextprotocol.io
 
-\[7\] bonbibi: offline, edge flood-aware accessible routing on a
+\[7\] Bonbibi: offline, edge flood-aware accessible routing on a
 Raspberry Pi 5. https:/\/github.com/msradam/bonbibi
 
 \[8\] llama.cpp. ggml-org. https:/\/github.com/ggml-org/llama.cpp
