@@ -1,0 +1,12 @@
+t=1783825294.159823347
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.881s  3.07 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1783825296.135930457
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.881s  3.07 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1783825298.113400511
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.880s  3.07 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)

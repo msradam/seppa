@@ -391,3 +391,41 @@ with `-fa 0` explicit on the CLI (not just the env var). `llama-cli` throws
 before calling this generally "usable," since `llama-cli` is the standard
 interactive entry point most people (and any future Bonbibi integration)
 would reach for first.
+
+## Machine-checked recreation over the wire (2026-07-11): keep verdict + gate refusal captured
+
+`drive_flood2_mcp.py http://<pi>:8000/mcp` (server: `theodosia_server.py
+--http --flood2`) drove the full cycle from the laptop through the MCP
+`step` tool: baseline 1346.8 steps/s (gates green) -> fused strip-2 as
+exp 1 -> verify green -> benchmark 2116.4 -> machine verdict keep (1.57x).
+Second cycle submitted the same kernel with rain injection doubled:
+compiles, verify_ok=false, and a `benchmark` request gets
+`{"error": "invalid_transition", "valid_next_actions": ["log_variant"]}` —
+the refusal, verbatim, is in `docs/paper/artifacts/`. Two repetitions agree
+(2105.3 first wire run, 2116 in-process 07-08). Gotcha: Theodosia's step
+tool returns "Step N: name ⊢ → next{json}" — parse from the first `{`, not
+the whole body.
+
+## Interference measured (2026-07-11): idle silicon costs 15% CPU, GPU keeps 52%, opt kernel wins more under load
+
+`pi/flood/concurrency_bench.sh` + `analyze_conc_bench.py` (raw logs in
+`docs/paper/artifacts/conc_bench/`): flood opt alone 2126.9±0.7 steps/s,
+orig alone 1348.2±1.6; Granite CPU decode (tg64, 4t) alone 9.5±0.2 t/s;
+concurrent: opt 1103.1±145.2 steps/s with decode 8.1±0.4, orig 599.5±81.2
+with decode 7.7±0.6; route.py 0.02s under all conditions. Findings: CPU
+keeps 85%, GPU keeps 52% (LPDDR contention is asymmetric, GPU is the
+victim); the optimization's edge GROWS under contention (1.58x -> 1.84x)
+and costs the CPU LESS — consistent with fusion removing flux-buffer DRAM
+traffic. Thermal honesty: sustained 4-thread decode engages the soft temp
+limit even alone (14/34 samples; concurrent 29/43, 31/45; peak 76.3C), so
+sustained numbers are steady-state thermally governed — that IS the
+deployment number. Ops gotcha: a background loop writing `> log` overwrote
+markers appended with `>>` (non-append fd position); truncate once with
+`: > log` and have the loop write `>> log`.
+
+## Paper: docs/paper/paper.md (2026-07-11)
+
+Short experimental-systems paper grounded entirely in repo artifacts +
+the two fresh runs above; every number carries its repro command; external
+citations verified to exist via web search. Transcripts and raw benchmark
+logs live in `docs/paper/artifacts/`.
