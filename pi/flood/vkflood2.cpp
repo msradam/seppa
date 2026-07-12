@@ -158,6 +158,11 @@ int main(int argc, char** argv){
                SZ,N,secs,22.0*(double)SZ*SZ*N/secs/1e9);
     }
 
+    if(const char* fp=getenv("DUMP_FULL")){  // full-resolution depth grid (SZ*SZ float32), for visualization
+        FILE* f=fopen(fp,"wb"); std::vector<float> w(SZ*SZ);
+        for(uint32_t i=0;i<SZ*SZ;i++) w[i]=gpuP[2*i];
+        fwrite(w.data(),4,SZ*SZ,f); fclose(f); printf("dumped %s (%ux%u float32)\n",fp,SZ,SZ);
+    }
     { FILE* f=fopen("/tmp/flood_depth.txt","w"); const uint32_t D=16, step=SZ/D;
       fprintf(f,"# flood depth grid %ux%u, each cell = %ux%u sim cells, value = water depth (m)\n",D,D,step,step);
       if(geo) fprintf(f,"# bbox lat %.4f..%.4f lon %.4f..%.4f  row0=north col0=west\n",la0,la1,lo0,lo1);
