@@ -446,3 +446,40 @@ derivation: matching GPU sim output caps decode at 6.7 t/s with guidance
 frozen during bursts. Caveat: 256^2 only (2 MB working set is
 cache-resident; CPU raw-speed edge may die on cache-spilling grids).
 Paper section 6.1; analyzer now glob-discovers conditions.
+
+## KleidiAI on the A76: benchmarked and rejected (2026-07-12)
+
+`cmake -B build-kleidi -DGGML_CPU_KLEIDIAI=ON -DGGML_VULKAN=OFF` at
+bb28c1f, config confirms kernels compiled in. Cool-start llama-bench
+(Granite 1B Q4_0, -t 4, r=5): pp128 83.42±2.11 / tg64 10.67±0.12 vs the
+native runtime-repack build's 87.84±0.10 / 11.34±0.16. Native aarch64
+repack (REPACK=1, DOTPROD=1 in system_info) wins by 5-6% on this
+dotprod-only core. Negative result; keep the stock path.
+
+## Win: +22% CPU decode by hiding the Vulkan device (2026-07-12)
+
+Same build-vulkan llama-bench, -ngl 0, cool starts, A/B:
+GPU visible tg64 = 9.40±0.36; GGML_VK_VISIBLE_DEVICES=99 tg64 =
+11.44±0.20. With a Vulkan device enumerated, llama.cpp puts CPU weights
+in Vulkan host-pinned (write-combined) memory even at -ngl 0 — fast for
+GPU transfers that never happen, slow for CPU reads on V3D. bonbibi's
+scripts already set the env (why its numbers were fine); the paper's
+interference study did NOT, so all its llama t/s were measured on the
+slow path — re-measured 2026-07-12 with the env in both bench scripts
+(conc_bench2 / cpu_flood_bench2). Rule: any CPU-only llama.cpp process
+on a box with an integrated GPU should hide the device. Untested
+alternative: an upstream fix so -ngl 0 skips host-buffer placement.
+
+## Interference study re-measured under the corrected env (2026-07-12)
+
+Both benches re-run with GGML_VK_VISIBLE_DEVICES=99 on every llama-bench
+call (deployment-matching; artifacts conc_bench2/ and cpu_flood_bench2/,
+old GPU-visible runs preserved). Corrected numbers: decode alone 11.5;
+GPU-concurrent (10.3 t/s, 711.9 steps/s) — CPU keeps 90%, GPU keeps 33%
+(faster decode pulls more LPDDR, contention shifts onto the GPU); opt
+kernel advantage under load grows to 2.09x (711.9 vs 340.1); CPU
+counterfactual: t3-alone 11.8 BEATS t4-alone 11.4 (memory-bound, 4th core
+is pure contention), partitioned (8.4, 680.6), oversubscribed (2.4,
+703.4). GPU split still dominates every CPU-only scheme: +23% decode,
++5% sim vs best partition. Paper section 6/6.1 updated; ratios from the
+old runs were directionally right but every absolute CPU number was low.

@@ -53,7 +53,7 @@ echo "== [2/6] llama decode alone (tg64, 5 reps, 4 threads, CPU only)"
 cooldown
 ( thermal_sampler "$OUT/thermal_llama_alone.log" ) &
 TSPID=$!
-"$BIN/llama-bench" -m "$M" -ngl 0 -t 4 -p 0 -n 64 -r 5 > "$OUT/llama_alone.log" 2>&1
+GGML_VK_VISIBLE_DEVICES=99 "$BIN/llama-bench" -m "$M" -ngl 0 -t 4 -p 0 -n 64 -r 5 > "$OUT/llama_alone.log" 2>&1
 kill "$TSPID" 2>/dev/null
 
 echo "== [3/6] router alone"
@@ -71,7 +71,7 @@ run_concurrent() { # $1 = kernel name (opt|orig)
     local pid=$!
     sleep 3
     echo "llama_start=$(stamp) $(therm)" >> "$floodlog"
-    "$BIN/llama-bench" -m "$M" -ngl 0 -t 4 -p 0 -n 64 -r 5 > "$llamalog" 2>&1
+    GGML_VK_VISIBLE_DEVICES=99 "$BIN/llama-bench" -m "$M" -ngl 0 -t 4 -p 0 -n 64 -r 5 > "$llamalog" 2>&1
     echo "llama_end=$(stamp) $(therm)" >> "$floodlog"
     kill "$pid" "$tspid" 2>/dev/null
     wait "$pid" 2>/dev/null

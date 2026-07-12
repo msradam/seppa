@@ -1,0 +1,31 @@
+t=1783863024.283606840
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.881s  3.07 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1783863026.260645264
+llama_start=1783863027.284739745 temp=temp=56.0'C throttled=throttled=0xe0000
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.965s  2.93 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1783863028.338767985
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=6.116s  0.94 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1783863034.605950352
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=6.092s  0.95 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1783863040.833651385
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=5.930s  0.97 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1783863046.905370863
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=5.392s  1.07 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1783863052.466993101
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=4.806s  1.20 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1783863058.522329560
+llama_end=1783863059.765775578 temp=temp=73.6'C throttled=throttled=0xe0008

@@ -1,0 +1,4 @@
+grid=256^2  steps=400  time=0.105s  5.51 GFLOP/s (cpu, 4 threads)
+correct(NMSE vs CPU)=yes  NMSE=1.46e-11
+mass: rain_injected=524288.0  water_total=524289.8  (conserved vs rain=yes)
+pooling: max depth=11.173 at (127,127)  basin_centre=(128,128)  (pools in basin=yes)

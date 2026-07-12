@@ -53,12 +53,12 @@ echo "== [3/5] decode alone (4 threads and 3 threads)"
 cooldown
 ( thermal_sampler "$OUT/thermal_llama_alone.log" ) &
 TSPID=$!
-"$BIN/llama-bench" -m "$M" -ngl 0 -t 4 -p 0 -n 64 -r 5 > "$OUT/llama_alone.log" 2>&1
+GGML_VK_VISIBLE_DEVICES=99 "$BIN/llama-bench" -m "$M" -ngl 0 -t 4 -p 0 -n 64 -r 5 > "$OUT/llama_alone.log" 2>&1
 kill "$TSPID" 2>/dev/null
 cooldown
 ( thermal_sampler "$OUT/thermal_llama_t3_alone.log" ) &
 TSPID=$!
-taskset -c 1-3 "$BIN/llama-bench" -m "$M" -ngl 0 -t 3 -p 0 -n 64 -r 5 > "$OUT/llama_t3_alone.log" 2>&1
+GGML_VK_VISIBLE_DEVICES=99 taskset -c 1-3 "$BIN/llama-bench" -m "$M" -ngl 0 -t 3 -p 0 -n 64 -r 5 > "$OUT/llama_t3_alone.log" 2>&1
 kill "$TSPID" 2>/dev/null
 
 run_concurrent() { # $1 tag, $2 flood threads, $3 flood cpuset, $4 llama threads, $5 llama cpuset
@@ -71,7 +71,7 @@ run_concurrent() { # $1 tag, $2 flood threads, $3 flood cpuset, $4 llama threads
     local pid=$!
     sleep 3
     echo "llama_start=$(stamp) $(therm)" >> "$floodlog"
-    taskset -c "$5" "$BIN/llama-bench" -m "$M" -ngl 0 -t "$4" -p 0 -n 64 -r 5 > "$llamalog" 2>&1
+    GGML_VK_VISIBLE_DEVICES=99 taskset -c "$5" "$BIN/llama-bench" -m "$M" -ngl 0 -t "$4" -p 0 -n 64 -r 5 > "$llamalog" 2>&1
     echo "llama_end=$(stamp) $(therm)" >> "$floodlog"
     kill "$pid" "$tspid" 2>/dev/null
     wait "$pid" 2>/dev/null
