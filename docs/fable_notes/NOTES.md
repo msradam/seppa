@@ -429,3 +429,20 @@ Short experimental-systems paper grounded entirely in repo artifacts +
 the two fresh runs above; every number carries its repro command; external
 citations verified to exist via web search. Transcripts and raw benchmark
 logs live in `docs/paper/artifacts/`.
+
+## CPU-only counterfactual (2026-07-12): the GPU loses the drag race and wins the deployment
+
+`pi/flood/cpuflood.cpp` (same WCA2D update, float, OpenMP; gates green at
+1t and 4t, NMSE 1.46e-11) + `pi/flood/cpu_flood_bench.sh` (raw logs in
+`docs/paper/artifacts/cpu_flood_bench/`). Alone: 992.5 / 1,980.9 / 3,859.8
+steps/s at 1/2/4 threads — four idle A76 cores BEAT the V3D (2,127).
+But with Granite decode running: oversubscribed (4t+4t) collapses decode
+78% to 2.1 t/s (token-synchronous workers straggle); partitioned (flood
+core 0, decode cores 1-3) reaches (7.0 t/s, 678 steps/s); decode-3t alone
+= decode-4t alone = 9.4 t/s, so the partition loss is memory contention,
+not core loss. GPU concurrent (8.1 t/s, 1,103 steps/s) dominates every
+CPU-only scheme: +16% decode, +63% sim vs the best one. Time-slicing
+derivation: matching GPU sim output caps decode at 6.7 t/s with guidance
+frozen during bursts. Caveat: 256^2 only (2 MB working set is
+cache-resident; CPU raw-speed edge may die on cache-spilling grids).
+Paper section 6.1; analyzer now glob-discovers conditions.

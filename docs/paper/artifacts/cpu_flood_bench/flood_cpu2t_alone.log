@@ -1,0 +1,6 @@
+t=1783830350.860377074
+grid=256^2  steps=4000  time=2.019s  2.86 GFLOP/s (cpu sim mode, 2 threads)
+t=1783830352.882378406
+grid=256^2  steps=4000  time=2.021s  2.85 GFLOP/s (cpu sim mode, 2 threads)
+t=1783830354.906306479
+grid=256^2  steps=4000  time=2.018s  2.86 GFLOP/s (cpu sim mode, 2 threads)

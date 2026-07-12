@@ -6,6 +6,7 @@ For concurrent flood logs, only runs that start after llama_start and finish
 before llama_end count as "under CPU load"; edge runs are discarded.
 """
 
+import glob
 import re
 import statistics
 import sys
@@ -55,21 +56,21 @@ def report(label, mean, sd, n, unit):
     print(f"{label:42s} {mean:8.1f} ± {sd:5.1f} {unit}  (n={n})")
 
 
-for kernel in ("opt", "orig"):
-    alone = flood_runs(f"{DIR}/flood_{kernel}_alone.log")
-    report(f"flood {kernel} alone", *sps([t for _, t in alone]), "steps/s")
+for path in sorted(glob.glob(f"{DIR}/flood_*_alone.log")):
+    tag = path.split("/")[-1][len("flood_") : -len("_alone.log")]
+    alone = flood_runs(path)
+    if alone:
+        report(f"flood {tag} alone", *sps([t for _, t in alone]), "steps/s")
 
-    conc_path = f"{DIR}/flood_{kernel}_conc.log"
-    a, b = llama_window(conc_path)
-    inside = [t for s, t in flood_runs(conc_path) if a and s >= a and s + t <= b]
+for path in sorted(glob.glob(f"{DIR}/flood_*_conc.log")):
+    tag = path.split("/")[-1][len("flood_") : -len("_conc.log")]
+    a, b = llama_window(path)
+    inside = [t for s, t in flood_runs(path) if a and s >= a and s + t <= b]
     if inside:
-        report(f"flood {kernel} under CPU decode", *sps(inside), "steps/s")
+        report(f"flood {tag} under CPU decode", *sps(inside), "steps/s")
 
-for name, path in (
-    ("llama alone", f"{DIR}/llama_alone.log"),
-    ("llama vs flood opt", f"{DIR}/llama_vs_opt.log"),
-    ("llama vs flood orig", f"{DIR}/llama_vs_orig.log"),
-):
+for path in sorted(glob.glob(f"{DIR}/llama_*.log")):
+    name = path.split("/")[-1][: -len(".log")].replace("_", " ")
     mean, sd = llama_tps(path)
     if mean is not None:
         report(name, mean, sd, 5, "t/s   ")
@@ -83,8 +84,6 @@ for name in ("route_alone", "route_conc"):
         pass
 
 print("\nthermal validity (max temp / samples with throttle ACTIVE):")
-import glob  # noqa: E402
-
 for path in sorted(glob.glob(f"{DIR}/thermal_*.log")):
     temps, active = [], 0
     for line in open(path):

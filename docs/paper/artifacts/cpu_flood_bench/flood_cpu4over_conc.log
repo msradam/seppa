@@ -1,0 +1,57 @@
+t=1783830474.207214111
+grid=256^2  steps=4000  time=1.052s  5.48 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830475.263010611
+grid=256^2  steps=4000  time=1.039s  5.55 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830476.305304684
+llama_start=1783830477.213360573 temp=temp=66.4'C throttled=throttled=0xe0000
+grid=256^2  steps=4000  time=1.605s  3.59 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830477.914210146
+grid=256^2  steps=4000  time=6.958s  0.83 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830484.877342438
+grid=256^2  steps=4000  time=6.624s  0.87 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830491.505383101
+grid=256^2  steps=4000  time=6.474s  0.89 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830497.983549931
+grid=256^2  steps=4000  time=6.498s  0.89 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830504.486844519
+grid=256^2  steps=4000  time=6.202s  0.93 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830510.692360238
+grid=256^2  steps=4000  time=6.534s  0.88 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830517.229888345
+grid=256^2  steps=4000  time=6.583s  0.88 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830523.816717656
+grid=256^2  steps=4000  time=6.984s  0.83 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830530.804692096
+grid=256^2  steps=4000  time=7.603s  0.76 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830538.412626055
+grid=256^2  steps=4000  time=4.796s  1.20 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830543.217537830
+grid=256^2  steps=4000  time=2.624s  2.20 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830545.857449346
+grid=256^2  steps=4000  time=3.167s  1.82 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830549.036086456
+grid=256^2  steps=4000  time=7.141s  0.81 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830556.181857600
+grid=256^2  steps=4000  time=7.661s  0.75 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830563.847502114
+grid=256^2  steps=4000  time=7.560s  0.76 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830571.412080702
+grid=256^2  steps=4000  time=7.508s  0.77 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830578.925312123
+grid=256^2  steps=4000  time=5.719s  1.01 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830584.653370768
+grid=256^2  steps=4000  time=2.786s  2.07 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830587.461612933
+grid=256^2  steps=4000  time=5.578s  1.03 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830593.050603078
+grid=256^2  steps=4000  time=7.786s  0.74 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830600.841016036
+grid=256^2  steps=4000  time=5.882s  0.98 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830606.733533384
+grid=256^2  steps=4000  time=6.814s  0.85 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830613.551442732
+grid=256^2  steps=4000  time=7.473s  0.77 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830621.028146283
+grid=256^2  steps=4000  time=7.024s  0.82 GFLOP/s (cpu sim mode, 4 threads)
+t=1783830628.055789094
+llama_end=1783830632.017473665 temp=temp=74.1'C throttled=throttled=0xe0008

@@ -1,0 +1,7 @@
+ggml_vulkan: Found 1 Vulkan devices:
+ggml_vulkan: 0 = V3D 7.1.10.2 (V3DV Mesa) | uma: 1 | fp16: 0 | bf16: 0 | warp size: 16 | shared memory: 16384 | int dot: 0 | matrix cores: none
+| model                          |       size |     params | backend    | ngl | threads |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | --: | ------: | --------------: | -------------------: |
+| granite 3B Q4_0                | 926.41 MiB |     1.63 B | Vulkan     |   0 |       3 |            tg64 |          6.95 ± 0.13 |
+
+build: 57998d5 (39)

@@ -182,8 +182,14 @@ its decode rate (9.5 to 8.1 tokens/s) and buys a continuous 1,100
 steps/s simulation; the GPU, sharing one LPDDR memory system with the
 CPU, retains 52% of its solo throughput. The kernel optimization matters
 more under contention, not less: its advantage over the original kernel
-grows from 1.58x alone to 1.84x concurrent, at lower CPU cost. All
-numbers in this paper carry their exact reproduction commands.
+grows from 1.58x alone to 1.84x concurrent, at lower CPU cost. A
+gate-verified CPU-only counterfactual (the same update in OpenMP)
+sharpens the claim: four idle cores outrun the GPU on this stencil, but
+with decode running, the best CPU-only scheme reaches 7.0 tokens/s with
+678 steps/s while the GPU-concurrent split delivers 8.1 and 1,103,
+dominating partitioned, oversubscribed, and time-sliced alternatives on
+both axes. All numbers in this paper carry their exact reproduction
+commands.
 
 == 1. Introduction
 <introduction>
@@ -245,7 +251,9 @@ Contributions:
   that fails the physics gate (Section 5).
 + An interference measurement of the target deployment: the optimized
   GPU flood loop and CPU LLM decode running concurrently, quantifying
-  what "leveraging idle silicon" costs each side (Section 6).
+  what "leveraging idle silicon" costs each side, and a gate-verified
+  CPU-only counterfactual (sequential, partitioned, and oversubscribed)
+  that the GPU split dominates on both axes (Section 6).
 
 == 2. Related work
 <related-work>
@@ -504,6 +512,66 @@ lose when bandwidth is contended and less pressure exerted on the CPU's
 traffic. The optimized kernel is strictly better on both axes of the
 deployment.
 
+=== 6.1 The CPU-only counterfactual
+<the-cpu-only-counterfactual>
+Concurrency is only worth defending against the alternative: running the
+flood on the CPU too. `pi/flood/cpuflood.cpp` is the same WCA2D update
+in float with OpenMP row parallelism, verified by the same three physics
+gates against the same double-precision reference (NMSE 1.46e-11, mass
+conserved, pools in basin, at 1 and 4 threads).
+`pi/flood/cpu_flood_bench.sh` measures it alone and sharing the four
+cores with decode two ways: oversubscribed (4 flood threads and 4 decode
+threads competing for 4 cores) and partitioned (flood pinned to core 0,
+decode pinned to cores 1 to 3). Same cooldown gates and thermal
+sampling; raw logs in `docs/paper/artifacts/cpu_flood_bench/`.
+
+#figure(
+  align(center)[#table(
+    columns: (33.33%, 33.33%, 33.33%),
+    align: (auto,auto,auto,),
+    table.header([Condition], [Flood (steps/s)], [CPU decode (t/s)],),
+    table.hline(),
+    [CPU flood alone, 1 / 2 / 4 threads], [992.5 / 1,980.9 /
+    3,859.8], [],
+    [Decode alone, 3 threads (pinned)], [], [9.4 ± 0.4],
+    [Partitioned: flood 1t + decode 3t], [678.4 ± 63.3 (n=7)], [7.0 ±
+    0.1],
+    [Oversubscribed: flood 4t + decode 4t], [703.3 ± 284.4 (n=24)], [2.1
+    ± 0.2],
+    [GPU concurrent, optimized (from above)], [1,103.1 ± 145.2], [8.1 ±
+    0.4],
+  )]
+  , kind: table
+  )
+
+The first row reframes the whole exercise: four idle A76 cores run this
+stencil at 3,860 steps/s (5.5 GFLOP/s, near-linear thread scaling),
+faster than the V3D's 2,127. On raw kernel speed the GPU loses to its
+own CPU. The GPU's value is not that it is a faster engine; it is that
+it is an additional engine whose capacity does not come out of the
+inference budget.
+
+Because idle cores do not exist in the deployment. The moment decode
+runs, every CPU-only scheme pays steeply. Oversubscription is
+catastrophic: decode collapses 78% to 2.1 t/s, because llama.cpp's
+worker threads synchronize every token, and whenever any one of them
+loses its core to a flood thread, all four stall. Partitioning is the
+best CPU-only configuration and reaches (7.0 t/s, 678 steps/s); note
+that decode on 3 pinned cores alone matches 4-core decode (9.4 t/s both,
+decode is memory-bound, not core-bound), so its drop to 7.0 under
+partition is pure memory contention from one flood thread. Time-slicing,
+derivable from the alone rates, is worse on both axes than it looks:
+matching the GPU's 1,103 steps/s average requires 28.6% of the time
+flooding, which caps average decode at 6.7 t/s and freezes guidance
+output entirely during each flood burst.
+
+Against the best CPU-only alternative, the GPU-concurrent split delivers
+16% more decode and 63% more simulation, with no scheme it does not
+dominate. That is the inactive-silicon claim in its correct, measured
+form: the GPU is slower than the CPU it sits next to, and the system is
+still strictly better for using it, because the CPU's cycles are already
+spoken for.
+
 One honesty note on thermals. The 1 Hz traces show that sustained
 4-thread decode engages the firmware's soft temperature limit on this
 passively cooled board even with no GPU work at all (14 of 34 samples
@@ -515,11 +583,14 @@ cold-silicon peaks. For the deployment question this paper asks, that is
 the right measurement: it is what bonbibi actually gets. The flood-alone
 measurements, which complete before heat accumulates, are thermally
 clean, and the earlier isolated measurements (Section 4) agree with
-them. Reproduction:
+them. The CPU-counterfactual phases behave the same way: every sustained
+condition throttles, including 3-thread decode alone. Reproduction:
 
 ```
 OUT=/tmp/conc_bench bash concurrency_bench.sh
+OUT=/tmp/cpu_flood_bench bash cpu_flood_bench.sh
 python3 analyze_conc_bench.py /tmp/conc_bench 4000
+python3 analyze_conc_bench.py /tmp/cpu_flood_bench 4000
 ```
 
 == 7. What transfers and what does not
@@ -556,7 +627,10 @@ part of the v3dv fallback ladder, so headroom likely remains. The
 concurrency measurement uses llama-bench decode as the CPU load and the
 raster router as the latency probe; bonbibi's street-graph CCH
 re-customization (about 14 ms per flood update on this board) was not
-separately measured under load. The LLM agent's proposals were not
+separately measured under load. The CPU counterfactual was measured at
+256x256 only, where the roughly 2 MB working set is cache-resident and
+thread scaling is near-linear; the CPU's raw-speed advantage may not
+survive grids that spill the cache. The LLM agent's proposals were not
 blind: the fused strip-2 kernel submitted in Section 5's reproduction
 was discovered in Section 4's hand-driven sweep, so the MCP run
 demonstrates machine verification and verdict, not de novo discovery.
