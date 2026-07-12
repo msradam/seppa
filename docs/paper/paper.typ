@@ -544,26 +544,25 @@ sampling; raw logs in `docs/paper/artifacts/cpu_flood_bench/`.
   , kind: table
   )
 
-The first row reframes the whole exercise: four idle A76 cores run this
-stencil at 3,860 steps/s (5.5 GFLOP/s, near-linear thread scaling),
-faster than the V3D's 2,127. On raw kernel speed the GPU loses to its
-own CPU. The GPU's value is not that it is a faster engine; it is that
-it is an additional engine whose capacity does not come out of the
-inference budget.
-
-Because idle cores do not exist in the deployment. The moment decode
-runs, every CPU-only scheme pays steeply. Oversubscription is
-catastrophic: decode collapses 78% to 2.1 t/s, because llama.cpp's
-worker threads synchronize every token, and whenever any one of them
-loses its core to a flood thread, all four stall. Partitioning is the
-best CPU-only configuration and reaches (7.0 t/s, 678 steps/s); note
-that decode on 3 pinned cores alone matches 4-core decode (9.4 t/s both,
-decode is memory-bound, not core-bound), so its drop to 7.0 under
-partition is pure memory contention from one flood thread. Time-slicing,
-derivable from the alone rates, is worse on both axes than it looks:
-matching the GPU's 1,103 steps/s average requires 28.6% of the time
-flooding, which caps average decode at 6.7 t/s and freezes guidance
-output entirely during each flood burst.
+The first row answers the objection a skeptical reader should raise:
+four idle A76 cores run this stencil at 3,860 steps/s (5.5 GFLOP/s,
+near-linear thread scaling), faster than the V3D's 2,127, so why involve
+the GPU at all? Because the deployment requirement is a real-time flood
+simulation running at the same time as the language query, and idle
+cores do not exist in that regime. The GPU is not a faster engine; it is
+an additional one whose capacity does not come out of the inference
+budget. The moment decode runs, every CPU-only scheme pays steeply.
+Oversubscription is catastrophic: decode collapses 78% to 2.1 t/s,
+because llama.cpp's worker threads synchronize every token, and whenever
+any one of them loses its core to a flood thread, all four stall.
+Partitioning is the best CPU-only configuration and reaches (7.0 t/s,
+678 steps/s); note that decode on 3 pinned cores alone matches 4-core
+decode (9.4 t/s both, decode is memory-bound, not core-bound), so its
+drop to 7.0 under partition is pure memory contention from one flood
+thread. Time-slicing, derivable from the alone rates, is worse on both
+axes than it looks: matching the GPU's 1,103 steps/s average requires
+28.6% of the time flooding, which caps average decode at 6.7 t/s and
+freezes guidance output entirely during each flood burst.
 
 Against the best CPU-only alternative, the GPU-concurrent split delivers
 16% more decode and 63% more simulation, with no scheme it does not
