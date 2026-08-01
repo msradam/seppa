@@ -1,4 +1,4 @@
-# Optimizing for Idle Silicon: Correctness-Gated, LLM-Driven Kernel Optimization on the Raspberry Pi 5's Integrated GPU
+# SEPPA: Correctness-Gated, LLM-Driven Kernel Optimization on the Raspberry Pi 5's Integrated GPU
 
 Adam Munawar Rahman
 New York University. Code: github.com/msradam/seppa, github.com/msradam/bonbibi
@@ -175,10 +175,6 @@ Bonbibi, the flood-guidance application, is a separately packaged competition en
 ## 10. Reproducibility and availability
 
 Everything is in two repositories: seppa (harness, FSM definitions, MCP server, driver scripts, kernels, and the running notes file `docs/fable_notes/NOTES.md` with one entry per confirmed win and dead end) and Bonbibi (the application). The flood kit is `pi/flood/`: kernels, parameterized harness `vkflood2.cpp`, the falsification-sweep variants, and `concurrency_bench.sh`. The FSM target is `v3d_flood2_opt.py`, served by `theodosia_server.py --http --flood2`; `drive_flood2_mcp.py` reproduces Section 5 against that endpoint, and `replay_flood2.py` does the same in-process on the Pi. Raw logs for Section 6 are produced by `concurrency_bench.sh` into a directory of plain-text files, from which every number in the table derives.
-
-## 11. AI involvement
-
-The optimization agent in this work is a large language model (Anthropic Claude, Fable 5 for the experiments reported here) operating through Seppa's MCP interface; that is the system under study, not an authorship aside. The same class of model assisted in drafting this paper's text. All measurements were produced by the deterministic harness described above, and every kept kernel passed machine-owned verification gates that the model could not bypass.
 
 ## References
 

@@ -1,26 +1,7 @@
-// Seppa paper, two-column IEEE-style (typst). Build: see Makefile note in SUBMISSION_PLAN.md
-#set page(paper: "us-letter", margin: (x: 0.68in, y: 0.75in), columns: 2)
-#set columns(gutter: 0.24in)
-#set text(size: 9.5pt)
-#set par(justify: true, leading: 0.55em)
-#show heading.where(level: 1): it => block(above: 0.95em, below: 0.5em, text(size: 10.8pt, it))
-#show heading.where(level: 2): it => block(above: 0.85em, below: 0.45em, text(size: 9.8pt, it))
-#show table: set text(size: 7.8pt)
-#set table(inset: 3.5pt)
-#show raw.where(block: true): it => block(above: 0.6em, below: 0.6em, text(size: 7.3pt, it))
-#show table: set block(above: 0.7em, below: 0.7em)
-
-#place(top + center, scope: "parent", float: true, clearance: 1.6em)[
-  #text(size: 15.5pt, weight: "bold")[Optimizing for Idle Silicon: Correctness-Gated, LLM-Driven Kernel Optimization on the Raspberry Pi 5's Integrated GPU]
-  #v(0.7em)
-  #text(size: 10.5pt)[Adam Munawar Rahman]\
-  #text(size: 9.5pt)[New York University Tandon School of Engineering \u{2022} github.com/msradam/seppa \u{2022} github.com/msradam/bonbibi]
-]
-
-
-== Abstract
-<abstract>
-Single-board computers ship with integrated GPUs that most edge AI
+#import "@preview/charged-ieee:0.1.4": ieee
+#show: ieee.with(
+  title: [SEPPA: Correctness-Gated, LLM-Driven Kernel Optimization on the Raspberry Pi 5's Integrated GPU],
+  abstract: [Single-board computers ship with integrated GPUs that most edge AI
 workloads leave idle. We present Seppa, a kernel-optimization harness in
 which a large language model proposes GPU kernel and host-contract
 changes while a finite-state machine, not the model, owns compilation,
@@ -41,9 +22,19 @@ mass-violating kernel. Under concurrent CPU inference the kernel's
 advantage grows to 2.09x, and the resulting deployment (10.3 tokens/s
 decode alongside 712 simulation steps/s) dominates partitioned,
 oversubscribed, and time-sliced CPU-only alternatives on both axes.
-Every number carries its exact reproduction command.
+Every number carries its exact reproduction command.],
+  authors: ((
+    name: "Adam Munawar Rahman",
+    organization: [New York University],
+    location: [New York, NY, USA],
+    email: "msr541@nyu.edu",
+  ),),
+  index-terms: ("GPU kernel optimization", "LLM agents", "correctness verification", "edge computing", "Vulkan"),
+)
+#show table: set text(size: 0.82em)
+#show raw.where(block: true): set text(size: 0.78em)
 
-== 1. Introduction
+= Introduction
 <introduction>
 A Raspberry Pi 5 running a quantized language model uses its four
 Cortex-A76 cores and leaves its VideoCore VII (V3D) GPU idle. That GPU
@@ -90,24 +81,24 @@ Contributions:
 
 + A measured account of optimizing a real WCA2D flood stencil for V3D
   under three physics gates, reaching 1.59x at 256x256, including the
-  falsified hypotheses (Section 4).
+  falsified hypotheses (Section IV).
 + An action-space lesson for LLM-driven kernel optimization: the first
   search plateaued at zero improvement not because the kernel was at its
   limit but because every winning change (buffer packing, fusion,
   dispatch geometry) lived in the host contract, outside the shader-only
   action space the machine exposed. Making the host contract part of the
-  `implement` step's inputs recovered the full speedup (Section 4.3).
+  `implement` step's inputs recovered the full speedup (Section IV-C).
 + A machine-checked reproduction: the FSM, driven over MCP,
   independently re-derives the result from its own baseline and issues
   its own keep verdict, and demonstrably refuses to benchmark a kernel
-  that fails the physics gate (Section 5).
+  that fails the physics gate (Section V).
 + An interference measurement of the target deployment: the optimized
   GPU flood loop and CPU LLM decode running concurrently, quantifying
   what "leveraging idle silicon" costs each side, and a gate-verified
   CPU-only counterfactual (sequential, partitioned, and oversubscribed)
-  that the GPU split dominates on both axes (Section 6).
+  that the GPU split dominates on both axes (Section VI).
 
-== 2. Related work
+= Related work
 <related-work>
 LLM-driven kernel generation is measured by KernelBench \[3\], whose
 fast\_p metric gates speedup claims on functional correctness by
@@ -145,7 +136,7 @@ evolutionary searches and credit the evaluator, not the model, with the
 reliability of the results. Seppa shares that conviction and differs in
 target and mechanism: a hostile, sparsely documented embedded GPU rather
 than a well-modeled datacenter part, and an action space that includes
-the host contract, which Section 4.3 shows is where the wins were.
+the host contract, which Section IV-C shows is where the wins were.
 
 The application side draws on established components: WCA2D \[1\] for
 reduced-complexity flood modeling (originally motivated by GPU
@@ -153,7 +144,7 @@ parallelism), Customizable Contraction Hierarchies \[2\] for reroutable
 street routing with millisecond re-customization, and llama.cpp \[8\]
 for CPU inference. The V3D driver stack is Mesa's v3dv \[10\].
 
-== 3. Seppa: the machine owns the gate
+= Seppa: the machine owns the gate
 <seppa-the-machine-owns-the-gate>
 Seppa is an AutoKernel-style optimization loop restructured as a Burr
 finite-state machine and served over MCP by a wrapper (Theodosia)
@@ -190,9 +181,9 @@ pooling inside the terrain basin. The benchmark metric is simulation
 steps per second on the same run. In practice verified NMSE is far below
 the threshold (1.3e-9 at 4,000 steps).
 
-== 4. Case study: the flood stencil
+= Case study: the flood stencil
 <case-study-the-flood-stencil>
-=== 4.1 The workload
+== The workload
 <the-workload>
 Bonbibi's simulation is a two-pass stencil per time step: a flux pass
 computes limited inter-cell flows from water-surface-height differences,
@@ -205,7 +196,7 @@ this same GPU (removing source-level unrolling to rescue the compiler's
 register allocation, worth +28% on matrix-vector decode there) had
 nothing to act on here. New target, new bound.
 
-=== 4.2 Falsification sweep
+== Falsification sweep
 <falsification-sweep>
 Rather than guess the bottleneck, we bought each hypothesis a variant
 and let the gate-and-benchmark loop price it. All variants passed all
@@ -261,31 +252,31 @@ Integrating it into Bonbibi is three host-side changes: the packed vec2
 state buffer, one pipeline and one dispatch per step, and a halved
 dispatch height (`pi/flood/README.md`).
 
-=== 4.3 The false plateau was an action-space limit
+== The false plateau was an action-space limit
 <the-false-plateau-was-an-action-space-limit>
 An earlier Seppa session pointed the FSM at this same stencil and
 measured flat: no variant beat the baseline, and the session concluded
 there was no headroom. That conclusion was wrong, and the reason matters
 for anyone building an LLM-driven optimizer. The machine's `implement`
 step accepted only shader source text under a fixed host program. Every
-change that won in Section 4.2 lives outside that space: vec2 packing is
-a buffer-layout change, fusion deletes a pipeline and a barrier from the
-host loop, and strip-mining changes the dispatch geometry. The search
-was sound and its result was correct for the space it was allowed to
-search.
+change that won in Section IV-B lives outside that space: vec2 packing
+is a buffer-layout change, fusion deletes a pipeline and a barrier from
+the host loop, and strip-mining changes the dispatch geometry. The
+search was sound and its result was correct for the space it was allowed
+to search.
 
 The fix is `v3d_flood2_opt.py`: `implement` now takes
 `{shader, height_shader, strip}`, where an empty height shader means a
 fused single-dispatch step and `strip` sets cells per invocation and the
 dispatch shape. Fusion and dispatch geometry became legal FSM moves
 rather than out-of-band build decisions, and the machine found and kept
-the fused strip-2 kernel from its own baseline (Section 5). The general
+the fused strip-2 kernel from its own baseline (Section V). The general
 rule we take from this: when a correctness-gated search plateaus, ask
 whether the winning move is expressible in the action space before
 concluding the target is exhausted. A plateau is evidence about the
 search space, not only about the hardware.
 
-== 5. Machine-checked reproduction over MCP
+= Machine-checked reproduction over MCP
 <machine-checked-reproduction-over-mcp>
 The optimization claim is only as good as its reproduction path, so the
 reproduction is executed by the machine, not narrated by the author.
@@ -328,7 +319,7 @@ Two independent repetitions agree: an in-process run on the Pi
 steps/s, and a first over-the-wire run earlier on 2026-07-11 measured
 baseline 1,346.8 and kept 2,105.3 steps/s.
 
-== 6. The point: concurrent CPU and GPU work
+= The point: concurrent CPU and GPU work
 <the-point-concurrent-cpu-and-gpu-work>
 The optimization exists to make a CPU-plus-GPU split worth having, so
 the last measurement is interference. Bonbibi's deployment shape is: the
@@ -404,7 +395,7 @@ simulation step means less to lose when bandwidth is contended. Under
 deployment conditions, the optimized kernel is the difference between a
 usable co-processor and a marginal one.
 
-=== 6.1 The CPU-only counterfactual
+== The CPU-only counterfactual
 <the-cpu-only-counterfactual>
 Concurrency is only worth defending against the alternative: running the
 flood on the CPU too. `pi/flood/cpuflood.cpp` is the same WCA2D update
@@ -477,7 +468,7 @@ steady-state, thermally governed figures rather than cold-silicon peaks.
 For the deployment question this paper asks, that is the right
 measurement: it is what Bonbibi actually gets. The flood-alone
 measurements, which complete before heat accumulates, are thermally
-clean, and the earlier isolated measurements (Section 4) agree with
+clean, and the earlier isolated measurements (Section IV) agree with
 them. The CPU-counterfactual phases behave the same way: every sustained
 condition throttles at least briefly. Reproduction:
 
@@ -488,7 +479,7 @@ python3 analyze_conc_bench.py /tmp/conc_bench 4000
 python3 analyze_conc_bench.py /tmp/cpu_flood_bench 4000
 ```
 
-== 7. What transfers and what does not
+= What transfers and what does not
 <what-transfers-and-what-does-not>
 Three V3D findings from this and companion targets in the same harness,
 offered as portable heuristics for this class of GPU:
@@ -513,7 +504,7 @@ flood stencil because its shaders never stressed the allocator. The
 harness's value is exactly that it prices each intuition on each target
 instead of letting the previous target's lesson ossify into doctrine.
 
-== 8. Limitations
+= Limitations
 <limitations>
 The performance envelope is specific: one board (Pi 5, V3D 7.1.10.2,
 Mesa v3dv 25.0.7), one grid family, and speedups that shrink as the grid
@@ -526,8 +517,8 @@ separately measured under load. The CPU counterfactual was measured at
 256x256 only, where the roughly 2 MB working set is cache-resident and
 thread scaling is near-linear; the CPU's raw-speed advantage may not
 survive grids that spill the cache. The LLM agent's proposals were not
-blind: the fused strip-2 kernel submitted in Section 5's reproduction
-was discovered in Section 4's hand-driven sweep, so the MCP run
+blind: the fused strip-2 kernel submitted in Section V's reproduction
+was discovered in Section IV's hand-driven sweep, so the MCP run
 demonstrates machine verification and verdict, not de novo discovery.
 And one honest scope note: the same harness's llama.cpp work on this GPU
 established that per-op correctness does not compose into end-to-end
@@ -536,7 +527,7 @@ llama.cpp Vulkan defect we isolated on llvmpipe, so GPU LLM inference on
 this board currently holds only for a small-offload envelope; that is
 why Bonbibi keeps inference on the CPU and gives the GPU to physics.
 
-== 9. Relationship to the companion application
+= Relationship to the companion application
 <relationship-to-the-companion-application>
 Bonbibi, the flood-guidance application, is a separately packaged
 competition entry (Arm AI Optimization Challenge, Physical AI track)
@@ -552,7 +543,7 @@ submission. The dual use of one project for the course deliverable and
 the competition follows the project advisor's guidance to delineate the
 work done beyond the hackathon.
 
-== 10. Reproducibility and availability
+= Reproducibility and availability
 <reproducibility-and-availability>
 Everything is in two repositories: seppa (harness, FSM definitions, MCP
 server, driver scripts, kernels, and the running notes file
@@ -561,24 +552,13 @@ end) and Bonbibi (the application). The flood kit is `pi/flood/`:
 kernels, parameterized harness `vkflood2.cpp`, the falsification-sweep
 variants, and `concurrency_bench.sh`. The FSM target is
 `v3d_flood2_opt.py`, served by `theodosia_server.py --http --flood2`\;
-`drive_flood2_mcp.py` reproduces Section 5 against that endpoint, and
+`drive_flood2_mcp.py` reproduces Section V against that endpoint, and
 `replay_flood2.py` does the same in-process on the Pi. Raw logs for
-Section 6 are produced by `concurrency_bench.sh` into a directory of
+Section VI are produced by `concurrency_bench.sh` into a directory of
 plain-text files, from which every number in the table derives.
 
-== 11. AI involvement
-<ai-involvement>
-The optimization agent in this work is a large language model (Anthropic
-Claude, Fable 5 for the experiments reported here) operating through
-Seppa's MCP interface; that is the system under study, not an authorship
-aside. The same class of model assisted in drafting this paper's text.
-All measurements were produced by the deterministic harness described
-above, and every kept kernel passed machine-owned verification gates
-that the model could not bypass.
-
-== References
-#set text(size: 8.3pt)
-#set par(leading: 0.5em)
+=#heading(numbering: none)[References]
+#set text(size: 0.82em)
 <references>
 \[1\] M. Guidolin, A. S. Chen, B. Ghimire, E. C. Keedwell, S.
 Djordjevic, and D. A. Savic. A weighted cellular automata 2D inundation
@@ -634,3 +614,4 @@ Workshop on Machine Learning for CAD (MLCAD), 2023.
 \[17\] S. Thakur, B. Ahmad, H. Pearce, B. Tan, B. Dolan-Gavitt, R.
 Karri, and S. Garg. VeriGen: A Large Language Model for Verilog Code
 Generation. ACM TODAES; arXiv:2308.00708, 2023.
+
