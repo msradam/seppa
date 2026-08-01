@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Seppa: correctness-gated, LLM-driven GPU kernel optimization"
+authors:
+  - family-names: Rahman
+    given-names: Adam Munawar
+version: "1.0"
+date-released: "2026-08-01"
+url: "https://github.com/msradam/seppa"
+license: MIT
