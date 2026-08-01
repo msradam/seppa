@@ -39,8 +39,9 @@ The application side draws on established components: WCA2D [1] for reduced-comp
 Seppa is an AutoKernel-style optimization loop restructured as a Burr finite-state machine and served over MCP by a wrapper (Theodosia) running on the Pi itself. The graph is:
 
 ```
-characterize -> baseline -> hypothesize -> implement -> compile
-    -> verify -> benchmark -> evaluate -> log_variant -> (hypothesize | stop)
+characterize -> baseline -> hypothesize -> implement
+  -> compile -> verify -> benchmark -> evaluate
+  -> log_variant -> (hypothesize | stop)
 ```
 
 with two guard edges: `compile -> log_variant` on compile failure, and `verify -> log_variant` on gate failure. The benchmark state is reachable only through a green verify. The agent's entire interface is one MCP tool, `step(action, inputs)`; the server constrains `action` to the graph's legal next moves, so "skip verify" is not an expressible request.
@@ -92,8 +93,9 @@ To make the optimization claim checkable, the reproduction is executed by the ma
 The first part re-derives the result. In the run of 2026-07-11 (transcript in `docs/paper/artifacts/`), the FSM measured its own baseline at 1,346.8 steps/s with all physics gates green, received the fused strip-2 kernel as experiment 1, compiled it, passed all three gates, benchmarked 2,116.4 steps/s, and issued its own verdict: keep. That is 1.57x, machine-derived end to end and consistent with the hand-measured sweep. The machine's ledger line reads:
 
 ```
-{"exp": 1, "fused": true, "strip": 2, "compile_ok": true, "verify_ok": true,
- "steps_per_sec": 2116.4, "best_sps": 2116.4, "verdict": "keep"}
+{"exp": 1, "fused": true, "strip": 2, "compile_ok": true,
+ "verify_ok": true, "steps_per_sec": 2116.4,
+ "best_sps": 2116.4, "verdict": "keep"}
 ```
 
 The second part demonstrates the gate. The driver submits the same kernel with one change, rainfall injection doubled in one of the two cell updates. It compiles. The physics gate fails it (`verify_ok: false`), and the driver then requests `benchmark` anyway. The server's verbatim response:
@@ -101,8 +103,8 @@ The second part demonstrates the gate. The driver submits the same kernel with o
 ```
 {"error": "invalid_transition", "requested": "benchmark",
  "valid_next_actions": ["log_variant"],
- "message": "action 'benchmark' is not reachable from current state.
-             Valid actions now: ['log_variant']."}
+ "message": "action 'benchmark' is not reachable from
+     current state. Valid actions now: ['log_variant']."}
 ```
 
 The broken variant enters the ledger as `verdict: revert` with `steps_per_sec: null`. The refusal is the property the harness exists to provide: neither the model nor a buggy or adversarial client can obtain a performance number for physics it broke.
