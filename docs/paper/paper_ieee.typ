@@ -114,9 +114,9 @@ systems and names the discrepancy "a critical gap in reward fidelity."
 SpecBench \[14\] generalizes the pattern beyond kernels: frontier agents
 saturate visible test suites while failing held-out ones. Every
 published remedy is machine-owned verification external to the model.
-Seppa takes that conclusion as its architecture: verification is not a
-post-hoc metric but a state transition the agent cannot skip, enforced
-in-loop by a server that refuses out-of-order calls.
+Seppa builds that conclusion into its structure: verification runs
+in-loop as a state transition, enforced by a server that refuses
+out-of-order calls, so the agent cannot skip it.
 
 The strength of the oracle matters as much as its placement. Sarkar
 \[15\] shows the major kernel benchmarks verify correctness with
@@ -155,12 +155,12 @@ characterize -> baseline -> hypothesize -> implement -> compile
     -> verify -> benchmark -> evaluate -> log_variant -> (hypothesize | stop)
 ```
 
-with two guard edges that define the system's character:
-`compile -> log_variant` on compile failure, and `verify -> log_variant`
-on gate failure. The benchmark state is reachable only through a green
-verify. The agent's entire interface is one MCP tool,
-`step(action, inputs)`\; the server constrains `action` to the graph's
-legal next moves, so "skip verify" is not an expressible request.
+with two guard edges: `compile -> log_variant` on compile failure, and
+`verify -> log_variant` on gate failure. The benchmark state is
+reachable only through a green verify. The agent's entire interface is
+one MCP tool, `step(action, inputs)`\; the server constrains `action` to
+the graph's legal next moves, so "skip verify" is not an expressible
+request.
 
 The agent owns two states. `hypothesize` returns the current best, the
 experiment history, and the hardware constraints (256 invocations, 16 KB
@@ -194,7 +194,7 @@ Notably, the shaders are too small to stress the v3dv register
 allocator, so an optimization playbook proven on llama.cpp kernels for
 this same GPU (removing source-level unrolling to rescue the compiler's
 register allocation, worth +28% on matrix-vector decode there) had
-nothing to act on here. New target, new bound.
+nothing to act on here; the bound had to be found fresh.
 
 == Falsification sweep
 <falsification-sweep>
@@ -278,29 +278,29 @@ search space, not only about the hardware.
 
 = Machine-checked reproduction over MCP
 <machine-checked-reproduction-over-mcp>
-The optimization claim is only as good as its reproduction path, so the
-reproduction is executed by the machine, not narrated by the author.
-`drive_flood2_mcp.py` connects to the Theodosia server's MCP endpoint
-from a separate machine and drives the full cycle through the `step`
-tool, in two acts.
+To make the optimization claim checkable, the reproduction is executed
+by the machine rather than narrated by the author. `drive_flood2_mcp.py`
+connects to the Theodosia server's MCP endpoint from a separate machine
+and drives the full cycle through the `step` tool, in two parts.
 
-Act one re-derives the result. In the run of 2026-07-11 (transcript in
-`docs/paper/artifacts/`), the FSM measured its own baseline at 1,346.8
-steps/s with all physics gates green, received the fused strip-2 kernel
-as experiment 1, compiled it, passed all three gates, benchmarked
-2,116.4 steps/s, and issued its own verdict: keep. That is 1.57x,
-machine-derived end to end and consistent with the hand-measured sweep.
-The machine's ledger line reads:
+The first part re-derives the result. In the run of 2026-07-11
+(transcript in `docs/paper/artifacts/`), the FSM measured its own
+baseline at 1,346.8 steps/s with all physics gates green, received the
+fused strip-2 kernel as experiment 1, compiled it, passed all three
+gates, benchmarked 2,116.4 steps/s, and issued its own verdict: keep.
+That is 1.57x, machine-derived end to end and consistent with the
+hand-measured sweep. The machine's ledger line reads:
 
 ```
 {"exp": 1, "fused": true, "strip": 2, "compile_ok": true, "verify_ok": true,
  "steps_per_sec": 2116.4, "best_sps": 2116.4, "verdict": "keep"}
 ```
 
-Act two demonstrates the gate. The driver submits the same kernel with
-one change, rainfall injection doubled in one of the two cell updates.
-It compiles. The physics gate fails it (`verify_ok: false`), and the
-driver then requests `benchmark` anyway. The server's verbatim response:
+The second part demonstrates the gate. The driver submits the same
+kernel with one change, rainfall injection doubled in one of the two
+cell updates. It compiles. The physics gate fails it
+(`verify_ok: false`), and the driver then requests `benchmark` anyway.
+The server's verbatim response:
 
 ```
 {"error": "invalid_transition", "requested": "benchmark",
@@ -310,25 +310,25 @@ driver then requests `benchmark` anyway. The server's verbatim response:
 ```
 
 The broken variant enters the ledger as `verdict: revert` with
-`steps_per_sec: null`. The refused benchmark is the system's thesis in
-one line: the model, or a buggy or adversarial client, cannot obtain a
-performance number for physics it broke.
+`steps_per_sec: null`. The refusal is the property the harness exists to
+provide: neither the model nor a buggy or adversarial client can obtain
+a performance number for physics it broke.
 
 Two independent repetitions agree: an in-process run on the Pi
 (`replay_flood2.py`, 2026-07-08) measured baseline 1,351 and kept 2,116
 steps/s, and a first over-the-wire run earlier on 2026-07-11 measured
 baseline 1,346.8 and kept 2,105.3 steps/s.
 
-= The point: concurrent CPU and GPU work
-<the-point-concurrent-cpu-and-gpu-work>
+= Concurrent CPU and GPU work
+<concurrent-cpu-and-gpu-work>
 The optimization exists to make a CPU-plus-GPU split worth having, so
 the last measurement is interference. Bonbibi's deployment shape is: the
 GPU loops flood simulation while the CPU runs street routing and Granite
 4.0 1B decode (llama.cpp, `-ngl 0`, 4 threads; the GGUF reports 1.63 B
 parameters under llama.cpp's granite-3B architecture label, which is
 what llama-bench prints). The board shares one LPDDR memory system
-between the halves, so "the GPU is free" is a hypothesis, not a fact,
-until measured.
+between the halves, so whether the GPU is effectively free has to be
+measured rather than assumed.
 
 The measurement campaign itself produced a finding worth stating first.
 With any Vulkan device visible, llama.cpp allocates CPU-resident model
@@ -384,16 +384,17 @@ simply does not have. Second, interference is strongly asymmetric, and
 the fast-decode configuration makes it more so: the CPU keeps 90% of its
 solo throughput, but the GPU keeps only 33% (the faster the CPU's
 decode, the more of the shared LPDDR bandwidth it consumes, and the GPU
-is the victim of that sharing). "Idle silicon" is real but it is not
-free silicon; it is a third of a GPU when the CPU is busy. Third, the
-kernel optimization matters more under contention, not less: the
-optimized kernel's advantage over the original grows from 1.58x alone to
-2.09x concurrent, at equal CPU cost (decode 10.3 against 10.2). This is
-consistent with the fused kernel's elimination of the intermediate
-flux-buffer traffic: fewer bytes through the shared memory system per
-simulation step means less to lose when bandwidth is contended. Under
-deployment conditions, the optimized kernel is the difference between a
-usable co-processor and a marginal one.
+is the victim of that sharing). The idle GPU delivers a third of its
+solo throughput when the CPU is busy: the silicon is available, but much
+of its bandwidth is not. Third, the kernel optimization matters more
+under contention: the optimized kernel's advantage over the original
+grows from 1.58x alone to 2.09x concurrent, at equal CPU cost (decode
+10.3 against 10.2). This is consistent with the fused kernel's
+elimination of the intermediate flux-buffer traffic: fewer bytes through
+the shared memory system per simulation step means less to lose when
+bandwidth is contended. Under deployment conditions, the optimized
+kernel is the difference between a usable co-processor and a marginal
+one.
 
 == The CPU-only counterfactual
 <the-cpu-only-counterfactual>
@@ -432,8 +433,8 @@ four idle A76 cores run this stencil at 3,803 steps/s (5.4 GFLOP/s,
 near-linear thread scaling), faster than the V3D's 2,127, so why involve
 the GPU at all? Because the deployment requirement is a real-time flood
 simulation running at the same time as the language query, and idle
-cores do not exist in that regime. The GPU is not a faster engine; it is
-an additional one whose capacity does not come out of the inference
+cores do not exist in that regime. The GPU's value is additive rather
+than comparative: its capacity does not come out of the inference
 budget. The moment decode runs, every CPU-only scheme pays steeply.
 Oversubscription is catastrophic: decode collapses 79% to 2.4 t/s,
 because llama.cpp's worker threads synchronize every token, and whenever
@@ -441,36 +442,36 @@ any one of them loses its core to a flood thread, all four stall.
 Partitioning is the best CPU-only configuration and reaches (8.4 t/s,
 681 steps/s); note that decode on 3 pinned cores alone slightly beats
 4-core decode (11.8 against 11.4 in the same run: decode is
-memory-bound, and the fourth core adds contention, not capacity), so its
-drop to 8.4 under partition is pure memory contention from one flood
-thread, a 29% tax against the GPU split's 10%. Time-slicing, derivable
-from the alone rates, loses on both axes too: matching the GPU's 712
-steps/s average requires 18.7% of the time flooding, which caps average
-decode at 9.3 t/s and freezes guidance output entirely during each flood
-burst.
+memory-bound, and the fourth core adds contention rather than capacity),
+so its drop to 8.4 under partition is pure memory contention from one
+flood thread, a 29% tax against the GPU split's 10%. Time-slicing,
+derivable from the alone rates, loses on both axes too: matching the
+GPU's 712 steps/s average requires 18.7% of the time flooding, which
+caps average decode at 9.3 t/s and freezes guidance output entirely
+during each flood burst.
 
 Against the best CPU-only alternative, the GPU-concurrent split delivers
-23% more decode and 5% more simulation, with no scheme it does not
-dominate; it wins decisively where the deployment is most sensitive
-(continuous language output) and never trails on simulation. That is the
-inactive-silicon claim in its correct, measured form: the GPU is slower
+23% more decode and 5% more simulation, and no CPU-only scheme beats it
+on either axis; it wins decisively where the deployment is most
+sensitive (continuous language output) and never trails on simulation.
+The measured form of the inactive-silicon claim is: the GPU is slower
 than the CPU it sits next to, and the system is still strictly better
 for using it, because the CPU's cycles are already spoken for.
 
-One honesty note on thermals. The 1 Hz traces show that sustained decode
-engages the firmware's soft temperature limit on this passively cooled
-board even with no GPU work at all (in the reported run, 1 sample
-throttled during decode alone, 16 during each concurrent phase, peak
-74.7 C; an earlier warmer-ambient run saw 14 to 31 throttled samples per
-sustained phase). Cool-throughout sustained measurements are not
-reliably attainable on this cooling, so the numbers above are
-steady-state, thermally governed figures rather than cold-silicon peaks.
-For the deployment question this paper asks, that is the right
-measurement: it is what Bonbibi actually gets. The flood-alone
-measurements, which complete before heat accumulates, are thermally
-clean, and the earlier isolated measurements (Section IV) agree with
-them. The CPU-counterfactual phases behave the same way: every sustained
-condition throttles at least briefly. Reproduction:
+One note on thermals. The 1 Hz traces show that sustained decode engages
+the firmware's soft temperature limit on this passively cooled board
+even with no GPU work at all (in the reported run, 1 sample throttled
+during decode alone, 16 during each concurrent phase, peak 74.7 C; an
+earlier warmer-ambient run saw 14 to 31 throttled samples per sustained
+phase). Cool-throughout sustained measurements are not reliably
+attainable on this cooling, so the numbers above are steady-state,
+thermally governed figures rather than cold-silicon peaks. For the
+deployment question this paper asks, that is the right measurement: it
+is what Bonbibi actually gets. The flood-alone measurements, which
+complete before heat accumulates, are thermally clean, and the earlier
+isolated measurements (Section IV) agree with them. The
+CPU-counterfactual phases behave the same way: every sustained condition
+throttles at least briefly. Reproduction:
 
 ```
 OUT=/tmp/conc_bench bash concurrency_bench.sh
@@ -519,8 +520,8 @@ thread scaling is near-linear; the CPU's raw-speed advantage may not
 survive grids that spill the cache. The LLM agent's proposals were not
 blind: the fused strip-2 kernel submitted in Section V's reproduction
 was discovered in Section IV's hand-driven sweep, so the MCP run
-demonstrates machine verification and verdict, not de novo discovery.
-And one honest scope note: the same harness's llama.cpp work on this GPU
+demonstrates machine verification and verdict rather than de novo
+discovery. One scope note: the same harness's llama.cpp work on this GPU
 established that per-op correctness does not compose into end-to-end
 correctness at full offload due to an upstream driver-independent
 llama.cpp Vulkan defect we isolated on llvmpipe, so GPU LLM inference on
