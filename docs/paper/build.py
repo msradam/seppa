@@ -24,6 +24,42 @@ for a, b in [("4.1", "IV-A"), ("4.2", "IV-B"), ("4.3", "IV-C"), ("6.1", "VI-A"),
     body_md = body_md.replace(f"Section {a}", f"Section {b}")
 
 
+def rep(old, new):
+    global body_md
+    assert old in body_md, f"missing: {old[:60]}"
+    body_md = body_md.replace(old, new)
+
+
+# the ASCII FSM sketch becomes the TikZ figure (raw latex passes through pandoc)
+rep(
+    """running on the Pi itself. The graph is:
+
+```
+characterize -> baseline -> hypothesize -> implement
+  -> compile -> verify -> benchmark -> evaluate
+  -> log_variant -> (hypothesize | stop)
+```
+
+with two guard edges:""",
+    """running on the Pi itself.
+
+\\input{fsm_fig}
+
+Fig.~\\ref{fig:fsm} shows the graph, with two guard edges:""",
+)
+# tables become numbered floats; point the prose at them
+rep("so every comparison in this paper is within `vkflood2`.",
+    "so every comparison in this paper is within `vkflood2`. Table~\\ref{tab:sweep} shows the sweep.")
+rep("Results from the run of 2026-07-12 (raw logs in",
+    "Results from the run of 2026-07-12 are in Table~\\ref{tab:conc} (raw logs in")
+rep("the earlier GPU-visible run is preserved in `conc_bench/`):",
+    "the earlier GPU-visible run is preserved in `conc_bench/`).")
+rep("Same cooldown gates and thermal sampling; raw logs in `docs/paper/artifacts/cpu_flood_bench2/`.",
+    "Same cooldown gates and thermal sampling; raw logs in `docs/paper/artifacts/cpu_flood_bench2/`. Table~\\ref{tab:cpu} shows the outcome.")
+rep("from which every number in the table derives.",
+    "from which every number in Table~\\ref{tab:conc} derives.")
+
+
 def pandoc(text):
     return subprocess.run(
         ["pandoc", "-f", "markdown+autolink_bare_uris", "-t", "latex",
@@ -35,9 +71,30 @@ def pandoc(text):
 body = pandoc(body_md)
 abstract = pandoc(abstract_md).strip()
 
-# longtable cannot appear in two-column mode; rewrap as plain tabular
-body = body.replace("\\begin{longtable}[]{", "\\begin{center}\\footnotesize\\begin{tabular}{")
-body = body.replace("\\end{longtable}", "\\end{tabular}\\end{center}")
+# pandoc escapes the ~ in "Fig.~\ref{...}" while passing \ref through raw
+body = body.replace("\\textasciitilde{}\\ref", "~\\ref")
+# keep code blocks on one column
+body = body.replace("\\begin{verbatim}",
+                    "\\smallskip\\noindent\\begin{minipage}{\\linewidth}\\begin{verbatim}")
+body = body.replace("\\end{verbatim}",
+                    "\\end{verbatim}\\end{minipage}\\smallskip")
+
+# tables: drop pandoc's minipage header cells, rewrap longtable (illegal in
+# two-column mode) as an IEEE table float with caption above
+body = re.sub(
+    r"\\begin\{minipage\}\[[bt]\]\{\\linewidth\}\\raggedright\s*(.*?)\s*\\end\{minipage\}",
+    r"\1", body, flags=re.S)
+captions = iter([
+    ("tab:sweep", "Falsification sweep: 400 steps at 256x256 in the \\mbox{vkflood2} harness"),
+    ("tab:conc", "Concurrent GPU flood and CPU LLM decode"),
+    ("tab:cpu", "The CPU-only counterfactual"),
+])
+def table_open(_m):
+    lab, cap = next(captions)
+    return ("\\begin{table}[!t]\\caption{%s}\\label{%s}\\centering\\footnotesize"
+            "\\renewcommand{\\arraystretch}{1.25}\\begin{tabular}{" % (cap, lab))
+body = re.sub(r"\\begin\{longtable\}\[\]\{", table_open, body)
+body = body.replace("\\end{longtable}", "\\end{tabular}\\end{table}")
 body = body.replace("\\noalign{}", "")
 body = re.sub(r"^\\end(first)?head\n", "", body, flags=re.M)
 body = re.sub(r"^\\end(last)?foot\n", "", body, flags=re.M)
@@ -53,10 +110,12 @@ tex = r"""\documentclass[conference]{IEEEtran}
 \usepackage{calc}
 \usepackage{url}
 \usepackage{textcomp}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
 \newcommand{\real}[1]{#1}
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \makeatletter
-\def\verbatim@font{\ttfamily\scriptsize}
+\def\verbatim@font{\ttfamily\footnotesize}
 \makeatother
 \begin{document}
 \title{%s}

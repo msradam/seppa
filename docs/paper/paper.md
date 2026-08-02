@@ -61,7 +61,7 @@ Bonbibi's simulation is a two-pass stencil per time step: a flux pass computes l
 Rather than guess the bottleneck, we bought each hypothesis a variant and let the gate-and-benchmark loop price it. All variants passed all three physics gates; speeds are for 400 steps at 256x256 on the parameterized `vkflood2` harness. Its host loop is itself faster than the original harness for identical kernels (about 1,345 steps/s, 1.94 GFLOP/s, against the 1,045 above), so every comparison in this paper is within `vkflood2`.
 
 | Variant | Hypothesis tested | Result |
-|---|---|---|
+|-----------|---------|----------|
 | Packed vec2 state (water, surface) halving flux-pass loads | Memory-op count is the bound | 1.93 GFLOP/s, no change: falsified |
 | Fused single-dispatch step (flux buffer eliminated) | Traffic and barriers are the bound | 2.04 GFLOP/s, +5%: mostly falsified |
 | 2 cells per invocation (strip-mined dispatch) | Fixed per-invocation cost is the bound | 2.40 GFLOP/s, +23%: supported |
@@ -75,7 +75,8 @@ The shipped kernel is 1.59x at 256x256 (0.187 s vs 0.297 s), 1.41x at 512x512, 1
 ```
 g++ -O3 -o vkflood2 vkflood2.cpp -lvulkan
 glslangValidator -V fused2s.comp -o fused2s.spv
-STRIP=2 FUSED=1 FLUX_SPV=fused2s.spv ./vkflood2 256 400
+STRIP=2 FUSED=1 FLUX_SPV=fused2s.spv \
+    ./vkflood2 256 400
 ```
 
 Integrating it into Bonbibi is three host-side changes: the packed vec2 state buffer, one pipeline and one dispatch per step, and a halved dispatch height (`pi/flood/README.md`).
@@ -93,18 +94,21 @@ To make the optimization claim checkable, the reproduction is executed by the ma
 The first part re-derives the result. In the run of 2026-07-11 (transcript in `docs/paper/artifacts/`), the FSM measured its own baseline at 1,346.8 steps/s with all physics gates green, received the fused strip-2 kernel as experiment 1, compiled it, passed all three gates, benchmarked 2,116.4 steps/s, and issued its own verdict: keep. That is 1.57x, machine-derived end to end and consistent with the hand-measured sweep. The machine's ledger line reads:
 
 ```
-{"exp": 1, "fused": true, "strip": 2, "compile_ok": true,
- "verify_ok": true, "steps_per_sec": 2116.4,
- "best_sps": 2116.4, "verdict": "keep"}
+{"exp": 1, "fused": true, "strip": 2,
+ "compile_ok": true, "verify_ok": true,
+ "steps_per_sec": 2116.4, "best_sps": 2116.4,
+ "verdict": "keep"}
 ```
 
 The second part demonstrates the gate. The driver submits the same kernel with one change, rainfall injection doubled in one of the two cell updates. It compiles. The physics gate fails it (`verify_ok: false`), and the driver then requests `benchmark` anyway. The server's verbatim response:
 
 ```
-{"error": "invalid_transition", "requested": "benchmark",
+{"error": "invalid_transition",
+ "requested": "benchmark",
  "valid_next_actions": ["log_variant"],
- "message": "action 'benchmark' is not reachable from
-     current state. Valid actions now: ['log_variant']."}
+ "message": "action 'benchmark' is not
+   reachable from current state. Valid
+   actions now: ['log_variant']."}
 ```
 
 The broken variant enters the ledger as `verdict: revert` with `steps_per_sec: null`. The refusal is the property the harness exists to provide: neither the model nor a buggy or adversarial client can obtain a performance number for physics it broke.
@@ -136,7 +140,7 @@ Three results. First, the co-processing thesis holds with a measured price. Addi
 Concurrency is only worth defending against the alternative: running the flood on the CPU too. `pi/flood/cpuflood.cpp` is the same WCA2D update in float with OpenMP row parallelism, verified by the same three physics gates against the same double-precision reference (NMSE 1.46e-11, mass conserved, pools in basin, at 1 and 4 threads). `pi/flood/cpu_flood_bench.sh` measures it alone and sharing the four cores with decode two ways: oversubscribed (4 flood threads and 4 decode threads competing for 4 cores) and partitioned (flood pinned to core 0, decode pinned to cores 1 to 3). Same cooldown gates and thermal sampling; raw logs in `docs/paper/artifacts/cpu_flood_bench2/`.
 
 | Condition | Flood (steps/s) | CPU decode (t/s) |
-|---|---|---|
+|------------|--------|------|
 | CPU flood alone, 1 / 2 / 4 threads | 992.0 / 1,977.9 / 3,803.2 | |
 | Decode alone, 3 threads (pinned) | | 11.8 ± 0.0 |
 | Partitioned: flood 1t + decode 3t | 680.6 ± 22.9 (n=6) | 8.4 ± 0.0 |
@@ -153,7 +157,8 @@ One note on thermals. The 1 Hz traces show that sustained decode engages the fir
 OUT=/tmp/conc_bench bash concurrency_bench.sh
 OUT=/tmp/cpu_flood_bench bash cpu_flood_bench.sh
 python3 analyze_conc_bench.py /tmp/conc_bench 4000
-python3 analyze_conc_bench.py /tmp/cpu_flood_bench 4000
+python3 analyze_conc_bench.py \
+    /tmp/cpu_flood_bench 4000
 ```
 
 ## 7. What transfers and what does not
@@ -176,7 +181,7 @@ Bonbibi, the flood-guidance application, is a separately packaged project (githu
 
 ## 10. Reproducibility and availability
 
-Everything is in two repositories: seppa (github.com/msradam/seppa: harness, FSM definitions, MCP server, driver scripts, kernels, and a running notes file with one entry per confirmed win and dead end) and Bonbibi (the application, github.com/msradam/bonbibi). The flood kit is `pi/flood/`: kernels, parameterized harness `vkflood2.cpp`, the falsification-sweep variants, and `concurrency_bench.sh`. The FSM target is `v3d_flood2_opt.py`, served by `theodosia_server.py --http --flood2`; `drive_flood2_mcp.py` reproduces Section 5 against that endpoint, and `replay_flood2.py` does the same in-process on the Pi. Raw logs for Section 6 are produced by `concurrency_bench.sh` into a directory of plain-text files, from which every number in the table derives.
+Everything is in two repositories: seppa (github.com/msradam/seppa: harness, FSM definitions, MCP server, driver scripts, kernels, and a running notes file with one entry per confirmed win and dead end) and Bonbibi (the application, github.com/msradam/bonbibi). The flood kit is `pi/flood/`: kernels, parameterized harness `vkflood2.cpp`, the falsification-sweep variants, and `concurrency_bench.sh`. The FSM target is `v3d_flood2_opt.py`, served by `theodosia_server.py --http --flood2`; `drive_flood2_mcp.py` reproduces Section 5 against that endpoint, and `replay_flood2.py` does the same in-process on the Pi. Raw logs for Section 6 are produced by `concurrency_bench.sh` into a directory of plain-text files, from which every number in the table derives. Local copies of every cited reference are archived in `docs/paper/references/`.
 
 ## References
 

@@ -1,0 +1,37 @@
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[
+  >={Stealth[length=1.8mm]},
+  state/.style={draw, rounded corners=1.5pt, font=\scriptsize\ttfamily,
+    inner xsep=4pt, inner ysep=2.5pt, minimum width=22mm},
+  agent/.style={state, fill=black!12},
+  glab/.style={font=\tiny\itshape, inner sep=1pt, fill=white},
+  node distance=2.6mm]
+\node[state] (ch) {characterize};
+\node[state, below=of ch] (ba) {baseline};
+\node[agent, below=of ba] (hy) {hypothesize};
+\node[agent, below=of hy] (im) {implement};
+\node[state, below=of im] (co) {compile};
+\node[state, below=of co] (ve) {verify};
+\node[state, below=of ve] (be) {benchmark};
+\node[state, below=of be] (ev) {evaluate};
+\node[state, below=of ev] (lv) {log\_variant};
+\node[state, below=of lv] (st) {stop};
+\foreach \a/\b in {ch/ba, ba/hy, hy/im, im/co, co/ve, ve/be, be/ev}
+  \draw[->] (\a) -- (\b);
+\draw[->] (ev) -- node[glab, right=1pt] {keep / revert} (lv);
+\draw[->] (lv) -- node[glab, right=1pt] {budget or plateau} (st);
+\draw[->] (lv.east) to[out=15, in=-15, looseness=2.0]
+  node[glab, right=-1pt] {next experiment} (hy.east);
+\draw[->, dashed] (co.west) to[out=195, in=165, looseness=2.0]
+  node[glab, left=-1pt, pos=0.4] {compile fail} (lv.170);
+\draw[->, dashed] (ve.west) to[out=200, in=175, looseness=1.4]
+  node[glab, left=-1pt, pos=0.6] {gate fail} (lv.180);
+\end{tikzpicture}
+\caption{The Seppa optimization loop as served over MCP. Shaded states
+(\texttt{hypothesize}, \texttt{implement}) are the only two the agent
+owns; the machine executes the rest. Dashed guard edges route compile
+failures and physics-gate failures to \texttt{log\_variant}, so
+\texttt{benchmark} is reachable only through a green \texttt{verify}.}
+\label{fig:fsm}
+\end{figure}

@@ -4,10 +4,12 @@
 \usepackage{calc}
 \usepackage{url}
 \usepackage{textcomp}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
 \newcommand{\real}[1]{#1}
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \makeatletter
-\def\verbatim@font{\ttfamily\scriptsize}
+\def\verbatim@font{\ttfamily\footnotesize}
 \makeatother
 \begin{document}
 \title{SEPPA: Correctness-Gated, LLM-Driven Kernel Optimization on the Raspberry Pi 5's Integrated GPU}
@@ -168,18 +170,15 @@ gate}\label{seppa-the-machine-owns-the-gate}
 
 Seppa is an AutoKernel-style optimization loop restructured as a Burr
 finite-state machine and served over MCP by a wrapper (Theodosia)
-running on the Pi itself. The graph is:
+running on the Pi itself.
 
-\begin{verbatim}
-characterize -> baseline -> hypothesize -> implement
-  -> compile -> verify -> benchmark -> evaluate
-  -> log_variant -> (hypothesize | stop)
-\end{verbatim}
+\input{fsm_fig}
 
-with two guard edges: \texttt{compile\ -\textgreater{}\ log\_variant} on
-compile failure, and \texttt{verify\ -\textgreater{}\ log\_variant} on
-gate failure. The benchmark state is reachable only through a green
-verify. The agent's entire interface is one MCP tool,
+Fig.~\ref{fig:fsm} shows the graph, with two guard
+edges: \texttt{compile\ -\textgreater{}\ log\_variant} on compile
+failure, and \texttt{verify\ -\textgreater{}\ log\_variant} on gate
+failure. The benchmark state is reachable only through a green verify.
+The agent's entire interface is one MCP tool,
 \texttt{step(action,\ inputs)}; the server constrains \texttt{action} to
 the graph's legal next moves, so ``skip verify'' is not an expressible
 request.
@@ -228,21 +227,16 @@ three physics gates; speeds are for 400 steps at 256x256 on the
 parameterized \texttt{vkflood2} harness. Its host loop is itself faster
 than the original harness for identical kernels (about 1,345 steps/s,
 1.94 GFLOP/s, against the 1,045 above), so every comparison in this
-paper is within \texttt{vkflood2}.
+paper is within \texttt{vkflood2}. Table~\ref{tab:sweep}
+shows the sweep.
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{center}\footnotesize\begin{tabular}{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}
+\begin{table}[!t]\caption{Falsification sweep: 400 steps at 256x256 in the \mbox{vkflood2} harness}\label{tab:sweep}\centering\footnotesize\renewcommand{\arraystretch}{1.25}\begin{tabular}{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3667}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3000}}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}@{}}
 \toprule
-\begin{minipage}[b]{\linewidth}\raggedright
-Variant
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Hypothesis tested
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Result
-\end{minipage} \\
+Variant & Hypothesis tested & Result \\
 \midrule
 \bottomrule
 Packed vec2 state (water, surface) halving flux-pass loads & Memory-op
@@ -255,7 +249,7 @@ cost is the bound & 2.40 GFLOP/s, +23\%: supported \\
 register pressure \\
 Fused + 2 cells per invocation (\texttt{fused2s.comp}) & The wins stack
 & 3.08 GFLOP/s, +59\% \\
-\end{tabular}\end{center}
+\end{tabular}\end{table}
 }
 
 The stencil is bound by fixed per-invocation cost: each invocation does
@@ -273,11 +267,12 @@ The shipped kernel is 1.59x at 256x256 (0.187 s vs 0.297 s), 1.41x at
 512x512, 1.18x at 1024x1024, and holds all gates over a 4,000-step run
 (NMSE 1.3e-9, mass conserved, pools in basin). Reproduction:
 
-\begin{verbatim}
+\smallskip\noindent\begin{minipage}{\linewidth}\begin{verbatim}
 g++ -O3 -o vkflood2 vkflood2.cpp -lvulkan
 glslangValidator -V fused2s.comp -o fused2s.spv
-STRIP=2 FUSED=1 FLUX_SPV=fused2s.spv ./vkflood2 256 400
-\end{verbatim}
+STRIP=2 FUSED=1 FLUX_SPV=fused2s.spv \
+    ./vkflood2 256 400
+\end{verbatim}\end{minipage}\smallskip
 
 Integrating it into Bonbibi is three host-side changes: the packed vec2
 state buffer, one pipeline and one dispatch per step, and a halved
@@ -326,11 +321,12 @@ gates, benchmarked 2,116.4 steps/s, and issued its own verdict: keep.
 That is 1.57x, machine-derived end to end and consistent with the
 hand-measured sweep. The machine's ledger line reads:
 
-\begin{verbatim}
-{"exp": 1, "fused": true, "strip": 2, "compile_ok": true,
- "verify_ok": true, "steps_per_sec": 2116.4,
- "best_sps": 2116.4, "verdict": "keep"}
-\end{verbatim}
+\smallskip\noindent\begin{minipage}{\linewidth}\begin{verbatim}
+{"exp": 1, "fused": true, "strip": 2,
+ "compile_ok": true, "verify_ok": true,
+ "steps_per_sec": 2116.4, "best_sps": 2116.4,
+ "verdict": "keep"}
+\end{verbatim}\end{minipage}\smallskip
 
 The second part demonstrates the gate. The driver submits the same
 kernel with one change, rainfall injection doubled in one of the two
@@ -338,12 +334,14 @@ cell updates. It compiles. The physics gate fails it
 (\texttt{verify\_ok:\ false}), and the driver then requests
 \texttt{benchmark} anyway. The server's verbatim response:
 
-\begin{verbatim}
-{"error": "invalid_transition", "requested": "benchmark",
+\smallskip\noindent\begin{minipage}{\linewidth}\begin{verbatim}
+{"error": "invalid_transition",
+ "requested": "benchmark",
  "valid_next_actions": ["log_variant"],
- "message": "action 'benchmark' is not reachable from
-     current state. Valid actions now: ['log_variant']."}
-\end{verbatim}
+ "message": "action 'benchmark' is not
+   reachable from current state. Valid
+   actions now: ['log_variant']."}
+\end{verbatim}\end{minipage}\smallskip
 
 The broken variant enters the ledger as \texttt{verdict:\ revert} with
 \texttt{steps\_per\_sec:\ null}. The refusal is the property the harness
@@ -389,12 +387,12 @@ and a 1 Hz sampler records temperature and the throttle register
 throughout; \texttt{pi/flood/analyze\_conc\_bench.py} reduces the raw
 logs and reports per-phase thermal validity. Concurrent flood runs count
 only if they start and finish inside the decode window. Results from the
-run of 2026-07-12 (raw logs in
-\texttt{docs/paper/artifacts/conc\_bench2/}; the earlier GPU-visible run
-is preserved in \texttt{conc\_bench/}):
+run of 2026-07-12 are in Table~\ref{tab:conc} (raw logs
+in \texttt{docs/paper/artifacts/conc\_bench2/}; the earlier GPU-visible
+run is preserved in \texttt{conc\_bench/}).
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{center}\footnotesize\begin{tabular}{@{}lll@{}}
+\begin{table}[!t]\caption{Concurrent GPU flood and CPU LLM decode}\label{tab:conc}\centering\footnotesize\renewcommand{\arraystretch}{1.25}\begin{tabular}{@{}lll@{}}
 \toprule
 Condition & GPU flood (steps/s) & CPU decode (t/s) \\
 \midrule
@@ -404,7 +402,7 @@ Original kernel alone & 1,348.9 ± 0.3 (n=3) & \\
 Decode alone & & 11.5 ± 0.0 \\
 Concurrent, optimized kernel & 711.9 ± 76.1 (n=5) & 10.3 ± 0.2 \\
 Concurrent, original kernel & 340.1 ± 16.9 (n=2) & 10.2 ± 0.3 \\
-\end{tabular}\end{center}
+\end{tabular}\end{table}
 }
 
 The router is not in the table because it does not move:
@@ -446,20 +444,15 @@ four cores with decode two ways: oversubscribed (4 flood threads and 4
 decode threads competing for 4 cores) and partitioned (flood pinned to
 core 0, decode pinned to cores 1 to 3). Same cooldown gates and thermal
 sampling; raw logs in \texttt{docs/paper/artifacts/cpu\_flood\_bench2/}.
+Table~\ref{tab:cpu} shows the outcome.
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{center}\footnotesize\begin{tabular}{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}@{}}
+\begin{table}[!t]\caption{The CPU-only counterfactual}\label{tab:cpu}\centering\footnotesize\renewcommand{\arraystretch}{1.25}\begin{tabular}{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4615}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3077}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2308}}@{}}
 \toprule
-\begin{minipage}[b]{\linewidth}\raggedright
-Condition
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Flood (steps/s)
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-CPU decode (t/s)
-\end{minipage} \\
+Condition & Flood (steps/s) & CPU decode (t/s) \\
 \midrule
 \bottomrule
 CPU flood alone, 1 / 2 / 4 threads & 992.0 / 1,977.9 / 3,803.2 & \\
@@ -468,7 +461,7 @@ Partitioned: flood 1t + decode 3t & 680.6 ± 22.9 (n=6) & 8.4 ± 0.0 \\
 Oversubscribed: flood 4t + decode 4t & 703.4 ± 338.7 (n=21) & 2.4 ±
 0.3 \\
 GPU concurrent, optimized (from above) & 711.9 ± 76.1 & 10.3 ± 0.2 \\
-\end{tabular}\end{center}
+\end{tabular}\end{table}
 }
 
 The first row answers the objection a skeptical reader should raise:
@@ -516,12 +509,13 @@ isolated measurements (Section IV) agree with them. The
 CPU-counterfactual phases behave the same way: every sustained condition
 throttles at least briefly. Reproduction:
 
-\begin{verbatim}
+\smallskip\noindent\begin{minipage}{\linewidth}\begin{verbatim}
 OUT=/tmp/conc_bench bash concurrency_bench.sh
 OUT=/tmp/cpu_flood_bench bash cpu_flood_bench.sh
 python3 analyze_conc_bench.py /tmp/conc_bench 4000
-python3 analyze_conc_bench.py /tmp/cpu_flood_bench 4000
-\end{verbatim}
+python3 analyze_conc_bench.py \
+    /tmp/cpu_flood_bench 4000
+\end{verbatim}\end{minipage}\smallskip
 
 \section{What transfers and what does
 not}\label{what-transfers-and-what-does-not}
@@ -609,7 +603,9 @@ Bonbibi (the application, github.com/msradam/bonbibi). The flood kit is
 endpoint, and \texttt{replay\_flood2.py} does the same in-process on the
 Pi. Raw logs for Section VI are produced by
 \texttt{concurrency\_bench.sh} into a directory of plain-text files,
-from which every number in the table derives.
+from which every number in Table~\ref{tab:conc} derives.
+Local copies of every cited reference are archived in
+\texttt{docs/paper/references/}.
 
 \begin{thebibliography}{17}
 \footnotesize
