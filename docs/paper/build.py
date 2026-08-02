@@ -53,10 +53,6 @@ tex = r"""\documentclass[conference]{IEEEtran}
 \usepackage{calc}
 \usepackage{url}
 \usepackage{textcomp}
-%% BasicTeX lacks the Courier (pcr) metrics IEEEtran defaults to for
-%% \ttfamily; Latin Modern mono is the installed substitute. To restore
-%% Courier: sudo tlmgr install courier, then delete this line.
-\renewcommand{\ttdefault}{lmtt}
 \newcommand{\real}[1]{#1}
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \makeatletter

@@ -4,10 +4,6 @@
 \usepackage{calc}
 \usepackage{url}
 \usepackage{textcomp}
-% BasicTeX lacks the Courier (pcr) metrics IEEEtran defaults to for
-% \ttfamily; Latin Modern mono is the installed substitute. To restore
-% Courier: sudo tlmgr install courier, then delete this line.
-\renewcommand{\ttdefault}{lmtt}
 \newcommand{\real}[1]{#1}
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \makeatletter
@@ -587,26 +583,23 @@ why Bonbibi keeps inference on the CPU and gives the GPU to physics.
 application}\label{relationship-to-the-companion-application}
 
 Bonbibi, the flood-guidance application, is a separately packaged
-competition entry (Arm AI Optimization Challenge, Physical AI track)
-that serves this paper as workload and demonstration vehicle. The
-contributions reported here, made beyond that entry, are: the
-correctness-gated FSM harness and its MCP serving; the verified
-kernel-optimization ledger including the falsified hypotheses and the
-action-space result; the machine-checked reproduction; the concurrency
-envelope and its CPU-only counterfactual; and this paper's analysis. The
-application's interface, mobility-threshold research, and deployment
-materials are documented in the Bonbibi repository and its competition
-submission. The dual use of one project for the course deliverable and
-the competition follows the project advisor's guidance to delineate the
-work done beyond the hackathon.
+project (github.com/msradam/bonbibi) that serves this paper as workload
+and demonstration vehicle. The contributions reported here, made beyond
+that application, are: the correctness-gated FSM harness and its MCP
+serving; the verified kernel-optimization ledger including the falsified
+hypotheses and the action-space result; the machine-checked
+reproduction; the concurrency envelope and its CPU-only counterfactual;
+and this paper's analysis. The application's interface,
+mobility-threshold research, and deployment materials are documented in
+the Bonbibi repository.
 
 \section{Reproducibility and
 availability}\label{reproducibility-and-availability}
 
-Everything is in two repositories: seppa (harness, FSM definitions, MCP
-server, driver scripts, kernels, and the running notes file
-\texttt{docs/fable\_notes/NOTES.md} with one entry per confirmed win and
-dead end) and Bonbibi (the application). The flood kit is
+Everything is in two repositories: seppa (github.com/msradam/seppa:
+harness, FSM definitions, MCP server, driver scripts, kernels, and a
+running notes file with one entry per confirmed win and dead end) and
+Bonbibi (the application, github.com/msradam/bonbibi). The flood kit is
 \texttt{pi/flood/}: kernels, parameterized harness
 \texttt{vkflood2.cpp}, the falsification-sweep variants, and
 \texttt{concurrency\_bench.sh}. The FSM target is
