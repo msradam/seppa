@@ -103,12 +103,45 @@ vendor compute toolchain; compute reaches the GPU only through Vulkan
 shaders, compiled by Mesa's v3dv driver {[}9{]}. In this paper, kernel
 means a GLSL compute shader.
 
-The limits are tight: at most 256 invocations and 16 KB of shared memory
-per workgroup, a fixed 16-lane SIMD width, no usable fp16, no matrix
-hardware. The best kernel we measured on this device sustains about 13
-GFLOP/s in fp32; the four CPU cores manage about 5.5 GFLOP/s on
-comparable work. The GPU is a second, slower engine that happens to be
-free.
+Tables~\ref{tab:platform} and \ref{tab:gpu} list the
+platform and the GPU's compute limits, collected from the running board
+by \texttt{pi/collect\_specs.sh} (archived with the raw vulkaninfo
+dump). The limits are tight, and the scale is modest: the best kernel we
+measured sustains about 13 GFLOP/s in fp32, while the four CPU cores
+manage about 5.5 GFLOP/s on comparable work. The GPU is a second, slower
+engine that happens to be free.
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{table}[!t]\caption{Platform, collected from the running board by \mbox{collect\_specs.sh}}\label{tab:platform}\centering\footnotesize\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.5000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.5000}}@{}}
+\toprule
+\bottomrule
+Model & Raspberry Pi 5 Model B Rev 1.1 \\
+SoC & BCM2712 \\
+CPU & 4 x Cortex-A76 @ 2400 MHz \\
+RAM & 16 GB LPDDR (shared with GPU) \\
+OS / kernel & Debian GNU/Linux 13 (trixie) (DietPi 10.5.2),
+6.18.39+rpt-rpi-2712 \\
+Firmware & 2025/12/08 \\
+\end{tabular}\end{table}
+}
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{table}[!t]\caption{GPU compute limits, collected live (vulkaninfo)}\label{tab:gpu}\centering\footnotesize\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}ll@{}}
+\toprule
+\bottomrule
+Device & V3D 7.1.10.2 \\
+Driver & Mesa 25.0.7-2+rpt4 (v3dv) \\
+Vulkan API & 1.3.305 \\
+Core clock & 960 MHz \\
+Max invocations / workgroup & 256 \\
+Shared memory / workgroup & 16 KB \\
+Subgroup (SIMD) width & 16 \\
+fp16 arithmetic & no \\
+Cooperative matrix & no \\
+\end{tabular}\end{table}
+}
 
 The strange part is the driver: when a shader wants more registers than
 exist, v3dv does not fail but recompiles with scheduling disabled, then
@@ -140,8 +173,20 @@ MCP by a wrapper (Theodosia) running on the Pi itself.
 Fig.~\ref{fig:fsm} shows the graph, with two guard
 edges: \texttt{compile\ -\textgreater{}\ log\_variant} on compile
 failure, and \texttt{verify\ -\textgreater{}\ log\_variant} on gate
-failure. The benchmark state is reachable only through a green verify.
-The agent's entire interface is one MCP tool,
+failure. The guards are ordinary code, from
+\texttt{v3d\_flood2\_opt.py}:
+
+\smallskip\noindent\begin{minipage}{\linewidth}\begin{verbatim}
+("compile_",  "verify",      expr("compile_ok")),
+("compile_",  "log_variant", expr("not compile_ok")),
+("verify",    "benchmark",   expr("verify_ok")),
+("verify",    "log_variant", expr("not verify_ok")),
+("benchmark", "evaluate"),
+("evaluate",  "log_variant"),
+\end{verbatim}\end{minipage}\smallskip
+
+The benchmark state is reachable only through a green verify. The
+agent's entire interface is one MCP tool,
 \texttt{step(action,\ inputs)}, and the server constrains
 \texttt{action} to the graph's legal next moves.
 
@@ -168,8 +213,18 @@ evidential; no proposed kernel was hand-edited (transcripts in
 For the flood target, \texttt{verify} runs 400 steps at 256x256 and
 demands three things: normalized mean-square error (NMSE) below 1e-3
 against a double-precision CPU reference, total water equal to injected
-rainfall, and maximum depth pooling inside the terrain basin; measured
-NMSE in practice is 1.3e-9.
+rainfall, and maximum depth pooling inside the terrain basin. A green
+gate in the harness log:
+
+\smallskip\noindent\begin{minipage}{\linewidth}\begin{verbatim}
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.880s
+correct(NMSE vs CPU)=yes  NMSE=1.26e-09
+mass: rain_injected=5242879.9
+  water_total=5242739.3  (conserved vs rain=yes)
+pooling: max depth=111.718 at (127,127)
+  (pools in basin=yes)
+\end{verbatim}\end{minipage}\smallskip
 
 \section{Case Study: The Flood
 Stencil}\label{case-study-the-flood-stencil}
@@ -236,9 +291,10 @@ allocation. The shipped kernel is 1.59x at 256x256 (0.187 s against
 An earlier session pointed the FSM at this stencil and came back empty;
 we nearly concluded the kernel was at its limit. The problem was the
 action space: that version of \texttt{implement} accepted shader text
-only, and every winning change in Table I lives outside the shader
-(packing changes the buffer layout, fusion deletes a host-loop pipeline,
-strip-mining changes the dispatch shape). Once \texttt{implement} took
+only, and every winning change in Table~\ref{tab:sweep}
+lives outside the shader (packing changes the buffer layout, fusion
+deletes a host-loop pipeline, strip-mining changes the dispatch shape).
+Once \texttt{implement} took
 \texttt{\{shader,\ height\_shader,\ strip\}}, the machine found and kept
 the fused strip-2 kernel from its own baseline (Section VI). A plateau
 reflects the search space before it reflects the hardware. The harness

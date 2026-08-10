@@ -28,7 +28,9 @@ This paper reports:
 
 The Pi 5 pairs four Cortex-A76 CPU cores with a VideoCore VII GPU (V3D 7.1), the block that also drives the desktop. There is no CUDA and no vendor compute toolchain; compute reaches the GPU only through Vulkan shaders, compiled by Mesa's v3dv driver [9]. In this paper, kernel means a GLSL compute shader.
 
-The limits are tight: at most 256 invocations and 16 KB of shared memory per workgroup, a fixed 16-lane SIMD width, no usable fp16, no matrix hardware. The best kernel we measured on this device sustains about 13 GFLOP/s in fp32; the four CPU cores manage about 5.5 GFLOP/s on comparable work. The GPU is a second, slower engine that happens to be free.
+Tables~\ref{tab:platform} and \ref{tab:gpu} list the platform and the GPU's compute limits, collected from the running board by `pi/collect_specs.sh` (archived with the raw vulkaninfo dump). The limits are tight, and the scale is modest: the best kernel we measured sustains about 13 GFLOP/s in fp32, while the four CPU cores manage about 5.5 GFLOP/s on comparable work. The GPU is a second, slower engine that happens to be free.
+
+<!--SPECS-->
 
 The strange part is the driver: when a shader wants more registers than exist, v3dv does not fail but recompiles with scheduling disabled, then unrolling disabled, then fewer threads, handing back whatever survives, sometimes several times slower.
 
@@ -46,13 +48,34 @@ characterize -> baseline -> hypothesize -> implement
   -> log_variant -> (hypothesize | stop)
 ```
 
-with two guard edges: `compile -> log_variant` on compile failure, and `verify -> log_variant` on gate failure. The benchmark state is reachable only through a green verify. The agent's entire interface is one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves.
+with two guard edges: `compile -> log_variant` on compile failure, and `verify -> log_variant` on gate failure. The guards are ordinary code, from `v3d_flood2_opt.py`:
+
+```
+("compile_",  "verify",      expr("compile_ok")),
+("compile_",  "log_variant", expr("not compile_ok")),
+("verify",    "benchmark",   expr("verify_ok")),
+("verify",    "log_variant", expr("not verify_ok")),
+("benchmark", "evaluate"),
+("evaluate",  "log_variant"),
+```
+
+The benchmark state is reachable only through a green verify. The agent's entire interface is one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves.
 
 The port preserves AutoKernel's loop discipline: one focused change per experiment, a baseline measured first, correctness and timing taken from the same execution, keep only on a gain of at least 1%, every experiment recorded. It moves one thing: the authority to decide. AutoKernel trusts its agent to run the benchmark and honestly revert failures; here the verdict is a deterministic action the model cannot reach. A run ends after three consecutive non-improvements on gate-passing variants, or at the budget. An audit of the port is in the repository (`docs/autokernel_fidelity.md`).
 
 For the division of labor, we follow Chip-Chat's disclosure convention. The author built the application and the harness, chose the physics gates, ran the hand-driven sweep of Section 5.2, and supervised sessions. The language model, Claude Sonnet 5 (Anthropic), driven through the Claude Code client at high reasoning effort, wrote the content of `hypothesize` and `implement` (kernel source and host-side parameters) and nothing else. The machine did everything evidential; no proposed kernel was hand-edited (transcripts in `docs/paper/artifacts/claude_sessions/`).
 
-For the flood target, `verify` runs 400 steps at 256x256 and demands three things: normalized mean-square error (NMSE) below 1e-3 against a double-precision CPU reference, total water equal to injected rainfall, and maximum depth pooling inside the terrain basin; measured NMSE in practice is 1.3e-9.
+For the flood target, `verify` runs 400 steps at 256x256 and demands three things: normalized mean-square error (NMSE) below 1e-3 against a double-precision CPU reference, total water equal to injected rainfall, and maximum depth pooling inside the terrain basin. A green gate in the harness log:
+
+```
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.880s
+correct(NMSE vs CPU)=yes  NMSE=1.26e-09
+mass: rain_injected=5242879.9
+  water_total=5242739.3  (conserved vs rain=yes)
+pooling: max depth=111.718 at (127,127)
+  (pools in basin=yes)
+```
 
 ## 5. Case Study: The Flood Stencil
 

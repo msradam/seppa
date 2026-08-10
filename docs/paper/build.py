@@ -3,6 +3,7 @@ Usage: python3 build.py  (writes paper_ieee.tex, compiles paper.pdf)
 IEEEtran.cls is vendored in this directory (CTAN, V1.8b).
 """
 
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -48,6 +49,8 @@ with two guard edges:""",
 Fig.~\\ref{fig:fsm} shows the graph, with two guard edges:""",
 )
 # tables become numbered floats; point the prose at them
+rep("every winning change in Table I lives outside the shader",
+    "every winning change in Table~\\ref{tab:sweep} lives outside the shader")
 rep("so every comparison in this paper is within `vkflood2`.",
     "so every comparison in this paper is within `vkflood2`. Table~\\ref{tab:sweep} shows the sweep.")
 rep("Results from the steady-state run of 2026-08-10 (raw logs in",
@@ -57,6 +60,36 @@ rep("`docs/paper/artifacts/`, conc_steady):",
 rep("The same soak-and-measure protocol applied; raw logs are in `docs/paper/artifacts/`, cpu_steady.",
     "The same soak-and-measure protocol applied; raw logs are in `docs/paper/artifacts/`, cpu_steady. Table~\\ref{tab:cpu} presents the outcome.")
 
+
+
+# spec tables are generated from the archived system capture, not typed in
+_specs = json.loads(Path("artifacts/specs_2026-08-10/specs.json").read_text())
+_plat, _gpu = _specs["platform"], _specs["gpu"]
+_plat_rows = [
+    ("Model", _plat["model"]),
+    ("SoC", _plat["soc"]),
+    ("CPU", f"{_plat['cpu']} @ {_plat['cpu_clock_mhz']} MHz"),
+    ("RAM", f"{_plat['ram_gb']} GB LPDDR (shared with GPU)"),
+    ("OS / kernel", f"{_plat['os']}, {_plat['kernel']}"),
+    ("Firmware", _plat["firmware"]),
+]
+_gpu_rows = [
+    ("Device", _gpu["device"]),
+    ("Driver", _gpu["driver"] + " (v3dv)"),
+    ("Vulkan API", _gpu["vulkan_api"]),
+    ("Core clock", f"{_gpu['core_clock_mhz']} MHz"),
+    ("Max invocations / workgroup", str(_gpu["max_workgroup_invocations"])),
+    ("Shared memory / workgroup", f"{_gpu['max_shared_memory_bytes'] // 1024} KB"),
+    ("Subgroup (SIMD) width", str(_gpu["subgroup_size"])),
+    ("fp16 arithmetic", "yes" if _gpu["shader_float16"] else "no"),
+    ("Cooperative matrix", "yes" if _gpu["cooperative_matrix"] else "no"),
+]
+def _md_table(rows):
+    out = ["| | |", "|---------|---------|"]
+    out += [f"| {k} | {v} |" for k, v in rows]
+    return "\n".join(out)
+assert "<!--SPECS-->" in body_md
+body_md = body_md.replace("<!--SPECS-->", _md_table(_plat_rows) + "\n\n" + _md_table(_gpu_rows))
 
 def pandoc(text):
     return subprocess.run(
@@ -83,6 +116,8 @@ body = re.sub(
     r"\\begin\{minipage\}\[[bt]\]\{\\linewidth\}\\raggedright\s*(.*?)\s*\\end\{minipage\}",
     r"\1", body, flags=re.S)
 captions = iter([
+    ("tab:platform", "Platform, collected from the running board by \\mbox{collect\\_specs.sh}"),
+    ("tab:gpu", "GPU compute limits, collected live (vulkaninfo)"),
     ("tab:sweep", "Falsification sweep: 400 steps at 256x256 in the \\mbox{vkflood2} harness"),
     ("tab:conc", "Concurrent GPU flood and CPU LLM decode"),
     ("tab:cpu", "The CPU-only counterfactual"),

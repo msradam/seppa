@@ -1,0 +1,400 @@
+==========
+VULKANINFO
+==========
+
+Vulkan Instance Version: 1.4.309
+
+
+Instance Extensions: count = 24
+===============================
+	VK_EXT_acquire_drm_display             : extension revision 1
+	VK_EXT_acquire_xlib_display            : extension revision 1
+	VK_EXT_debug_report                    : extension revision 10
+	VK_EXT_debug_utils                     : extension revision 2
+	VK_EXT_direct_mode_display             : extension revision 1
+	VK_EXT_display_surface_counter         : extension revision 1
+	VK_EXT_headless_surface                : extension revision 1
+	VK_EXT_surface_maintenance1            : extension revision 1
+	VK_EXT_swapchain_colorspace            : extension revision 5
+	VK_KHR_device_group_creation           : extension revision 1
+	VK_KHR_display                         : extension revision 23
+	VK_KHR_external_fence_capabilities     : extension revision 1
+	VK_KHR_external_memory_capabilities    : extension revision 1
+	VK_KHR_external_semaphore_capabilities : extension revision 1
+	VK_KHR_get_display_properties2         : extension revision 1
+	VK_KHR_get_physical_device_properties2 : extension revision 2
+	VK_KHR_get_surface_capabilities2       : extension revision 1
+	VK_KHR_portability_enumeration         : extension revision 1
+	VK_KHR_surface                         : extension revision 25
+	VK_KHR_surface_protected_capabilities  : extension revision 1
+	VK_KHR_wayland_surface                 : extension revision 6
+	VK_KHR_xcb_surface                     : extension revision 6
+	VK_KHR_xlib_surface                    : extension revision 6
+	VK_LUNARG_direct_driver_loading        : extension revision 1
+
+Layers: count = 2
+=================
+VK_LAYER_MESA_device_select (Linux device selection layer) Vulkan version 1.4.303, layer version 1:
+	Layer Extensions: count = 0
+	Devices: count = 2
+		GPU id = 0 (V3D 7.1.10.2)
+		Layer-Device Extensions: count = 0
+
+		GPU id = 1 (llvmpipe (LLVM 19.1.7, 128 bits))
+		Layer-Device Extensions: count = 0
+
+VK_LAYER_MESA_overlay (Mesa Overlay layer) Vulkan version 1.4.303, layer version 1:
+	Layer Extensions: count = 0
+	Devices: count = 2
+		GPU id = 0 (V3D 7.1.10.2)
+		Layer-Device Extensions: count = 0
+
+		GPU id = 1 (llvmpipe (LLVM 19.1.7, 128 bits))
+		Layer-Device Extensions: count = 0
+
+Device Properties and Extensions:
+=================================
+GPU0:
+VkPhysicalDeviceProperties:
+---------------------------
+	apiVersion        = 1.3.305 (4206897)
+	driverVersion     = 25.0.7 (104857607)
+	vendorID          = 0x14e4
+	deviceID          = 0x55701c33
+	deviceType        = PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU
+	deviceName        = V3D 7.1.10.2
+	pipelineCacheUUID = a801ad89-90bc-6e4b-dbf7-6f6038afe3ab
+
+VkPhysicalDeviceLimits:
+-----------------------
+	maxImageDimension1D                             = 4096
+	maxImageDimension2D                             = 4096
+	maxImageDimension3D                             = 4096
+	maxImageDimensionCube                           = 4096
+	maxImageArrayLayers                             = 2048
+	maxTexelBufferElements                          = 268435456
+	maxUniformBufferRange                           = 1073741824
+	maxStorageBufferRange                           = 1073741824
+	maxPushConstantsSize                            = 128
+	maxMemoryAllocationCount                        = 1048576
+	maxSamplerAllocationCount                       = 65536
+	bufferImageGranularity                          = 0x00000100
+	sparseAddressSpaceSize                          = 0x00000000
+	maxBoundDescriptorSets                          = 16
+	maxPerStageDescriptorSamplers                   = 24
+	maxPerStageDescriptorUniformBuffers             = 16
+	maxPerStageDescriptorStorageBuffers             = 8
+	maxPerStageDescriptorSampledImages              = 16
+	maxPerStageDescriptorStorageImages              = 4
+	maxPerStageDescriptorInputAttachments           = 4
+	maxPerStageResources                            = 128
+	maxDescriptorSetSamplers                        = 96
+	maxDescriptorSetUniformBuffers                  = 64
+	maxDescriptorSetUniformBuffersDynamic           = 8
+	maxDescriptorSetStorageBuffers                  = 32
+	maxDescriptorSetStorageBuffersDynamic           = 4
+	maxDescriptorSetSampledImages                   = 64
+	maxDescriptorSetStorageImages                   = 16
+	maxDescriptorSetInputAttachments                = 4
+	maxVertexInputAttributes                        = 16
+	maxVertexInputBindings                          = 16
+	maxVertexInputAttributeOffset                   = 4294967295
+	maxVertexInputBindingStride                     = 65535
+	maxVertexOutputComponents                       = 64
+	maxTessellationGenerationLevel                  = 0
+	maxTessellationPatchSize                        = 0
+	maxTessellationControlPerVertexInputComponents  = 0
+	maxTessellationControlPerVertexOutputComponents = 0
+	maxTessellationControlPerPatchOutputComponents  = 0
+	maxTessellationControlTotalOutputComponents     = 0
+	maxTessellationEvaluationInputComponents        = 0
+	maxTessellationEvaluationOutputComponents       = 0
+	maxGeometryShaderInvocations                    = 32
+	maxGeometryInputComponents                      = 64
+	maxGeometryOutputComponents                     = 64
+	maxGeometryOutputVertices                       = 256
+	maxGeometryTotalOutputComponents                = 1024
+	maxFragmentInputComponents                      = 64
+	maxFragmentOutputAttachments                    = 4
+	maxFragmentDualSrcAttachments                   = 0
+	maxFragmentCombinedOutputResources              = 20
+	maxComputeSharedMemorySize                      = 16384
+	maxComputeWorkGroupCount: count = 3
+		65535
+		65535
+		65535
+	maxComputeWorkGroupInvocations                  = 256
+	maxComputeWorkGroupSize: count = 3
+		256
+		256
+		256
+	subPixelPrecisionBits                           = 6
+	subTexelPrecisionBits                           = 8
+	mipmapPrecisionBits                             = 8
+	maxDrawIndexedIndexValue                        = 4294967295
+	maxDrawIndirectCount                            = 2147483647
+	maxSamplerLodBias                               = 14
+	maxSamplerAnisotropy                            = 16
+	maxViewports                                    = 1
+	maxViewportDimensions: count = 2
+		4096
+		4096
+	viewportBoundsRange: count = 2
+		-8192
+		8191
+	viewportSubPixelBits                            = 0
+	minMemoryMapAlignment                           = 4096
+	minTexelBufferOffsetAlignment                   = 0x00000040
+	minUniformBufferOffsetAlignment                 = 0x00000020
+	minStorageBufferOffsetAlignment                 = 0x00000020
+	minTexelOffset                                  = -8
+	maxTexelOffset                                  = 7
+	minTexelGatherOffset                            = -8
+	maxTexelGatherOffset                            = 7
+	minInterpolationOffset                          = -0.5
+	maxInterpolationOffset                          = 0.5
+	subPixelInterpolationOffsetBits                 = 6
+	maxFramebufferWidth                             = 4096
+	maxFramebufferHeight                            = 4096
+	maxFramebufferLayers                            = 256
+	framebufferColorSampleCounts: count = 2
+		SAMPLE_COUNT_1_BIT
+		SAMPLE_COUNT_4_BIT
+	framebufferDepthSampleCounts: count = 2
+		SAMPLE_COUNT_1_BIT
+		SAMPLE_COUNT_4_BIT
+	framebufferStencilSampleCounts: count = 2
+		SAMPLE_COUNT_1_BIT
+		SAMPLE_COUNT_4_BIT
+	framebufferNoAttachmentsSampleCounts: count = 2
+		SAMPLE_COUNT_1_BIT
+		SAMPLE_COUNT_4_BIT
+	maxColorAttachments                             = 8
+	sampledImageColorSampleCounts: count = 2
+		SAMPLE_COUNT_1_BIT
+		SAMPLE_COUNT_4_BIT
+	sampledImageIntegerSampleCounts: count = 2
+		SAMPLE_COUNT_1_BIT
+		SAMPLE_COUNT_4_BIT
+	sampledImageDepthSampleCounts: count = 2
+		SAMPLE_COUNT_1_BIT
+		SAMPLE_COUNT_4_BIT
+	sampledImageStencilSampleCounts: count = 2
+		SAMPLE_COUNT_1_BIT
+		SAMPLE_COUNT_4_BIT
+	storageImageSampleCounts: count = 1
+		SAMPLE_COUNT_1_BIT
+	maxSampleMaskWords                              = 1
+	timestampComputeAndGraphics                     = true
+	timestampPeriod                                 = 1
+	maxClipDistances                                = 8
+	maxCullDistances                                = 0
+	maxCombinedClipAndCullDistances                 = 8
+	discreteQueuePriorities                         = 2
+	pointSizeRange: count = 2
+		0.03125
+		512
+	lineWidthRange: count = 2
+		1
+		32
+	pointSizeGranularity                            = 0.03125
+	lineWidthGranularity                            = 0.03125
+	strictLines                                     = true
+	standardSampleLocations                         = false
+	optimalBufferCopyOffsetAlignment                = 0x00000020
+	optimalBufferCopyRowPitchAlignment              = 0x00000020
+	nonCoherentAtomSize                             = 0x00000100
+
+VkPhysicalDeviceSparseProperties:
+---------------------------------
+	residencyStandard2DBlockShape            = false
+	residencyStandard2DMultisampleBlockShape = false
+	residencyStandard3DBlockShape            = false
+	residencyAlignedMipSize                  = false
+	residencyNonResidentStrict               = false
+
+VkPhysicalDeviceCustomBorderColorPropertiesEXT:
+-----------------------------------------------
+	maxCustomBorderColorSamplers = 24
+
+VkPhysicalDeviceDrmPropertiesEXT:
+---------------------------------
+	hasPrimary   = true
+	hasRender    = true
+	primaryMajor = 226
+	primaryMinor = 1
+	renderMajor  = 226
+	renderMinor  = 128
+
+VkPhysicalDeviceLineRasterizationPropertiesKHR:
+-----------------------------------------------
+	lineSubPixelPrecisionBits = 6
+
+VkPhysicalDeviceMaintenance5PropertiesKHR:
+------------------------------------------
+	earlyFragmentMultisampleCoverageAfterSampleCounting = true
+	earlyFragmentSampleMaskTestBeforeSampleCounting     = true
+	depthStencilSwizzleOneSupport                       = true
+	polygonModePointSize                                = true
+	nonStrictSinglePixelWideLinesUseParallelogram       = true
+	nonStrictWideLinesUseParallelogram                  = true
+
+VkPhysicalDeviceMultiDrawPropertiesEXT:
+---------------------------------------
+	maxMultiDrawCount = 2048
+
+VkPhysicalDevicePerformanceQueryPropertiesKHR:
+----------------------------------------------
+	allowCommandBufferQueryCopies = true
+
+VkPhysicalDevicePipelineRobustnessPropertiesEXT:
+------------------------------------------------
+	defaultRobustnessStorageBuffers = PIPELINE_ROBUSTNESS_BUFFER_BEHAVIOR_DEVICE_DEFAULT
+	defaultRobustnessUniformBuffers = PIPELINE_ROBUSTNESS_BUFFER_BEHAVIOR_DEVICE_DEFAULT
+	defaultRobustnessVertexInputs = PIPELINE_ROBUSTNESS_BUFFER_BEHAVIOR_DEVICE_DEFAULT
+	defaultRobustnessImages = PIPELINE_ROBUSTNESS_IMAGE_BEHAVIOR_DEVICE_DEFAULT
+
+VkPhysicalDeviceProvokingVertexPropertiesEXT:
+---------------------------------------------
+	provokingVertexModePerPipeline                       = true
+	transformFeedbackPreservesTriangleFanProvokingVertex = false
+
+VkPhysicalDeviceShaderModuleIdentifierPropertiesEXT:
+----------------------------------------------------
+	shaderModuleIdentifierAlgorithmUUID     = 4d455341-2d42-4c41-4b45-330000000000
+
+VkPhysicalDeviceVertexAttributeDivisorPropertiesKHR:
+----------------------------------------------------
+	maxVertexAttribDivisor       = 65535
+	supportsNonZeroFirstInstance = true
+
+VkPhysicalDeviceVertexAttributeDivisorPropertiesEXT:
+----------------------------------------------------
+	maxVertexAttribDivisor = 65535
+
+VkPhysicalDeviceVulkan11Properties:
+-----------------------------------
+	deviceUUID                        = 5fd8106e-741a-cafa-e080-fdb16cf11a80
+	driverUUID                        = cd58235c-2a29-4ac7-8b40-a18d30b128ba
+	deviceNodeMask                    = 0
+	deviceLUIDValid                   = false
+	subgroupSize                      = 16
+	subgroupSupportedStages: count = 2
+		SHADER_STAGE_FRAGMENT_BIT
+		SHADER_STAGE_COMPUTE_BIT
+	subgroupSupportedOperations: count = 6
+		SUBGROUP_FEATURE_BASIC_BIT
+		SUBGROUP_FEATURE_VOTE_BIT
+		SUBGROUP_FEATURE_BALLOT_BIT
+		SUBGROUP_FEATURE_SHUFFLE_BIT
+		SUBGROUP_FEATURE_SHUFFLE_RELATIVE_BIT
+		SUBGROUP_FEATURE_QUAD_BIT
+	subgroupQuadOperationsInAllStages = false
+	pointClippingBehavior             = POINT_CLIPPING_BEHAVIOR_ALL_CLIP_PLANES
+	maxMultiviewViewCount             = 16
+	maxMultiviewInstanceIndex         = 4294967294
+	protectedNoFault                  = false
+	maxPerSetDescriptors              = 67108863
+	maxMemoryAllocationSize           = 0x40000000
+
+VkPhysicalDeviceVulkan12Properties:
+-----------------------------------
+	driverID                                             = DRIVER_ID_MESA_V3DV
+	driverName                                           = V3DV Mesa
+	driverInfo                                           = Mesa 25.0.7-2+rpt4
+	conformanceVersion:
+		major    = 1
+		minor    = 3
+		subminor = 8
+		patch    = 3
+	denormBehaviorIndependence                           = SHADER_FLOAT_CONTROLS_INDEPENDENCE_ALL
+	roundingModeIndependence                             = SHADER_FLOAT_CONTROLS_INDEPENDENCE_ALL
+	shaderSignedZeroInfNanPreserveFloat16                = true
+	shaderSignedZeroInfNanPreserveFloat32                = true
+	shaderSignedZeroInfNanPreserveFloat64                = false
+	shaderDenormPreserveFloat16                          = true
+	shaderDenormPreserveFloat32                          = true
+	shaderDenormPreserveFloat64                          = false
+	shaderDenormFlushToZeroFloat16                       = false
+	shaderDenormFlushToZeroFloat32                       = false
+	shaderDenormFlushToZeroFloat64                       = false
+	shaderRoundingModeRTEFloat16                         = true
+	shaderRoundingModeRTEFloat32                         = true
+	shaderRoundingModeRTEFloat64                         = false
+	shaderRoundingModeRTZFloat16                         = false
+	shaderRoundingModeRTZFloat32                         = false
+	shaderRoundingModeRTZFloat64                         = false
+	maxUpdateAfterBindDescriptorsInAllPools              = 0
+	shaderUniformBufferArrayNonUniformIndexingNative     = false
+	shaderSampledImageArrayNonUniformIndexingNative      = false
+	shaderStorageBufferArrayNonUniformIndexingNative     = false
+	shaderStorageImageArrayNonUniformIndexingNative      = false
+	shaderInputAttachmentArrayNonUniformIndexingNative   = false
+	robustBufferAccessUpdateAfterBind                    = false
+	quadDivergentImplicitLod                             = false
+	maxPerStageDescriptorUpdateAfterBindSamplers         = 24
+	maxPerStageDescriptorUpdateAfterBindUniformBuffers   = 16
+	maxPerStageDescriptorUpdateAfterBindStorageBuffers   = 8
+	maxPerStageDescriptorUpdateAfterBindSampledImages    = 16
+	maxPerStageDescriptorUpdateAfterBindStorageImages    = 4
+	maxPerStageDescriptorUpdateAfterBindInputAttachments = 4
+	maxPerStageUpdateAfterBindResources                  = 128
+	maxDescriptorSetUpdateAfterBindSamplers              = 96
+	maxDescriptorSetUpdateAfterBindUniformBuffers        = 64
+	maxDescriptorSetUpdateAfterBindUniformBuffersDynamic = 8
+	maxDescriptorSetUpdateAfterBindStorageBuffers        = 32
+	maxDescriptorSetUpdateAfterBindStorageBuffersDynamic = 8
+	maxDescriptorSetUpdateAfterBindSampledImages         = 64
+	maxDescriptorSetUpdateAfterBindStorageImages         = 16
+	maxDescriptorSetUpdateAfterBindInputAttachments      = 4
+	supportedDepthResolveModes: count = 1
+		RESOLVE_MODE_SAMPLE_ZERO_BIT
+	supportedStencilResolveModes: count = 1
+		RESOLVE_MODE_SAMPLE_ZERO_BIT
+	independentResolveNone                               = false
+	independentResolve                                   = false
+	filterMinmaxSingleComponentFormats                   = false
+	filterMinmaxImageComponentMapping                    = false
+	maxTimelineSemaphoreValueDifference                  = 18446744073709551615
+	framebufferIntegerColorSampleCounts: count = 2
+		SAMPLE_COUNT_1_BIT
+		SAMPLE_COUNT_4_BIT
+
+VkPhysicalDeviceVulkan13Properties:
+-----------------------------------
+	minSubgroupSize                                                               = 16
+	maxSubgroupSize                                                               = 16
+	maxComputeWorkgroupSubgroups                                                  = 16
+	requiredSubgroupSizeStages: count = 1
+		SHADER_STAGE_COMPUTE_BIT
+	maxInlineUniformBlockSize                                                     = 4096
+	maxPerStageDescriptorInlineUniformBlocks                                      = 4
+	maxPerStageDescriptorUpdateAfterBindInlineUniformBlocks                       = 4
+	maxDescriptorSetInlineUniformBlocks                                           = 4
+	maxDescriptorSetUpdateAfterBindInlineUniformBlocks                            = 4
+	maxInlineUniformTotalSize                                                     = 16384
+	integerDotProduct8BitUnsignedAccelerated                                      = false
+	integerDotProduct8BitSignedAccelerated                                        = false
+	integerDotProduct8BitMixedSignednessAccelerated                               = false
+	integerDotProduct4x8BitPackedUnsignedAccelerated                              = false
+	integerDotProduct4x8BitPackedSignedAccelerated                                = false
+	integerDotProduct4x8BitPackedMixedSignednessAccelerated                       = false
+	integerDotProduct16BitUnsignedAccelerated                                     = false
+	integerDotProduct16BitSignedAccelerated                                       = false
+	integerDotProduct16BitMixedSignednessAccelerated                              = false
+	integerDotProduct32BitUnsignedAccelerated                                     = false
+	integerDotProduct32BitSignedAccelerated                                       = false
+	integerDotProduct32BitMixedSignednessAccelerated                              = false
+	integerDotProduct64BitUnsignedAccelerated                                     = false
+	integerDotProduct64BitSignedAccelerated                                       = false
+	integerDotProduct64BitMixedSignednessAccelerated                              = false
+	integerDotProductAccumulatingSaturating8BitUnsignedAccelerated                = false
+	integerDotProductAccumulatingSaturating8BitSignedAccelerated                  = false
+	integerDotProductAccumulatingSaturating8BitMixedSignednessAccelerated         = false
+	integerDotProductAccumulatingSaturating4x8BitPackedUnsignedAccelerated        = false
+	integerDotProductAccumulatingSaturating4x8BitPackedSignedAccelerated          = false
+	integerDotProductAccumulatingSaturating4x8BitPackedMixedSignednessAccelerated = false
+	integerDotProductAccumulatingSaturating16BitUnsignedAccelerated               = false
+	integerDotProductAccumulatingSaturating16BitSignedAccelerated                 = false
+	integerDotProductAccumulatingSaturating16BitMixedSignednessAccelerated        = false
+	integerDotProductAccumulatingSaturating32BitUnsignedAccelerated               = false
