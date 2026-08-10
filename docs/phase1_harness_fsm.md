@@ -87,7 +87,7 @@ Every call, success or refusal, is one hash-chained ledger line. That transcript
 ## Deployment (Phase 1)
 
 - Theodosia server runs **on the Pi** (aarch64 / py3.13, confirmed): `theodosia serve fsm:build_app --transport streamable-http --host 0.0.0.0 --port 8000`, factory mode.
-- Agent runs on the **laptop**, MCP client → `http://pi.local:8000/mcp`.
+- Agent runs on the **laptop**, MCP client → `http://<pi-ip>:8000/mcp`.
 - The FSM's `implement`/`compile`/`verify`/`benchmark` actions call Pi tools via **local subprocess** (as the existing burr_fsm already does). No SSH inside the loop.
 
 ---

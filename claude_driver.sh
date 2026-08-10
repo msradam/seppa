@@ -9,7 +9,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-URL="${1:-http://pi.local:8000/mcp}"
+URL="${1:?usage: claude_driver.sh http://<pi>:8000/mcp}"
 MODEL="${MODEL:-claude-sonnet-5}"
 EFFORT="${EFFORT:-high}"
 MAX_EXPERIMENTS="${MAX_EXPERIMENTS:-3}"

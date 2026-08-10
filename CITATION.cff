@@ -4,7 +4,7 @@ title: "Seppa: correctness-gated, LLM-driven GPU kernel optimization"
 authors:
   - family-names: Rahman
     given-names: Adam Munawar
-version: "1.0"
+version: "0.1.0"
 date-released: "2026-08-01"
 url: "https://github.com/msradam/seppa"
 license: MIT

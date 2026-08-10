@@ -1,13 +1,11 @@
+/private/
 __pycache__/
 *.pyc
 .venv/
 .DS_Store
 *.spv
-.mcp.json
-FABLE_HANDOFF.md
-checkpoint_august_1.md
-docs/paper/desire.md
 docs/paper/paper_ieee.aux
 docs/paper/paper_ieee.log
 docs/paper/missfont.log
 .ipynb_checkpoints/
+.mcp.json

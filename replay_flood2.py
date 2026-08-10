@@ -1,10 +1,13 @@
 """Recreate the flood optimization through the FSM: baseline, then submit
 the fused strip-2 kernel as experiment 1 and let the machine judge it."""
 import json
+import os
+
 import v3d_flood2_opt
 
 app = v3d_flood2_opt.build_flood2_app()
-fused_src = open("/root/v3d-research/fused2s.comp").read()
+_HERE = os.path.dirname(os.path.abspath(__file__))
+fused_src = open(os.path.join(_HERE, "pi", "flood", "fused2s.comp")).read()
 
 steps = [
     ("characterize", {}),

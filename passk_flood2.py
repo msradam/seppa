@@ -15,19 +15,20 @@ docs/paper/artifacts/passk_<date>/.
 """
 
 import json
+import os
 import statistics
 import subprocess
 import sys
 import time
 from datetime import date
 from pathlib import Path
+from urllib.parse import urlparse
 
 K = int(sys.argv[1]) if len(sys.argv) > 1 else 5
 URL = sys.argv[2] if len(sys.argv) > 2 else "http://pi.local:8000/mcp"
-PI = "root@pi.local"
+PI = os.environ.get("PI_SSH") or f"root@{urlparse(URL).hostname}"
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "docs" / "paper" / "artifacts" / f"passk_{date.today().isoformat()}"
-OUT.mkdir(parents=True, exist_ok=True)
 
 
 def soc_temp() -> float:
@@ -77,33 +78,39 @@ def score(lines: list[dict]) -> dict:
     return r
 
 
-runs = []
-for i in range(1, K + 1):
-    t = cool_start()
-    p = subprocess.run(
-        [str(HERE / ".venv" / "bin" / "python"), str(HERE / "drive_flood2_mcp.py"), URL],
-        capture_output=True, text=True, timeout=600,
-    )
-    (OUT / f"run{i}.jsonl").write_text(p.stdout)
-    if p.returncode != 0:
-        (OUT / f"run{i}.stderr").write_text(p.stderr)
-    lines = [json.loads(ln) for ln in p.stdout.splitlines() if ln.startswith("{")]
-    r = score(lines)
-    r.update(run=i, start_temp_c=t, rc=p.returncode)
-    runs.append(r)
-    print(json.dumps(r))
+def main():
+    runs = []
+    for i in range(1, K + 1):
+        t = cool_start()
+        p = subprocess.run(
+            [str(HERE / ".venv" / "bin" / "python"), str(HERE / "drive_flood2_mcp.py"), URL],
+            capture_output=True, text=True, timeout=600,
+        )
+        (OUT / f"run{i}.jsonl").write_text(p.stdout)
+        if p.returncode != 0:
+            (OUT / f"run{i}.stderr").write_text(p.stderr)
+        lines = [json.loads(ln) for ln in p.stdout.splitlines() if ln.startswith("{")]
+        r = score(lines)
+        r.update(run=i, start_temp_c=t, rc=p.returncode)
+        runs.append(r)
+        print(json.dumps(r))
 
-baselines = [r["baseline"] for r in runs if r["baseline"]]
-kepts = [r["kept"] for r in runs if r["kept"]]
-summary = {
-    "k": K,
-    "passes": sum(r["pass"] for r in runs),
-    "pass_k": all(r["pass"] for r in runs),
-    "baseline_mean": round(statistics.mean(baselines), 1),
-    "baseline_stdev": round(statistics.stdev(baselines), 1) if len(baselines) > 1 else 0.0,
-    "kept_mean": round(statistics.mean(kepts), 1),
-    "kept_stdev": round(statistics.stdev(kepts), 1) if len(kepts) > 1 else 0.0,
-    "speedups": [round(r["kept"] / r["baseline"], 3) for r in runs if r["kept"] and r["baseline"]],
-}
-(OUT / "summary.json").write_text(json.dumps({"runs": runs, "summary": summary}, indent=1))
-print(json.dumps(summary))
+    baselines = [r["baseline"] for r in runs if r["baseline"]]
+    kepts = [r["kept"] for r in runs if r["kept"]]
+    summary = {
+        "k": K,
+        "passes": sum(r["pass"] for r in runs),
+        "pass_k": all(r["pass"] for r in runs),
+        "baseline_mean": round(statistics.mean(baselines), 1),
+        "baseline_stdev": round(statistics.stdev(baselines), 1) if len(baselines) > 1 else 0.0,
+        "kept_mean": round(statistics.mean(kepts), 1),
+        "kept_stdev": round(statistics.stdev(kepts), 1) if len(kepts) > 1 else 0.0,
+        "speedups": [round(r["kept"] / r["baseline"], 3) for r in runs if r["kept"] and r["baseline"]],
+    }
+    (OUT / "summary.json").write_text(json.dumps({"runs": runs, "summary": summary}, indent=1))
+    print(json.dumps(summary))
+
+
+if __name__ == "__main__":
+    OUT.mkdir(parents=True, exist_ok=True)
+    main()

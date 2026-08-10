@@ -32,7 +32,7 @@ on this specific board, GPU or CPU.
   — real, verified, NMSE-checked, mass-conserving. This is genuine production
   GPU work, not a benchmark.
 - **The GEMM demo shader** (`best_gemm.comp`) — a standalone benchmark used to
-  prove and measure the FSM optimization loop (7.02 → 12.56 GFLOPS). It is
+  prove and measure the FSM optimization loop (7.02 → 13.42 GFLOPS over two rounds). It is
   not plugged into a real workload; it exists to validate the methodology.
 
 ## Ranked candidates for further GPU-compute work

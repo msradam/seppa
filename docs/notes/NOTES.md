@@ -1,4 +1,4 @@
-# Fable session notes: llama.cpp GPU decode on V3D
+# Session notes: llama.cpp GPU decode on V3D
 
 One lesson per entry. Confirmed wins and dead ends both, with why.
 Hardware: Pi 5, V3D 7.1.10.2, Mesa 25.0.7-2+rpt4, llama.cpp bb28c1f.
@@ -117,7 +117,7 @@ block-buffered: the last line of a log is NOT where a process died.
 ## State of the MCP server
 
 The server on the Pi (port 8000) serves whichever mode `/tmp/serve.sh`
-launches; as of the second Fable session it is `--explore` (GEMM). Switch by
+launches; as of the second optimization session it is `--explore` (GEMM). Switch by
 editing /tmp/serve.sh (or launching `.venv/bin/python theodosia_server.py
 --http --llama-mmv|--explore` from /root/seppa) — kill the old server with
 `pkill -f "theodosia_[s]erver"` from a command line that does NOT itself
@@ -146,7 +146,7 @@ shaders and match what is on the Pi.
 
 Two layers, both closed:
 
-**Layer 1 — the abort Sonnet reproduced.** "Shared memory size too small for
+**Layer 1 — the abort reproduced independently.** "Shared memory size too small for
 matrix multiplication" is the exact line commit 428df1d deletes. The string
 occurs 0 times in the patched source but 2 times in the llama-cli binary,
 which was dated May 21 (the original stock build): ggml-vulkan is a STATIC
@@ -375,7 +375,7 @@ is TMU-op reduction (pack terrain+water into one vec2 buffer: flux drops
 worth it, flood speed is not a Bonbibi bottleneck (its gaps are physics
 and data plumbing per its own README).
 
-## Sonnet independent verification (2026-07-04): mostly confirmed, one real gap found
+## Independent verification (2026-07-04): mostly confirmed, one real gap found
 
 Reproduced independently: `llama-bench -ngl 6` gives tg32 ≈ 5.5 t/s (matches
 5.55-5.56 claim). `llama-completion` with the documented flags
