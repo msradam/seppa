@@ -1,5 +1,15 @@
 # Deterministic Verification Design, V3D LLM/ML Kernel Optimization
 
+> **Note on this document:** planning doc. The NMSE-vs-CPU-oracle principle
+> and the anti-gaming guard predicates below are exactly what
+> `v3d_verify.py` implements. The concrete harness differs from what's
+> described here: the implemented oracle is a small dedicated program
+> (`pi/vkgemm_nmse.cpp` — random inputs, double-precision CPU reference,
+> prints `correct=yes NMSE=...`), not llama.cpp's `test-backend-ops`. The
+> design reasoning (why an in-process CPU oracle beats a torch reference,
+> why NMSE energy-normalization catches partial-output cheating for free)
+> carries over unchanged.
+
 **Scope:** how the FSM decides that an optimized Vulkan compute kernel, or a full LLM forward pass, on the Pi 5 V3D GPU is *numerically valid*, in a way an autotuner or agent cannot game. This is the load-bearing part of the whole project: without it, every speedup is a plausible but numerically wrong result.
 
 All thresholds and mechanisms below are sourced from the engines' own test harnesses (llama.cpp `test-backend-ops`, MNN `backendTest.out`, NCNN `test_layer`) and the reward-hacking literature (robust-kbench arXiv:2509.14279, CUDA-L1 arXiv:2507.14111, Kevin arXiv:2507.11948). See "Sources" at the end.

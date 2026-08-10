@@ -1,5 +1,11 @@
 # Phase 1, Agent Harness → FSM Mapping (single-kernel V3D optimization)
 
+> **Note on this document:** planning doc, kept for the FSM/guard design
+> rationale. The implemented target op is a standalone GEMM shader
+> (`best_gemm.comp` / `pi/gemm.comp`), not `MUL_MAT` inside llama.cpp/MNN as
+> described below — see `README.md` → Results for what was actually built
+> and measured.
+
 **Scope:** the smallest complete thing. One V3D kernel, optimized by an *LLM agent* driving AutoKernel's edit→verify→keep/revert loop through a Burr FSM served by Theodosia, correctness-gated by NMSE-vs-CPU. No concurrency, no multi-kernel orchestration, no offload scheduling. Those are later phases and are explicitly out of scope here.
 
 **Why kernel optimization first:** until `mul_mat` runs inside the V3D envelope (256 invocations / 16 KB shared mem / no fp16 / no coop-matrix), *nothing* runs on the GPU. Stock llama.cpp Vulkan aborts on exactly this op. So the first enabling exploration is getting one core op to pass `test-backend-ops -b Vulkan0` and then optimizing it. This is the prerequisite for every downstream ambition.
