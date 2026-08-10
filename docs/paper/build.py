@@ -106,9 +106,10 @@ abstract = pandoc(abstract_md).strip()
 body = body.replace("\\textasciitilde{}\\ref", "~\\ref")
 # keep code blocks on one column
 body = body.replace("\\begin{verbatim}",
-                    "\\smallskip\\noindent\\begin{minipage}{\\linewidth}\\begin{verbatim}")
+                    "\\medskip\\noindent\\begin{minipage}{\\linewidth}\n"
+                    "\\begin{Verbatim}[frame=lines,framesep=1.6mm,fontsize=\\scriptsize]")
 body = body.replace("\\end{verbatim}",
-                    "\\end{verbatim}\\end{minipage}\\smallskip")
+                    "\\end{Verbatim}\n\\end{minipage}\\medskip")
 
 # tables: drop pandoc's minipage header cells, rewrap longtable (illegal in
 # two-column mode) as an IEEE table float with caption above
@@ -127,10 +128,15 @@ def table_open(_m):
     return ("\\begin{table}[!t]\\caption{%s}\\label{%s}\\centering\\footnotesize"
             "\\renewcommand{\\arraystretch}{1.15}\\begin{tabular}{" % (cap, lab))
 body = re.sub(r"\\begin\{longtable\}\[\]\{", table_open, body)
-body = body.replace("\\end{longtable}", "\\end{tabular}\\end{table}")
+body = body.replace("\\end{longtable}", "\\bottomrule\n\\end{tabular}\\end{table}")
 body = body.replace("\\noalign{}", "")
 body = re.sub(r"^\\end(first)?head\n", "", body, flags=re.M)
 body = re.sub(r"^\\end(last)?foot\n", "", body, flags=re.M)
+# pandoc's longtable footer rule lands right under the header once the
+# endhead/endlastfoot markers are stripped; the real bottom rule is added
+# at \end{tabular} above
+body = body.replace("\\midrule\n\\bottomrule", "\\midrule")
+body = body.replace("\\toprule\n\\bottomrule", "\\toprule")
 
 bibitems = []
 for i, para in enumerate(re.split(r"\n\n+", pandoc(refs_md).strip()), 1):
@@ -143,6 +149,7 @@ tex = r"""\documentclass[conference]{IEEEtran}
 \usepackage{calc}
 \usepackage{url}
 \usepackage{textcomp}
+\usepackage{fancyvrb}
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta}
 \newcommand{\real}[1]{#1}

@@ -4,6 +4,7 @@
 \usepackage{calc}
 \usepackage{url}
 \usepackage{textcomp}
+\usepackage{fancyvrb}
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta}
 \newcommand{\real}[1]{#1}
@@ -116,7 +117,6 @@ engine that happens to be free.
   >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.5000}}
   >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.5000}}@{}}
 \toprule
-\bottomrule
 Model & Raspberry Pi 5 Model B Rev 1.1 \\
 SoC & BCM2712 \\
 CPU & 4 x Cortex-A76 @ 2400 MHz \\
@@ -124,13 +124,13 @@ RAM & 16 GB LPDDR (shared with GPU) \\
 OS / kernel & Debian GNU/Linux 13 (trixie) (DietPi 10.5.2),
 6.18.39+rpt-rpi-2712 \\
 Firmware & 2025/12/08 \\
+\bottomrule
 \end{tabular}\end{table}
 }
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{table}[!t]\caption{GPU compute limits, collected live (vulkaninfo)}\label{tab:gpu}\centering\footnotesize\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}ll@{}}
 \toprule
-\bottomrule
 Device & V3D 7.1.10.2 \\
 Driver & Mesa 25.0.7-2+rpt4 (v3dv) \\
 Vulkan API & 1.3.305 \\
@@ -140,6 +140,7 @@ Shared memory / workgroup & 16 KB \\
 Subgroup (SIMD) width & 16 \\
 fp16 arithmetic & no \\
 Cooperative matrix & no \\
+\bottomrule
 \end{tabular}\end{table}
 }
 
@@ -176,14 +177,16 @@ failure, and \texttt{verify\ -\textgreater{}\ log\_variant} on gate
 failure. The guards are ordinary code, from
 \texttt{v3d\_flood2\_opt.py}:
 
-\smallskip\noindent\begin{minipage}{\linewidth}\begin{verbatim}
+\medskip\noindent\begin{minipage}{\linewidth}
+\begin{Verbatim}[frame=lines,framesep=1.6mm,fontsize=\scriptsize]
 ("compile_",  "verify",      expr("compile_ok")),
 ("compile_",  "log_variant", expr("not compile_ok")),
 ("verify",    "benchmark",   expr("verify_ok")),
 ("verify",    "log_variant", expr("not verify_ok")),
 ("benchmark", "evaluate"),
 ("evaluate",  "log_variant"),
-\end{verbatim}\end{minipage}\smallskip
+\end{Verbatim}
+\end{minipage}\medskip
 
 The benchmark state is reachable only through a green verify. The
 agent's entire interface is one MCP tool,
@@ -216,7 +219,8 @@ against a double-precision CPU reference, total water equal to injected
 rainfall, and maximum depth pooling inside the terrain basin. A green
 gate in the harness log:
 
-\smallskip\noindent\begin{minipage}{\linewidth}\begin{verbatim}
+\medskip\noindent\begin{minipage}{\linewidth}
+\begin{Verbatim}[frame=lines,framesep=1.6mm,fontsize=\scriptsize]
 selected: V3D 7.1.10.2
 grid=256^2  steps=4000  time=1.880s
 correct(NMSE vs CPU)=yes  NMSE=1.26e-09
@@ -224,7 +228,8 @@ mass: rain_injected=5242879.9
   water_total=5242739.3  (conserved vs rain=yes)
 pooling: max depth=111.718 at (127,127)
   (pools in basin=yes)
-\end{verbatim}\end{minipage}\smallskip
+\end{Verbatim}
+\end{minipage}\medskip
 
 \section{Case Study: The Flood
 Stencil}\label{case-study-the-flood-stencil}
@@ -259,7 +264,6 @@ sweep.
 \toprule
 Variant & Hypothesis tested & Result \\
 \midrule
-\bottomrule
 Packed vec2 state (water, surface) halving flux-pass loads & Memory-op
 count is the bound & 1.93 GFLOP/s, no change: falsified \\
 Fused single-dispatch step (flux buffer eliminated) & Traffic and
@@ -270,6 +274,7 @@ cost is the bound & 2.40 GFLOP/s, +23\%: supported \\
 register pressure \\
 Fused + 2 cells per invocation (\texttt{fused2s.comp}) & The wins stack
 & 3.08 GFLOP/s, +59\% \\
+\bottomrule
 \end{tabular}\end{table}
 }
 
@@ -313,26 +318,30 @@ The FSM measures its own baseline (1,346.8 steps/s on 2026-07-11, gates
 green), receives the fused strip-2 kernel as experiment 1, compiles it,
 gates it, benchmarks 2,116.4 steps/s, and issues its own verdict:
 
-\smallskip\noindent\begin{minipage}{\linewidth}\begin{verbatim}
+\medskip\noindent\begin{minipage}{\linewidth}
+\begin{Verbatim}[frame=lines,framesep=1.6mm,fontsize=\scriptsize]
 {"exp": 1, "fused": true, "strip": 2,
  "compile_ok": true, "verify_ok": true,
  "steps_per_sec": 2116.4, "best_sps": 2116.4,
  "verdict": "keep"}
-\end{verbatim}\end{minipage}\smallskip
+\end{Verbatim}
+\end{minipage}\medskip
 
 Then the driver tries to cheat: it submits the same kernel with rainfall
 injection doubled in one of the two cell updates, a change that compiles
 and breaks conservation. The gate fails it; the driver requests
 \texttt{benchmark} anyway, and the server answers:
 
-\smallskip\noindent\begin{minipage}{\linewidth}\begin{verbatim}
+\medskip\noindent\begin{minipage}{\linewidth}
+\begin{Verbatim}[frame=lines,framesep=1.6mm,fontsize=\scriptsize]
 {"error": "invalid_transition",
  "requested": "benchmark",
  "valid_next_actions": ["log_variant"],
  "message": "action 'benchmark' is not
    reachable from current state. Valid
    actions now: ['log_variant']."}
-\end{verbatim}\end{minipage}\smallskip
+\end{Verbatim}
+\end{minipage}\medskip
 
 The variant is ledgered as revert with a null \texttt{steps\_per\_sec}.
 
@@ -389,12 +398,12 @@ Table~\ref{tab:conc} (raw logs in
 \toprule
 Condition & GPU flood (steps/s) & CPU decode (t/s) \\
 \midrule
-\bottomrule
 Optimized kernel alone & 2,128.0 ± 1.7 (n=3) & \\
 Original kernel alone & 1,351.4 ± 0.5 (n=3) & \\
 Decode alone (soaked) & & 11.4 ± 0.0 \\
 Concurrent, optimized kernel & 883.4 ± 47.1 (n=28) & 9.6 ± 0.2 \\
 Concurrent, original kernel & 401.8 ± 8.3 (n=12) & 9.6 ± 0.2 \\
+\bottomrule
 \end{tabular}\end{table}
 }
 
@@ -437,13 +446,13 @@ cpu\_steady. Table~\ref{tab:cpu} presents the outcome.
 \toprule
 Condition & Flood (steps/s) & CPU decode (t/s) \\
 \midrule
-\bottomrule
 CPU flood alone, 1 / 2 / 4 threads & 992.5 / 1,980.5 / 3,852.4 & \\
 Decode alone, 3 threads (pinned) & & 11.9 ± 0.0 \\
 Partitioned: flood 1t + decode 3t & 678.8 ± 10.6 (n=25) & 8.4 ± 0.1 \\
 Oversubscribed: flood 4t + decode 4t & 857.1 ± 181.0 (n=89) & 3.0 ±
 0.3 \\
 GPU concurrent, optimized (from above) & 883.4 ± 47.1 & 9.6 ± 0.2 \\
+\bottomrule
 \end{tabular}\end{table}
 }
 
