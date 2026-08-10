@@ -18,9 +18,9 @@ refs_md = src[src.index("## References") :].split("\n", 1)[1].strip()
 body_md = re.sub(r"^## \d+\. ", "# ", body_md, flags=re.M)
 body_md = re.sub(r"^### \d+\.\d+ ", "## ", body_md, flags=re.M)
 # textual cross-references -> IEEE roman style (longest first)
-for a, b in [("4.1", "IV-A"), ("4.2", "IV-B"), ("4.3", "IV-C"), ("6.1", "VI-A"),
-             ("10", "X"), ("2", "II"), ("3", "III"), ("4", "IV"), ("5", "V"),
-             ("6", "VI"), ("7", "VII"), ("8", "VIII"), ("9", "IX")]:
+for a, b in [("5.1", "V-A"), ("5.2", "V-B"), ("5.3", "V-C"), ("7.1", "VII-A"),
+             ("10", "X"), ("11", "XI"), ("2", "II"), ("3", "III"), ("4", "IV"),
+             ("5", "V"), ("6", "VI"), ("7", "VII"), ("8", "VIII"), ("9", "IX")]:
     body_md = body_md.replace(f"Section {a}", f"Section {b}")
 
 
@@ -54,10 +54,8 @@ rep("Results from the run of 2026-07-12 (raw logs in",
     "Results from the run of 2026-07-12 are in Table~\\ref{tab:conc} (raw logs in")
 rep("the earlier GPU-visible run is preserved in `conc_bench/`):",
     "the earlier GPU-visible run is preserved in `conc_bench/`).")
-rep("Same cooldown gates and thermal sampling; raw logs in `docs/paper/artifacts/cpu_flood_bench2/`.",
-    "Same cooldown gates and thermal sampling; raw logs in `docs/paper/artifacts/cpu_flood_bench2/`. Table~\\ref{tab:cpu} shows the outcome.")
-rep("from which every number in the table derives.",
-    "from which every number in Table~\\ref{tab:conc} derives.")
+rep("The same cooldown gates and thermal sampling applied; raw logs are in `docs/paper/artifacts/cpu_flood_bench2/`.",
+    "The same cooldown gates and thermal sampling applied; raw logs are in `docs/paper/artifacts/cpu_flood_bench2/`. Table~\\ref{tab:cpu} presents the outcome.")
 
 
 def pandoc(text):
@@ -92,7 +90,7 @@ captions = iter([
 def table_open(_m):
     lab, cap = next(captions)
     return ("\\begin{table}[!t]\\caption{%s}\\label{%s}\\centering\\footnotesize"
-            "\\renewcommand{\\arraystretch}{1.25}\\begin{tabular}{" % (cap, lab))
+            "\\renewcommand{\\arraystretch}{1.15}\\begin{tabular}{" % (cap, lab))
 body = re.sub(r"\\begin\{longtable\}\[\]\{", table_open, body)
 body = body.replace("\\end{longtable}", "\\end{tabular}\\end{table}")
 body = body.replace("\\noalign{}", "")
@@ -115,7 +113,7 @@ tex = r"""\documentclass[conference]{IEEEtran}
 \newcommand{\real}[1]{#1}
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \makeatletter
-\def\verbatim@font{\ttfamily\footnotesize}
+\def\verbatim@font{\ttfamily\scriptsize}
 \makeatother
 \begin{document}
 \title{%s}
@@ -130,7 +128,7 @@ GPU kernel optimization, LLM agents, correctness verification, edge computing, V
 \end{IEEEkeywords}
 %s
 \begin{thebibliography}{%d}
-\footnotesize
+\scriptsize
 %s
 \end{thebibliography}
 \end{document}
