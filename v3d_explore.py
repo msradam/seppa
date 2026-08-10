@@ -132,7 +132,7 @@ def hypothesize(state: State) -> tuple[dict, State]:
 
 @action(reads=["exp_idx"], writes=["proposed_shader", "implement_ok"])
 def implement(state: State, shader: str = "") -> tuple[dict, State]:
-    # The agent's edit arrives here as `shader` (full source). Write it to the Pi.
+    # The agent's edit arrives here as `shader` (full source).
     if not shader.strip():
         return {"implement_ok": False, "error": "no shader provided"}, state.update(
             proposed_shader="", implement_ok=False

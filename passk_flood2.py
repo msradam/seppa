@@ -63,6 +63,8 @@ def score(lines: list[dict]) -> dict:
             if e.get("verify_ok") is False:
                 r["broken_null"] = e.get("steps_per_sec") is None
         if ev.get("gate_demo"):
+            # the server returns the refusal as a normal tool result (isError
+            # unset), so detect it by payload
             resp = ev.get("response", {})
             r["refused"] = bool(ev.get("server_refused")) or (
                 isinstance(resp, dict) and resp.get("error") == "invalid_transition"

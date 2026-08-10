@@ -11,7 +11,7 @@ skip VERIFY or reach BENCHMARK on a kernel that failed correctness.
 
 Default is replay mode (canned variants) so the server is pokeable without the
 Pi toolchain. Live mode is wired by passing a run_fn into build_app that shells
-out to test-backend-ops / MNN; see v3d_live.py (to come).
+out to test-backend-ops / MNN; see v3d_live.py.
 """
 
 from __future__ import annotations

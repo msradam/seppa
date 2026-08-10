@@ -31,17 +31,14 @@ phase() {
 }
 endphase() { kill "$TPID" 2>/dev/null; wait "$TPID" 2>/dev/null; }
 
-# 1. GPU alone
 phase gpu_alone
 for _ in 1 2 3; do echo "t=$(stamp)"; gpu_run; done > "$OUT/gpu_alone.log" 2>&1
 endphase
 
-# 2. openssl alone (4 threads, 20 s)
 phase openssl_alone
 openssl speed -multi 4 -seconds 20 sha256 > "$OUT/openssl_alone.log" 2>&1
 endphase
 
-# 3. openssl + GPU concurrent
 phase openssl_conc
 openssl speed -multi 4 -seconds 45 sha256 > "$OUT/openssl_conc.log" 2>&1 & OPID=$!
 sleep 2
@@ -49,13 +46,11 @@ for _ in 1 2 3; do echo "t=$(stamp)"; gpu_run; done > "$OUT/gpu_during_openssl.l
 wait "$OPID"
 endphase
 
-# 4. CPU flood alone (4 threads)
 phase cpuflood_alone
 (cd "$R" && for _ in 1 2 3; do echo "t=$(stamp)"; OMP_NUM_THREADS=4 ./cpuflood 256 "$STEPS" sim; done) \
     > "$OUT/cpuflood4t_alone.log" 2>&1
 endphase
 
-# 5. CPU flood + GPU concurrent
 phase cpuflood_conc
 (cd "$R" && while :; do echo "t=$(stamp)"; OMP_NUM_THREADS=4 ./cpuflood 256 "$STEPS" sim; done) \
     > "$OUT/cpuflood4t_conc.log" 2>&1 & CPID=$!
@@ -65,4 +60,4 @@ kill "$CPID" 2>/dev/null; wait "$CPID" 2>/dev/null
 pkill -f "\./cpuflood" 2>/dev/null
 endphase
 
-echo done
+echo "done"

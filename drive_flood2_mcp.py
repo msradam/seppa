@@ -61,6 +61,8 @@ async def main(url):
             )
             assert failed, "gate did not fail the broken kernel"
             gate_err, gate_res = await step(session, "benchmark")
+            # the server returns the refusal as a normal tool result (isError
+            # unset), so detect it by payload
             refused = bool(gate_err) or (
                 isinstance(gate_res, dict) and gate_res.get("error") == "invalid_transition"
             )
