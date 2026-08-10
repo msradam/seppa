@@ -1,0 +1,2 @@
+model=/root/v3d-research/models/granite-4.0-1b-dense/granite-4.0-1b-Q4_0.gguf
+b2375a3372d747f40302c40d5f5beb2e  /root/v3d-research/models/granite-4.0-1b-dense/granite-4.0-1b-Q4_0.gguf

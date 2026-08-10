@@ -312,10 +312,11 @@ The campaign turned up one configuration surprise first. With any Vulkan
 device visible, llama.cpp places CPU-resident model weights in the GPU's
 host-pinned, write-combined memory even at \texttt{-ngl\ 0}, memory that
 is slow for the CPU reads that dominate decode. Hiding the device with
-\texttt{GGML\_VK\_VISIBLE\_DEVICES=99} took decode from 9.40 ± 0.36 to
-11.44 ± 0.20 tokens/s, a 22\% gain from an environment variable (A/B
-from cool starts, five repetitions each). Every number below uses the
-hidden-device configuration, which the application ships.
+\texttt{GGML\_VK\_VISIBLE\_DEVICES=99} takes decode from 9.68 to 11.59
+tokens/s, a 20\% gain from an environment variable (A/B from cool
+starts, llama-bench r=5; raw logs in \texttt{docs/paper/artifacts/},
+ab\_vkvisible). Every number below uses the hidden-device configuration,
+which the application ships.
 
 \texttt{pi/flood/concurrency\_bench.sh} measures each kernel alone,
 decode alone (llama-bench tg64), and each kernel looping while the same

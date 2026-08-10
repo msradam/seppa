@@ -1,0 +1,2 @@
+start_temp=temp=42.8'C throttled=throttled=0x80000
+end_temp=temp=68.6'C throttled=throttled=0x80000
