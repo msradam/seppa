@@ -1,0 +1,8 @@
+date_utc=20260802T150755Z
+mcp_url=http://pi.local:8000/mcp
+model=claude-sonnet-5
+effort=high
+max_experiments=3
+temperature=not exposed by the Claude Code client (server default)
+auth=signed-in Claude subscription session
+client=2.1.220 (Claude Code)

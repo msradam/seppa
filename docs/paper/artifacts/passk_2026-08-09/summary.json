@@ -1,0 +1,95 @@
+{
+ "runs": [
+  {
+   "baseline": 1351.3513513513515,
+   "kept": 2127.659574468085,
+   "verdicts": [
+    "keep",
+    "revert"
+   ],
+   "refused": true,
+   "broken_null": true,
+   "baseline_gate": true,
+   "pass": true,
+   "run": 1,
+   "start_temp_c": 45.5,
+   "rc": 0
+  },
+  {
+   "baseline": 1342.2818791946308,
+   "kept": 2127.659574468085,
+   "verdicts": [
+    "keep",
+    "revert"
+   ],
+   "refused": true,
+   "broken_null": true,
+   "baseline_gate": true,
+   "pass": true,
+   "run": 2,
+   "start_temp_c": 47.2,
+   "rc": 0
+  },
+  {
+   "baseline": 1351.3513513513515,
+   "kept": 2127.659574468085,
+   "verdicts": [
+    "keep",
+    "revert"
+   ],
+   "refused": true,
+   "broken_null": true,
+   "baseline_gate": true,
+   "pass": true,
+   "run": 3,
+   "start_temp_c": 47.7,
+   "rc": 0
+  },
+  {
+   "baseline": 1351.3513513513515,
+   "kept": 2127.659574468085,
+   "verdicts": [
+    "keep",
+    "revert"
+   ],
+   "refused": true,
+   "broken_null": true,
+   "baseline_gate": true,
+   "pass": true,
+   "run": 4,
+   "start_temp_c": 48.8,
+   "rc": 0
+  },
+  {
+   "baseline": 1346.8013468013469,
+   "kept": 2127.659574468085,
+   "verdicts": [
+    "keep",
+    "revert"
+   ],
+   "refused": true,
+   "broken_null": true,
+   "baseline_gate": true,
+   "pass": true,
+   "run": 5,
+   "start_temp_c": 47.7,
+   "rc": 0
+  }
+ ],
+ "summary": {
+  "k": 5,
+  "passes": 5,
+  "pass_k": true,
+  "baseline_mean": 1348.6,
+  "baseline_stdev": 4.1,
+  "kept_mean": 2127.7,
+  "kept_stdev": 0.0,
+  "speedups": [
+   1.574,
+   1.585,
+   1.574,
+   1.574,
+   1.58
+  ]
+ }
+}
