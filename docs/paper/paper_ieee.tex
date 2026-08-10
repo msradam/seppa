@@ -26,13 +26,12 @@ benchmarks, and decides keep or revert, refusing to benchmark any kernel
 that failed verification. On the flood-simulation stencil of an offline
 flood-guidance application for the Raspberry Pi 5, the harness produced
 a kernel 1.58x faster than the original; the machine re-measured and
-re-judged the result over the Model Context Protocol in five consecutive
-runs; each run also refused an out-of-order benchmark request for a
-gate-failing kernel. With CPU inference running concurrently the
-advantage widens to 2.20x, and the deployment sustains 9.6 tokens/s of
-language-model decode beside 883 simulation steps per second, an
-operating point that beats the best measured CPU-only configuration on
-both axes.
+re-judged the result in five consecutive runs over the Model Context
+Protocol, and in every run it refused to benchmark a kernel that failed
+its gate. With CPU inference running concurrently the advantage widens
+to 2.20x, and the deployment sustains 9.6 tokens/s of language-model
+decode beside 883 simulation steps per second, an operating point that
+beats the best measured CPU-only configuration on both axes.
 \end{abstract}
 \begin{IEEEkeywords}
 GPU kernel optimization, LLM agents, correctness verification, edge computing, Vulkan
@@ -211,13 +210,17 @@ through the Claude Code client at high reasoning effort, wrote the
 content of \texttt{hypothesize} and \texttt{implement} (kernel source
 and host-side parameters) and nothing else. The machine did everything
 evidential; no proposed kernel was hand-edited (transcripts in
-\texttt{docs/paper/artifacts/claude\_sessions/}).
+\texttt{docs/paper/artifacts/claude\_sessions/}). Concretely: the
+winning kernel came from the hand-driven sweep, the machine verified and
+reproduced it (Section VI), and the one fully agent-driven session
+worked a knob the server exposed without reaching fusion.
 
 For the flood target, \texttt{verify} runs 400 steps at 256x256 and
 demands three things: normalized mean-square error (NMSE) below 1e-3
-against a double-precision CPU reference, total water equal to injected
-rainfall, and maximum depth pooling inside the terrain basin. A green
-gate in the harness log:
+against a double-precision CPU reference (loose enough for fp32 drift,
+six orders above what correct kernels measure), total water equal to
+injected rainfall, and maximum depth pooling inside the terrain basin. A
+green gate in the harness log:
 
 \medskip\noindent\begin{minipage}{\linewidth}
 \begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\scriptsize]
@@ -283,14 +286,17 @@ nothing, and fusion, which deletes an intermediate buffer and a barrier,
 bought only 5\%. Fixed per-invocation cost dominated: each invocation
 does so little arithmetic that launch overhead swamps it, and giving
 each thread two cells beat every memory-system optimization we tried;
-four cells gave the gain back to register pressure. Two hardware details
-shaped the final kernel. Strips run vertically because that keeps a
-subgroup's 16 lanes on adjacent addresses, and the kernel consumes each
-flux value as it is produced; holding all four alive fails register
-allocation. The shipped kernel is 1.58x at 256x256 across every
-machine-checked run (1.574 to 1.585; the hand-timed sweep pair, 0.187 s
-against 0.297 s, reads 1.59x), 1.41x at 512x512, 1.18x at 1024x1024, and
-holds all gates over 4,000 steps.
+four cells gave the gain back to register pressure. The sweep's own
+numbers size that cost: strip-2 removes 65,536 invocations per step and
+saves about 140 microseconds, near 2 ns, two clock cycles, per
+invocation, the scale of thread issue rather than of arithmetic or
+memory traffic. Two hardware details shaped the final kernel. Strips run
+vertically because that keeps a subgroup's 16 lanes on adjacent
+addresses, and the kernel consumes each flux value as it is produced;
+holding all four alive fails register allocation. Across every
+machine-checked run the shipped kernel is 1.58x at 256x256 (1.574 to
+1.585; the hand-timed sweep pair reads 1.59x). It is 1.41x at 512x512
+and 1.18x at 1024x1024, and it holds all gates over 4,000 steps.
 
 \subsection{Action-Space Limits}\label{action-space-limits}
 
@@ -359,11 +365,12 @@ speedups 1.574 to 1.585.
 
 One session was fully agent-driven (2026-08-02, budget three). The
 server's \texttt{characterize} payload names fixed per-invocation cost
-as the bound and exposes the strip parameter, so the session tests the
-loop rather than blind discovery: the model worked the exposed knob
-(strip 4 kept at 1,470.6, +8.8\%), hit the register cliff at strip 8
-(921.7, reverted), probed it at strip 6 (1,298.7, reverted), and never
-reached fusion; all of its reported numbers came from the machine.
+as the bound and exposes the strip parameter, so the session
+demonstrates the loop's enforcement, not autonomous discovery: the model
+worked the exposed knob (strip 4 kept at 1,470.6, +8.8\%), hit the
+register cliff at strip 8 (921.7, reverted), probed it at strip 6
+(1,298.7, reverted), and never reached fusion; all of its reported
+numbers came from the machine.
 
 \section{Concurrent CPU and GPU
 Execution}\label{concurrent-cpu-and-gpu-execution}
@@ -385,15 +392,16 @@ which the application ships.
 
 \texttt{pi/flood/conc\_steady\_bench.sh} measures each kernel alone
 (cool starts, finished before heat accumulates), decode alone, and each
-kernel looping while decode runs; concurrent and decode-alone phases are
+kernel looping while decode runs. Concurrent and decode-alone phases are
 measured only after a decode soak reaches the firmware's governed regime
-(74 to 76 C, soft-limit bit active), over windows of 12 to 28 flood
-completions (llama-bench tg64, r=20), counting a flood run only if it
-fits inside the window. An earlier short-window campaign, preserved in
-\texttt{conc\_bench2/}, read up to 19\% differently in both directions
-because it measured the thermal transient. Results from the steady-state
-run of 2026-08-10 are in Table~\ref{tab:conc} (raw logs
-in \texttt{docs/paper/artifacts/}, conc\_steady).
+(74 to 76 C, soft-limit bit active). Each window is long enough for 12
+to 28 flood completions (llama-bench tg64, r=20), and a flood run counts
+only if it fits inside the window. An earlier short-window campaign,
+preserved in \texttt{conc\_bench2/}, read up to 19\% differently in both
+directions because it measured the thermal transient. Results from the
+steady-state run of 2026-08-10 are in
+Table~\ref{tab:conc} (raw logs in
+\texttt{docs/paper/artifacts/}, conc\_steady).
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{table}[!t]\caption{Concurrent GPU flood and CPU LLM decode}\label{tab:conc}\centering\footnotesize\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}lll@{}}
@@ -489,7 +497,10 @@ scripted reproduction's kernel came from the hand sweep, and the
 agent-driven session worked a knob the server itself exposed. The
 demonstrated property is machine verification; autonomous discovery
 remains open. Full GPU offload of the language model is blocked by an
-upstream llama.cpp Vulkan defect.
+upstream llama.cpp Vulkan defect. Numbers without an archived log (the
+original harness's 1,045 steps/s, the sweep's GFLOP/s column and
+hand-timed ratios, and the GEMM and matrix-vector results) come from the
+repository's dated running notes.
 
 \section{The Sample Application}\label{the-sample-application}
 
@@ -503,10 +514,7 @@ github.com/msradam/seppa. Measurements used its Granite 4.0 1B
 configuration, whose 1.63 B GGUF llama-bench prints under a granite-3B
 size label (the application has since moved to a larger model); build
 commands are in \texttt{pi/flood/README.md}, and cited references are
-archived in \texttt{docs/paper/references/}. Numbers without an archived
-log (the original harness's 1,045 steps/s, the sweep's GFLOP/s column
-and hand-timed ratios, and the GEMM and matrix-vector results) come from
-the repository's dated running notes.
+archived in \texttt{docs/paper/references/}.
 
 \section{Conclusion}\label{conclusion}
 
