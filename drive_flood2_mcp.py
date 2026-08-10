@@ -61,11 +61,14 @@ async def main(url):
             )
             assert failed, "gate did not fail the broken kernel"
             gate_err, gate_res = await step(session, "benchmark")
+            refused = bool(gate_err) or (
+                isinstance(gate_res, dict) and gate_res.get("error") == "invalid_transition"
+            )
             print(
                 json.dumps(
                     {
                         "gate_demo": "benchmark after failed verify",
-                        "server_refused": bool(gate_err),
+                        "server_refused": refused,
                         "response": gate_res,
                     }
                 )

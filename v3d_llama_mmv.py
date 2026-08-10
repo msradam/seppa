@@ -268,8 +268,9 @@ def log_variant(state: State) -> tuple[dict, State]:
     verdict = state["verdict"]
     consecutive = state["consecutive_no_gain"]
     if not state["benchmark_done"]:  # compile/verify failed -> bypassed evaluate
+        # ponytail: correctness failures don't count toward the 3-strike stop
+        # (phase1_harness_fsm.md: the agent pivots on failure); budget still bounds
         verdict = "revert"
-        consecutive += 1
     if verdict == "revert" and state["best_shader"]:
         # never leave the tree sitting on a rejected edit
         write_shader(state["best_shader"])
