@@ -1,0 +1,6 @@
+ggml_vulkan: Invalid device index 99 in GGML_VK_VISIBLE_DEVICES.
+| model                          |       size |     params | backend    | threads |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --------------: | -------------------: |
+| granite 3B Q4_0                | 926.41 MiB |     1.63 B | CPU        |       3 |            tg64 |          8.41 ± 0.05 |
+
+build: 57998d5 (39)

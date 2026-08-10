@@ -33,12 +33,13 @@ notebooks below recompute every number from them.
   machine re-derived the result over MCP five times out of five
   (`passk_flood2.py`), refusing each time to benchmark a deliberately
   mass-violating kernel.
-- **Concurrency:** with CPU LLM decode saturating the cores, the
-  optimized kernel sustains 712 steps/s while decode keeps 90% of its
-  solo rate; the kernel's advantage grows from 1.58x alone to 2.09x
-  under contention. Against generic CPU loads the GPU keeps 99%
-  (compute-bound) to 91% (memory-bound); a weight-streaming LLM is the
-  harshest measured case.
+- **Concurrency (steady-state, thermally soaked):** with CPU LLM decode
+  saturating the cores, the optimized kernel sustains 883 steps/s while
+  decode keeps 84% of its solo rate; the kernel's advantage grows from
+  1.58x alone to 2.20x under contention, and the split beats the best
+  CPU-only scheme on both axes. Against generic CPU loads the GPU keeps
+  99% (compute-bound) to 92% (memory-bound); a weight-streaming LLM is
+  the harshest measured case.
 - **Other targets, same harness:** a GEMM kernel from 7.02 to 13.42
   GFLOP/s over two FSM rounds; llama.cpp's matrix-vector kernel
   de-unrolled for +28% end-to-end decode.

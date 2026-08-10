@@ -1,0 +1,599 @@
+window_start=1786338481.298804255
+t=1786338481.306803068
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.890s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338484.282957084
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.885s  3.06 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338486.370999620
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.888s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338488.458915277
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.890s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338490.534986515
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.889s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338492.642997010
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.890s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338494.731093258
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.892s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338496.779054911
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.902s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338498.843047687
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.906s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338500.959018735
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.895s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338503.014979107
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.900s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338506.162931869
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.900s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338508.263057665
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.910s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338510.383083221
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.897s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338512.467231996
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.899s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338514.563019513
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.896s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338516.667067176
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.894s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338518.771062388
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.909s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338520.923470664
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338522.987158028
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.894s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338526.206900889
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.890s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338528.303030725
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.896s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338531.514922570
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.903s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338534.714904148
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.902s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338536.827233488
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.916s  3.01 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338538.931378663
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.895s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338542.162938541
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.907s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338544.227085116
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.902s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338546.316800895
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.889s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338549.534975009
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.890s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338551.642866797
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.904s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338553.690964963
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.905s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338555.834946491
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.902s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338557.951415399
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.908s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338560.071045294
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.897s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338562.139004478
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.901s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338565.326890474
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.901s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338567.455131395
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.889s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338569.571153357
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338571.691034582
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338573.819062470
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338575.930995760
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.902s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338577.975381663
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.905s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338580.075013972
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.910s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338582.175103954
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.892s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338585.366928011
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.899s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338587.483051209
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.907s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338589.599033818
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.897s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338591.659003417
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.896s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338594.874949529
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.904s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338596.979288004
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338599.191104025
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.894s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338601.251127780
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.908s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338603.347035709
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.904s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338606.590874909
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.893s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338608.715034253
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.901s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338610.839179071
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.897s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338614.022897522
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.908s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338616.159427789
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.903s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338618.250987026
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338621.454905349
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.894s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338624.666926185
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.895s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338626.747074794
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.887s  3.06 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338628.835056372
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.889s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338631.978937878
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.897s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338634.103112766
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.907s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338637.298953034
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.896s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338640.598736247
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.904s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338643.818883774
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.902s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338645.931188416
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.893s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338649.154950174
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.899s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338652.370917389
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.909s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338654.431077991
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338656.471125948
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338658.607040556
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.904s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338660.699050166
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.894s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338663.902949258
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.891s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338666.007009631
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.907s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338669.106932965
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.900s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338672.282937486
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.901s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338674.395013180
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.897s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338677.598846832
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.899s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338679.683059509
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.901s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338681.779091500
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338683.899035607
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338685.959003964
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.896s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338688.070272385
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.909s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338691.286924646
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.905s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338693.403042471
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.913s  3.01 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338695.539037433
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.913s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338697.648931352
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.911s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338699.695434609
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.907s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338701.831034245
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.896s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338705.066935144
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.884s  3.06 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338707.115424802
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.911s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338709.243027366
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338711.351033490
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.903s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338713.463019398
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.895s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338716.638899468
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.897s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338718.759054200
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.901s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338720.883242799
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.893s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338722.967167851
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.896s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338725.067016268
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.906s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338727.175045273
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.897s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338729.251065207
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.904s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338732.478920512
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.899s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338735.678954486
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338737.790897707
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.903s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338741.014822602
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.901s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338743.123024601
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.907s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338745.238987312
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.893s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338747.326844810
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.906s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338749.359020222
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.897s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338751.455040467
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.905s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338753.543013875
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.895s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338756.738928995
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.892s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338758.839019069
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.900s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338762.070918821
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.902s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338764.135015649
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.896s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338766.251021418
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.896s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338768.339139435
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.892s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338770.383395533
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.901s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338772.507044751
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.890s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338775.722865375
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.911s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338777.871053320
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.900s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338779.971147582
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.902s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338782.083400383
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.905s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338785.254954736
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338787.387025015
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.912s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338789.467166972
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.896s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338791.571083774
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.900s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338793.667036410
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.900s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338796.938932817
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.899s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338799.055064630
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.898s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338802.278958418
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.893s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338804.395148316
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.899s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338806.531069557
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.907s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338809.650899672
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.896s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338811.711004023
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.884s  3.06 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338813.799028086
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.907s  3.02 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338816.926917154
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.893s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338818.987027212
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.900s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338821.043276562
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.906s  3.03 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338823.139019835
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.894s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338825.235149282
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.895s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338828.442953307
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.894s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338830.551046918
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.887s  3.06 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338832.635015955
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.897s  3.04 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338835.838787186
+selected: V3D 7.1.10.2
+grid=256^2  steps=4000  time=1.893s  3.05 GFLOP/s (sim mode, no verify)
+dumped /tmp/flood_depth.txt (16x16 depth grid)
+t=1786338837.939208204
+window_end=1786338839.305767548

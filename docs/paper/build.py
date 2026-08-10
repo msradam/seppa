@@ -50,12 +50,12 @@ Fig.~\\ref{fig:fsm} shows the graph, with two guard edges:""",
 # tables become numbered floats; point the prose at them
 rep("so every comparison in this paper is within `vkflood2`.",
     "so every comparison in this paper is within `vkflood2`. Table~\\ref{tab:sweep} shows the sweep.")
-rep("Results from the run of 2026-07-12 (raw logs in",
-    "Results from the run of 2026-07-12 are in Table~\\ref{tab:conc} (raw logs in")
-rep("the earlier GPU-visible run is preserved in `conc_bench/`):",
-    "the earlier GPU-visible run is preserved in `conc_bench/`).")
-rep("The same cooldown gates and thermal sampling applied; raw logs are in `docs/paper/artifacts/cpu_flood_bench2/`.",
-    "The same cooldown gates and thermal sampling applied; raw logs are in `docs/paper/artifacts/cpu_flood_bench2/`. Table~\\ref{tab:cpu} presents the outcome.")
+rep("Results from the steady-state run of 2026-08-10 (raw logs in",
+    "Results from the steady-state run of 2026-08-10 are in Table~\\ref{tab:conc} (raw logs in")
+rep("`docs/paper/artifacts/`, conc_steady):",
+    "`docs/paper/artifacts/`, conc_steady).")
+rep("The same soak-and-measure protocol applied; raw logs are in `docs/paper/artifacts/`, cpu_steady.",
+    "The same soak-and-measure protocol applied; raw logs are in `docs/paper/artifacts/`, cpu_steady. Table~\\ref{tab:cpu} presents the outcome.")
 
 
 def pandoc(text):
