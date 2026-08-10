@@ -184,7 +184,7 @@ for _ in range(2):
         capture_output=True, text=True,
     )
 if r.returncode != 0:
-    print("\n".join(l for l in r.stdout.splitlines() if l.startswith("!") or "Error" in l))
+    print("\n".join(ln for ln in r.stdout.splitlines() if ln.startswith("!") or "Error" in ln))
     raise SystemExit(1)
 Path("paper_ieee.pdf").replace("paper.pdf")
 print("built paper.pdf")
