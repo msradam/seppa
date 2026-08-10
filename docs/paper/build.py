@@ -107,7 +107,7 @@ body = body.replace("\\textasciitilde{}\\ref", "~\\ref")
 # keep code blocks on one column
 body = body.replace("\\begin{verbatim}",
                     "\\medskip\\noindent\\begin{minipage}{\\linewidth}\n"
-                    "\\begin{Verbatim}[frame=lines,framesep=1.6mm,fontsize=\\scriptsize]")
+                    "\\begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\\scriptsize]")
 body = body.replace("\\end{verbatim}",
                     "\\end{Verbatim}\n\\end{minipage}\\medskip")
 

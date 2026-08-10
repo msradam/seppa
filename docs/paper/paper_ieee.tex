@@ -178,7 +178,7 @@ failure. The guards are ordinary code, from
 \texttt{v3d\_flood2\_opt.py}:
 
 \medskip\noindent\begin{minipage}{\linewidth}
-\begin{Verbatim}[frame=lines,framesep=1.6mm,fontsize=\scriptsize]
+\begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\scriptsize]
 ("compile_",  "verify",      expr("compile_ok")),
 ("compile_",  "log_variant", expr("not compile_ok")),
 ("verify",    "benchmark",   expr("verify_ok")),
@@ -220,7 +220,7 @@ rainfall, and maximum depth pooling inside the terrain basin. A green
 gate in the harness log:
 
 \medskip\noindent\begin{minipage}{\linewidth}
-\begin{Verbatim}[frame=lines,framesep=1.6mm,fontsize=\scriptsize]
+\begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\scriptsize]
 selected: V3D 7.1.10.2
 grid=256^2  steps=4000  time=1.880s
 correct(NMSE vs CPU)=yes  NMSE=1.26e-09
@@ -319,7 +319,7 @@ green), receives the fused strip-2 kernel as experiment 1, compiles it,
 gates it, benchmarks 2,116.4 steps/s, and issues its own verdict:
 
 \medskip\noindent\begin{minipage}{\linewidth}
-\begin{Verbatim}[frame=lines,framesep=1.6mm,fontsize=\scriptsize]
+\begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\scriptsize]
 {"exp": 1, "fused": true, "strip": 2,
  "compile_ok": true, "verify_ok": true,
  "steps_per_sec": 2116.4, "best_sps": 2116.4,
@@ -333,7 +333,7 @@ and breaks conservation. The gate fails it; the driver requests
 \texttt{benchmark} anyway, and the server answers:
 
 \medskip\noindent\begin{minipage}{\linewidth}
-\begin{Verbatim}[frame=lines,framesep=1.6mm,fontsize=\scriptsize]
+\begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\scriptsize]
 {"error": "invalid_transition",
  "requested": "benchmark",
  "valid_next_actions": ["log_variant"],
