@@ -19,6 +19,7 @@ refs_md = src[src.index("## References") :].split("\n", 1)[1].strip()
 body_md = re.sub(r"^## \d+\. ", "# ", body_md, flags=re.M)
 body_md = re.sub(r"^### \d+\.\d+ ", "## ", body_md, flags=re.M)
 # textual cross-references -> IEEE roman style (longest first)
+body_md = body_md.replace("Sections 5 and 6 answer", "Sections V and VI answer")
 for a, b in [("5.1", "V-A"), ("5.2", "V-B"), ("5.3", "V-C"), ("7.1", "VII-A"),
              ("10", "X"), ("11", "XI"), ("2", "II"), ("3", "III"), ("4", "IV"),
              ("5", "V"), ("6", "VI"), ("7", "VII"), ("8", "VIII"), ("9", "IX")]:

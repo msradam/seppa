@@ -5,7 +5,7 @@ New York University. Code: github.com/msradam/seppa, github.com/msradam/bonbibi
 
 ## Abstract
 
-Most edge AI deployments on single-board computers leave the integrated GPU idle. We present Seppa, a harness for optimizing GPU kernels with a large language model in the loop: the model proposes changes, and a finite-state machine compiles, verifies against physics gates, benchmarks, and decides keep or revert, refusing to benchmark any kernel that failed verification. On the flood-simulation stencil of an offline flood-guidance application for the Raspberry Pi 5, the harness produced a kernel 1.59x faster than the original; the machine re-measured and re-judged the result over the Model Context Protocol in five consecutive runs; each run also refused an out-of-order benchmark request for a gate-failing kernel. With CPU inference running concurrently the advantage widens to 2.20x, and the deployment sustains 9.6 tokens/s of language-model decode beside 883 simulation steps per second, an operating point that beats every measured CPU-only configuration on both axes.
+Most edge AI deployments on single-board computers leave the integrated GPU idle. We present Seppa, a harness for optimizing GPU kernels with a large language model in the loop: the model proposes changes, and a finite-state machine compiles, verifies against physics gates, benchmarks, and decides keep or revert, refusing to benchmark any kernel that failed verification. On the flood-simulation stencil of an offline flood-guidance application for the Raspberry Pi 5, the harness produced a kernel 1.58x faster than the original; the machine re-measured and re-judged the result over the Model Context Protocol in five consecutive runs; each run also refused an out-of-order benchmark request for a gate-failing kernel. With CPU inference running concurrently the advantage widens to 2.20x, and the deployment sustains 9.6 tokens/s of language-model decode beside 883 simulation steps per second, an operating point that beats the best measured CPU-only configuration on both axes.
 
 ## 1. Introduction
 
@@ -19,7 +19,7 @@ The demonstration workload is the flood simulation of an offline flood-guidance 
 
 This paper reports:
 
-1. the optimization of a real flood stencil for V3D under three physics gates (correctness checks passed before any benchmark), to 1.59x, failed hypotheses included (Section 5);
+1. the optimization of a real flood stencil for V3D under three physics gates (correctness checks passed before any benchmark), to 1.58x, failed hypotheses included (Section 5);
 2. an action-space lesson: the first search plateaued because every winning change lived in the host program, outside what the machine let the model edit (Section 5.3);
 3. a machine-checked reproduction over MCP, repeated five times under a defined pass criterion, including the server's refusal to benchmark a gate-failing kernel (Section 6);
 4. an interference measurement of the deployed configuration, with a gate-verified CPU-only counterfactual that the GPU split beats on both axes (Section 7).
@@ -69,12 +69,12 @@ For the flood target, `verify` runs 400 steps at 256x256 and demands three thing
 
 ```
 selected: V3D 7.1.10.2
-grid=256^2  steps=4000  time=1.880s
+grid=256^2 steps=4000 time=1.880s 3.07 GFLOP/s
 correct(NMSE vs CPU)=yes  NMSE=1.26e-09
 mass: rain_injected=5242879.9
   water_total=5242739.3  (conserved vs rain=yes)
 pooling: max depth=111.718 at (127,127)
-  (pools in basin=yes)
+  basin_centre=(128,128)  (pools in basin=yes)
 ```
 
 ## 5. Case Study: The Flood Stencil
@@ -95,7 +95,7 @@ Rather than guess the bottleneck, each hypothesis got its own variant and the lo
 | 4 cells per invocation | More strip is better | 2.35 GFLOP/s: falsified, register pressure |
 | Fused + 2 cells per invocation (`fused2s.comp`) | The wins stack | 3.08 GFLOP/s, +59% |
 
-The outcome surprised us. Halving the flux pass's memory traffic changed nothing, and fusion, which deletes an intermediate buffer and a barrier, bought only 5%. Fixed per-invocation cost dominated: each invocation does so little arithmetic that launch overhead swamps it, and giving each thread two cells beat every memory-system optimization we tried; four cells gave the gain back to register pressure. Two hardware details shaped the final kernel. Strips run vertically because that keeps a subgroup's 16 lanes on adjacent addresses, and the kernel consumes each flux value as it is produced; holding all four alive fails register allocation. The shipped kernel is 1.59x at 256x256 (0.187 s against 0.297 s), 1.41x at 512x512, 1.18x at 1024x1024, and holds all gates over 4,000 steps.
+The outcome surprised us. Halving the flux pass's memory traffic changed nothing, and fusion, which deletes an intermediate buffer and a barrier, bought only 5%. Fixed per-invocation cost dominated: each invocation does so little arithmetic that launch overhead swamps it, and giving each thread two cells beat every memory-system optimization we tried; four cells gave the gain back to register pressure. Two hardware details shaped the final kernel. Strips run vertically because that keeps a subgroup's 16 lanes on adjacent addresses, and the kernel consumes each flux value as it is produced; holding all four alive fails register allocation. The shipped kernel is 1.58x at 256x256 across every machine-checked run (1.574 to 1.585; the hand-timed sweep pair, 0.187 s against 0.297 s, reads 1.59x), 1.41x at 512x512, 1.18x at 1024x1024, and holds all gates over 4,000 steps.
 
 ### 5.3 Action-Space Limits
 
@@ -114,7 +114,7 @@ The FSM measures its own baseline (1,346.8 steps/s on 2026-07-11, gates green), 
  "verdict": "keep"}
 ```
 
-Then the driver tries to cheat: it submits the same kernel with rainfall injection doubled in one of the two cell updates, a change that compiles and breaks conservation. The gate fails it; the driver requests `benchmark` anyway, and the server answers:
+Then the driver tries to cheat: it submits the same kernel with rainfall injection doubled in one of the two cell updates, a change that compiles and breaks conservation. The gate fails it; the driver requests `benchmark` anyway, and the server answers (two advisory fields elided):
 
 ```
 {"error": "invalid_transition",
@@ -137,7 +137,7 @@ In deployment the GPU loops the simulation while the CPU routes and decodes (Gra
 
 The campaign turned up one configuration surprise first. With any Vulkan device visible, llama.cpp places CPU-resident model weights in the GPU's host-pinned, write-combined memory even at `-ngl 0`, memory that is slow for the CPU reads that dominate decode. Hiding the device with `GGML_VK_VISIBLE_DEVICES=99` takes decode from 9.68 to 11.59 tokens/s, a 20% gain from an environment variable (A/B from cool starts, llama-bench r=5; raw logs in `docs/paper/artifacts/`, ab_vkvisible). Every number below uses the hidden-device configuration, which the application ships.
 
-`pi/flood/conc_steady_bench.sh` measures each kernel alone (cool starts, finished before heat accumulates), decode alone, and each kernel looping while decode runs; concurrent and decode-alone phases are measured only after a decode soak reaches the firmware's governed thermal plateau (about 76 C, soft-limit bit active), over windows of 12 to 28 flood completions (llama-bench tg64, r=20), counting a flood run only if it fits inside the window. An earlier short-window campaign, preserved in `conc_bench2/`, read 10 to 15% differently in both directions because it measured the thermal transient. Results from the steady-state run of 2026-08-10 (raw logs in `docs/paper/artifacts/`, conc_steady):
+`pi/flood/conc_steady_bench.sh` measures each kernel alone (cool starts, finished before heat accumulates), decode alone, and each kernel looping while decode runs; concurrent and decode-alone phases are measured only after a decode soak reaches the firmware's governed regime (74 to 76 C, soft-limit bit active), over windows of 12 to 28 flood completions (llama-bench tg64, r=20), counting a flood run only if it fits inside the window. An earlier short-window campaign, preserved in `conc_bench2/`, read up to 19% differently in both directions because it measured the thermal transient. Results from the steady-state run of 2026-08-10 (raw logs in `docs/paper/artifacts/`, conc_steady):
 
 | Condition | GPU flood (steps/s) | CPU decode (t/s) |
 |---|---|---|
@@ -147,9 +147,9 @@ The campaign turned up one configuration surprise first. With any Vulkan device 
 | Concurrent, optimized kernel | 883.4 ± 47.1 (n=28) | 9.6 ± 0.2 |
 | Concurrent, original kernel | 401.8 ± 8.3 (n=12) | 9.6 ± 0.2 |
 
-Three things follow. Co-processing costs the CPU 16% of its decode and buys a continuous 883 steps/s of simulation that a CPU-only deployment does not have. The interference is lopsided: the CPU keeps 84% of its rate while the GPU keeps 42%, as decode traffic crowds the shared bus. And contention favors the optimized kernel: 1.58x over the original alone becomes 2.20x concurrent, at identical decode cost (9.6 t/s under either kernel).
+Three things follow. Co-processing costs the CPU 16% of its decode and buys a continuous 883 steps/s of simulation that a CPU-only deployment does not have. The interference is lopsided: the CPU keeps 84% of its rate while the GPU keeps 42%, as decode traffic crowds the shared bus. And contention favors the optimized kernel: 1.58x over the original alone becomes 2.20x concurrent, at identical decode cost (9.6 t/s under either kernel). One residual: the optimized-kernel window still drifts upward (first-half mean 852, second-half 915 steps/s) as governance slows decode, so 883.4 is conservative relative to the late-window rate.
 
-Decode is also the GPU's worst case. Paired with a compute-bound CPU load (openssl SHA-256, four threads) the GPU keeps 99% and the load keeps 88% of its 16 KB-block throughput; paired with the memory-bound four-thread CPU flood the GPU keeps 92% and the load keeps 75% (continuous sim-mode probes, both sides logged; `docs/paper/artifacts/`, genload2). The GPU is the robust side of every pairing except decode, which streams model weights from DRAM every token and drives GPU retention to 42%: interference tracks the CPU load's memory traffic.
+Decode is also the GPU's worst case. Paired with a compute-bound CPU load (openssl SHA-256, four threads) the GPU keeps 99% and the load keeps 88% of its 16 KB-block throughput; paired with the memory-bound four-thread CPU flood the GPU keeps 92% and the load keeps 75% (continuous sim-mode probes over cool-start 60 s windows, both sides logged; `docs/paper/artifacts/`, genload2). The GPU is the robust side of every pairing except decode, which streams model weights from DRAM every token and drives GPU retention to 42%: interference tracks the CPU load's memory traffic.
 
 ### 7.1 The CPU-Only Counterfactual
 
@@ -167,15 +167,15 @@ The idle-core number is real but unavailable: in deployment, decode is always ru
 
 ## 8. Limitations
 
-The envelope is one board (Pi 5, V3D 7.1.10.2, Mesa v3dv 25.0.7) and one grid family, with speedups that shrink as the grid grows; headroom likely remains. The July and August campaigns straddle an OS update (kernel 6.12 to 6.18); flood baselines agree across it (1,346.8 before, 1,348.6 ± 4.1 after). The gates are necessary rather than sufficient: verification covers one storm scenario at one grid size, and the keep decision rests on a single timing sample against a 1% threshold. The 3,803 steps/s CPU figure assumed a cache-resident 256x256 working set and may not survive larger grids. The scripted reproduction's kernel came from the hand sweep, and the agent-driven session worked a knob the server itself exposed. The demonstrated property is machine verification; autonomous discovery remains open. Full GPU offload of the language model is blocked by an upstream llama.cpp Vulkan defect.
+The envelope is one board (Pi 5, V3D 7.1.10.2, Mesa v3dv 25.0.7) and one grid family, with speedups that shrink as the grid grows; headroom likely remains. The July and August campaigns straddle an OS update (kernel 6.12 to 6.18); flood baselines agree across it (1,346.8 before, 1,348.6 ± 4.1 after). The gates are necessary rather than sufficient: verification covers one storm scenario at one grid size, and the keep decision rests on a single timing sample against a 1% threshold. The 3,852 steps/s CPU figure assumed a cache-resident 256x256 working set and may not survive larger grids. The scripted reproduction's kernel came from the hand sweep, and the agent-driven session worked a knob the server itself exposed. The demonstrated property is machine verification; autonomous discovery remains open. Full GPU offload of the language model is blocked by an upstream llama.cpp Vulkan defect.
 
 ## 9. The Sample Application
 
-The sample application [7] simulates surface flooding over real terrain [1], finds shelter routes by mobility profile [2], and explains the result in plain language, entirely offline; the model never makes a safety decision, only narrating what the deterministic code computed. The application lives at github.com/msradam/bonbibi, distinct from this paper's contributions; the harness at github.com/msradam/seppa. Measurements used its Granite 4.0 1B configuration (since moved to a larger model); build commands are in `pi/flood/README.md`, and cited references are archived in `docs/paper/references/`. Numbers without an archived log (the original harness's 1,045 steps/s and the GEMM and matrix-vector results) come from the repository's dated running notes.
+The sample application [7] simulates surface flooding over real terrain [1], finds shelter routes by mobility profile [2], and explains the result in plain language, entirely offline; the model never makes a safety decision, only narrating what the deterministic code computed. The application lives at github.com/msradam/bonbibi, distinct from this paper's contributions; the harness at github.com/msradam/seppa. Measurements used its Granite 4.0 1B configuration (since moved to a larger model); build commands are in `pi/flood/README.md`, and cited references are archived in `docs/paper/references/`. Numbers without an archived log (the original harness's 1,045 steps/s, the sweep's GFLOP/s column and hand-timed ratios, and the GEMM and matrix-vector results) come from the repository's dated running notes.
 
 ## 10. Conclusion
 
-Seppa separates proposal from judgment: a language model suggests kernels for the Raspberry Pi 5's integrated GPU, and a state machine the model cannot argue with decides what is true about them. On a real flood stencil this produced a verified 1.59x, reproduced within 1% by the machine five of five times, and it holds in deployment: 883 steps/s of simulation beside decode at 84% of its solo speed. What we trust in the end is not the model's account of its work but the gate the work had to pass through. The suggestion is open-ended: commodity edge boards carry more usable silicon than their deployments exercise, and a loop that cannot lie about correctness is a reasonable way to get at it.
+Seppa separates proposal from judgment: a language model suggests kernels for the Raspberry Pi 5's integrated GPU, and a state machine the model cannot argue with decides what is true about them. On a real flood stencil this produced a verified 1.58x, reproduced within 1% by the machine five of five times, and it holds in deployment: 883 steps/s of simulation beside decode at 84% of its solo speed. What we trust in the end is not the model's account of its work but the gate the work had to pass through. The suggestion is open-ended: commodity edge boards carry more usable silicon than their deployments exercise, and a loop that cannot lie about correctness is a reasonable way to get at it.
 
 ## References
 

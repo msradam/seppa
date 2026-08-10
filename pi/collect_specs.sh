@@ -35,7 +35,7 @@ cat <<EOF
     "soc": "$SOC",
     "cpu": "$NCPU x $CPU",
     "cpu_clock_mhz": $((ARM_HZ / 1000000)),
-    "ram_gb": $((RAM_KB / 1024 / 1024 + 1)),
+    "ram_gb": $(( (RAM_KB + 524288) / 1048576 )),
     "os": "$OS (DietPi $DIETPI)",
     "kernel": "$KERNEL",
     "firmware": "$FW"

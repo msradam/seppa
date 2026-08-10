@@ -25,14 +25,14 @@ finite-state machine compiles, verifies against physics gates,
 benchmarks, and decides keep or revert, refusing to benchmark any kernel
 that failed verification. On the flood-simulation stencil of an offline
 flood-guidance application for the Raspberry Pi 5, the harness produced
-a kernel 1.59x faster than the original; the machine re-measured and
+a kernel 1.58x faster than the original; the machine re-measured and
 re-judged the result over the Model Context Protocol in five consecutive
 runs; each run also refused an out-of-order benchmark request for a
 gate-failing kernel. With CPU inference running concurrently the
 advantage widens to 2.20x, and the deployment sustains 9.6 tokens/s of
 language-model decode beside 883 simulation steps per second, an
-operating point that beats every measured CPU-only configuration on both
-axes.
+operating point that beats the best measured CPU-only configuration on
+both axes.
 \end{abstract}
 \begin{IEEEkeywords}
 GPU kernel optimization, LLM agents, correctness verification, edge computing, Vulkan
@@ -52,7 +52,7 @@ Less attention goes to silicon already on the board: every Pi 5 ships a
 VideoCore VII GPU that compute workloads rarely touch, and during CPU
 inference it idles. Two questions decide that idle GPU's worth: can it
 be made fast enough at a useful workload to be a co-processor, and can
-it run beside a busy CPU on a shared LPDDR bus? Sections 5 and 6 answer
+it run beside a busy CPU on a shared LPDDR bus? Sections V and VI answer
 the first question, Section VII the second.
 
 Making kernels fast on a sparsely documented mobile GPU, where tuning
@@ -79,7 +79,7 @@ This paper reports:
 \tightlist
 \item
   the optimization of a real flood stencil for V3D under three physics
-  gates (correctness checks passed before any benchmark), to 1.59x,
+  gates (correctness checks passed before any benchmark), to 1.58x,
   failed hypotheses included (Section V);
 \item
   an action-space lesson: the first search plateaued because every
@@ -222,12 +222,12 @@ gate in the harness log:
 \medskip\noindent\begin{minipage}{\linewidth}
 \begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\scriptsize]
 selected: V3D 7.1.10.2
-grid=256^2  steps=4000  time=1.880s
+grid=256^2 steps=4000 time=1.880s 3.07 GFLOP/s
 correct(NMSE vs CPU)=yes  NMSE=1.26e-09
 mass: rain_injected=5242879.9
   water_total=5242739.3  (conserved vs rain=yes)
 pooling: max depth=111.718 at (127,127)
-  (pools in basin=yes)
+  basin_centre=(128,128)  (pools in basin=yes)
 \end{Verbatim}
 \end{minipage}\medskip
 
@@ -287,9 +287,10 @@ four cells gave the gain back to register pressure. Two hardware details
 shaped the final kernel. Strips run vertically because that keeps a
 subgroup's 16 lanes on adjacent addresses, and the kernel consumes each
 flux value as it is produced; holding all four alive fails register
-allocation. The shipped kernel is 1.59x at 256x256 (0.187 s against
-0.297 s), 1.41x at 512x512, 1.18x at 1024x1024, and holds all gates over
-4,000 steps.
+allocation. The shipped kernel is 1.58x at 256x256 across every
+machine-checked run (1.574 to 1.585; the hand-timed sweep pair, 0.187 s
+against 0.297 s, reads 1.59x), 1.41x at 512x512, 1.18x at 1024x1024, and
+holds all gates over 4,000 steps.
 
 \subsection{Action-Space Limits}\label{action-space-limits}
 
@@ -330,7 +331,8 @@ gates it, benchmarks 2,116.4 steps/s, and issues its own verdict:
 Then the driver tries to cheat: it submits the same kernel with rainfall
 injection doubled in one of the two cell updates, a change that compiles
 and breaks conservation. The gate fails it; the driver requests
-\texttt{benchmark} anyway, and the server answers:
+\texttt{benchmark} anyway, and the server answers (two advisory fields
+elided):
 
 \medskip\noindent\begin{minipage}{\linewidth}
 \begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\scriptsize]
@@ -383,15 +385,14 @@ which the application ships.
 \texttt{pi/flood/conc\_steady\_bench.sh} measures each kernel alone
 (cool starts, finished before heat accumulates), decode alone, and each
 kernel looping while decode runs; concurrent and decode-alone phases are
-measured only after a decode soak reaches the firmware's governed
-thermal plateau (about 76 C, soft-limit bit active), over windows of 12
-to 28 flood completions (llama-bench tg64, r=20), counting a flood run
-only if it fits inside the window. An earlier short-window campaign,
-preserved in \texttt{conc\_bench2/}, read 10 to 15\% differently in both
-directions because it measured the thermal transient. Results from the
-steady-state run of 2026-08-10 are in
-Table~\ref{tab:conc} (raw logs in
-\texttt{docs/paper/artifacts/}, conc\_steady).
+measured only after a decode soak reaches the firmware's governed regime
+(74 to 76 C, soft-limit bit active), over windows of 12 to 28 flood
+completions (llama-bench tg64, r=20), counting a flood run only if it
+fits inside the window. An earlier short-window campaign, preserved in
+\texttt{conc\_bench2/}, read up to 19\% differently in both directions
+because it measured the thermal transient. Results from the steady-state
+run of 2026-08-10 are in Table~\ref{tab:conc} (raw logs
+in \texttt{docs/paper/artifacts/}, conc\_steady).
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{table}[!t]\caption{Concurrent GPU flood and CPU LLM decode}\label{tab:conc}\centering\footnotesize\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}lll@{}}
@@ -413,17 +414,19 @@ does not have. The interference is lopsided: the CPU keeps 84\% of its
 rate while the GPU keeps 42\%, as decode traffic crowds the shared bus.
 And contention favors the optimized kernel: 1.58x over the original
 alone becomes 2.20x concurrent, at identical decode cost (9.6 t/s under
-either kernel).
+either kernel). One residual: the optimized-kernel window still drifts
+upward (first-half mean 852, second-half 915 steps/s) as governance
+slows decode, so 883.4 is conservative relative to the late-window rate.
 
 Decode is also the GPU's worst case. Paired with a compute-bound CPU
 load (openssl SHA-256, four threads) the GPU keeps 99\% and the load
 keeps 88\% of its 16 KB-block throughput; paired with the memory-bound
 four-thread CPU flood the GPU keeps 92\% and the load keeps 75\%
-(continuous sim-mode probes, both sides logged;
-\texttt{docs/paper/artifacts/}, genload2). The GPU is the robust side of
-every pairing except decode, which streams model weights from DRAM every
-token and drives GPU retention to 42\%: interference tracks the CPU
-load's memory traffic.
+(continuous sim-mode probes over cool-start 60 s windows, both sides
+logged; \texttt{docs/paper/artifacts/}, genload2). The GPU is the robust
+side of every pairing except decode, which streams model weights from
+DRAM every token and drives GPU retention to 42\%: interference tracks
+the CPU load's memory traffic.
 
 \subsection{The CPU-Only
 Counterfactual}\label{the-cpu-only-counterfactual}
@@ -477,7 +480,7 @@ likely remains. The July and August campaigns straddle an OS update
 1,348.6 ± 4.1 after). The gates are necessary rather than sufficient:
 verification covers one storm scenario at one grid size, and the keep
 decision rests on a single timing sample against a 1\% threshold. The
-3,803 steps/s CPU figure assumed a cache-resident 256x256 working set
+3,852 steps/s CPU figure assumed a cache-resident 256x256 working set
 and may not survive larger grids. The scripted reproduction's kernel
 came from the hand sweep, and the agent-driven session worked a knob the
 server itself exposed. The demonstrated property is machine
@@ -496,15 +499,16 @@ github.com/msradam/seppa. Measurements used its Granite 4.0 1B
 configuration (since moved to a larger model); build commands are in
 \texttt{pi/flood/README.md}, and cited references are archived in
 \texttt{docs/paper/references/}. Numbers without an archived log (the
-original harness's 1,045 steps/s and the GEMM and matrix-vector results)
-come from the repository's dated running notes.
+original harness's 1,045 steps/s, the sweep's GFLOP/s column and
+hand-timed ratios, and the GEMM and matrix-vector results) come from the
+repository's dated running notes.
 
 \section{Conclusion}\label{conclusion}
 
 Seppa separates proposal from judgment: a language model suggests
 kernels for the Raspberry Pi 5's integrated GPU, and a state machine the
 model cannot argue with decides what is true about them. On a real flood
-stencil this produced a verified 1.59x, reproduced within 1\% by the
+stencil this produced a verified 1.58x, reproduced within 1\% by the
 machine five of five times, and it holds in deployment: 883 steps/s of
 simulation beside decode at 84\% of its solo speed. What we trust in the
 end is not the model's account of its work but the gate the work had to
