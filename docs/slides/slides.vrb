@@ -1,0 +1,16 @@
+\frametitle{The machine re-judges the result}
+The FSM measures its own baseline (1{,}346.8 steps/s, gates green),
+  receives the fused strip-2 kernel, and issues its own verdict:
+  \begin{Verbatim}[frame=single,framesep=1.5mm]
+{"exp": 1, "fused": true, "strip": 2, "compile_ok": true,
+ "verify_ok": true, "steps_per_sec": 2116.4, "verdict": "keep"}
+  \end{Verbatim}
+  Then the driver cheats: same kernel, rainfall doubled in one cell update.
+  It compiles; the gate fails it; the driver requests \texttt{benchmark} anyway:
+  \begin{Verbatim}[frame=single,framesep=1.5mm]
+{"error": "invalid_transition", "requested": "benchmark",
+ "valid_next_actions": ["log_variant"],
+ "message": "action 'benchmark' is not reachable from
+             current state."}
+  \end{Verbatim}
+  The broken variant is ledgered as a revert with a null speed.
