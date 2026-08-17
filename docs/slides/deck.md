@@ -9,7 +9,7 @@ footer: "A. M. Rahman · ECE-GY 9953 Advanced Project · NYU Tandon · Summer 20
 <!-- _paginate: false -->
 <!-- _footer: "" -->
 
-# Correctness-Gated, LLM-Driven Kernel Optimization on the Raspberry Pi 5's Integrated GPU
+# Seppa: Correctness-Gated LLM Kernel Optimization on the Raspberry Pi 5 GPU
 
 **Adam Munawar Rahman**
 

@@ -13,7 +13,7 @@
 \def\verbatim@font{\ttfamily\scriptsize}
 \makeatother
 \begin{document}
-\title{Correctness-Gated, LLM-Driven Kernel Optimization on the Raspberry Pi 5's Integrated GPU}
+\title{Seppa: Correctness-Gated LLM Kernel Optimization on the Raspberry Pi 5 GPU}
 \author{\IEEEauthorblockN{Adam Munawar Rahman}
 \IEEEauthorblockA{New York University \\ New York, NY, USA \\ msr541@nyu.edu}}
 \maketitle
@@ -459,7 +459,7 @@ cpu\_steady. Table~\ref{tab:cpu} presents the outcome.
 Condition & Flood (steps/s) & CPU decode (t/s) \\
 \midrule
 CPU flood alone, 1 / 2 / 4 threads & 992.5 / 1,980.5 / 3,852.4 & \\
-Decode alone, 3 threads (pinned) & & 11.9 ± 0.0 \\
+Decode alone, 3 threads (pinned, soaked) & & 11.8 ± 0.0 \\
 Partitioned: flood 1t + decode 3t & 678.8 ± 10.6 (n=25) & 8.4 ± 0.1 \\
 Oversubscribed: flood 4t + decode 4t & 857.1 ± 181.0 (n=89) & 3.0 ±
 0.3 \\

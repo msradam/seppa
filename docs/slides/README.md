@@ -52,15 +52,16 @@ npx @marp-team/marp-cli deck.md --html --theme themes/ieee.css \
   --allow-local-files --pdf -o deck.pdf
 
 npx @marp-team/marp-cli deck.md --html --theme themes/ieee.css \
-  --allow-local-files --images png --image-scale 1.5 -o frames/slide.png
+  --allow-local-files --images png --image-scale 3 -o frames/slide.png
 
 ffmpeg -y -f concat -safe 0 -i frames/concat.txt -vf "format=yuv420p" \
-  -c:v libx264 -crf 18 -r 30 -t 900 defense.mp4
+  -c:v libx264 -crf 20 -r 30 -t 900 defense.mp4
 ```
 
 `--html` is required: without it Marp strips the inline HTML the deck uses for
-two-column layouts. `--image-scale 1.5` renders frames at 1920x1080 so the
-video needs no upscale, which would otherwise soften every glyph. `frames/` is generated and not tracked; the per-slide
+two-column layouts. `--image-scale 3` renders frames at 3840x2160. The deck is designed at
+1280x720, so anything less is upscaled by the player on a high-density display
+and reads as blurry even though the encode is lossless-looking. `frames/` is generated and not tracked; the per-slide
 durations live in `frames/concat.txt`, and `-t 900` trims the trailing entry
 that the concat demuxer would otherwise hold past the end.
 

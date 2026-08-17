@@ -1,4 +1,4 @@
-# Correctness-Gated, LLM-Driven Kernel Optimization on the Raspberry Pi 5's Integrated GPU
+# Seppa: Correctness-Gated LLM Kernel Optimization on the Raspberry Pi 5 GPU
 
 Adam Munawar Rahman
 New York University. Code: github.com/msradam/seppa, github.com/msradam/bonbibi
@@ -158,7 +158,7 @@ Four idle A76 cores run this stencil at 3,852 steps/s, well above the V3D's 2,12
 | Condition | Flood (steps/s) | CPU decode (t/s) |
 |------------|--------|------|
 | CPU flood alone, 1 / 2 / 4 threads | 992.5 / 1,980.5 / 3,852.4 | |
-| Decode alone, 3 threads (pinned) | | 11.9 ± 0.0 |
+| Decode alone, 3 threads (pinned, soaked) | | 11.8 ± 0.0 |
 | Partitioned: flood 1t + decode 3t | 678.8 ± 10.6 (n=25) | 8.4 ± 0.1 |
 | Oversubscribed: flood 4t + decode 4t | 857.1 ± 181.0 (n=89) | 3.0 ± 0.3 |
 | GPU concurrent, optimized (from above) | 883.4 ± 47.1 | 9.6 ± 0.2 |
