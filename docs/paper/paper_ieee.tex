@@ -202,9 +202,9 @@ reach. A run ends after three consecutive non-improvements on
 gate-passing variants, or at the budget. An audit of the port is in the
 repository (\texttt{docs/autokernel\_fidelity.md}).
 
-For the division of labor, we follow Chip-Chat's disclosure convention.
-The author built the application and the harness, chose the physics
-gates, ran the hand-driven sweep of Section V-B, and supervised
+For the division of labor, this paper follows Chip-Chat's disclosure
+convention. The author built the application and the harness, chose the
+physics gates, ran the hand-driven sweep of Section V-B, and supervised
 sessions. The language model, Claude Sonnet 5 (Anthropic), driven
 through the Claude Code client at high reasoning effort, wrote the
 content of \texttt{hypothesize} and \texttt{implement} (kernel source
@@ -300,13 +300,13 @@ and 1.18x at 1024x1024, and it holds all gates over 4,000 steps.
 
 \subsection{Action-Space Limits}\label{action-space-limits}
 
-An earlier session pointed the FSM at this stencil and came back empty;
-we nearly concluded the kernel was at its limit. The problem was the
-action space: that version of \texttt{implement} accepted shader text
-only, and every winning change in Table~\ref{tab:sweep}
-lives outside the shader (packing changes the buffer layout, fusion
-deletes a host-loop pipeline, strip-mining changes the dispatch shape).
-Once \texttt{implement} took
+An earlier session pointed the state machine at this stencil and came
+back empty; we nearly concluded the kernel was at its limit. The problem
+was the action space: that version of \texttt{implement} accepted shader
+text only, and every winning change in
+Table~\ref{tab:sweep} lives outside the shader (packing
+changes the buffer layout, fusion deletes a host-loop pipeline,
+strip-mining changes the dispatch shape). Once \texttt{implement} took
 \texttt{\{shader,\ height\_shader,\ strip\}}, the machine found and kept
 the fused strip-2 kernel from its own baseline (Section VI). A plateau
 can mean the search space is too small, not that the hardware is
@@ -321,11 +321,13 @@ MCP}\label{machine-checked-reproduction-over-mcp}
 
 Rather than ask a reader to trust Section V's numbers,
 \texttt{drive\_flood2\_mcp.py} runs on a second computer and drives the
-Pi-resident FSM through the whole cycle via the \texttt{step} tool.
+Pi-resident state machine through the whole cycle via the \texttt{step}
+tool.
 
-The FSM measures its own baseline (1,346.8 steps/s on 2026-07-11, gates
-green), receives the fused strip-2 kernel as experiment 1, compiles it,
-gates it, benchmarks 2,116.4 steps/s, and issues its own verdict:
+The state machine measures its own baseline (1,346.8 steps/s on
+2026-07-11, gates green), receives the fused strip-2 kernel as
+experiment 1, compiles it, gates it, benchmarks 2,116.4 steps/s, and
+issues its own verdict:
 
 \medskip\noindent\begin{minipage}{\linewidth}
 \begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\scriptsize]
