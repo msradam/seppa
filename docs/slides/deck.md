@@ -11,8 +11,12 @@ style: |
     font-family: Georgia, 'Times New Roman', serif;
     font-size: 26px;
     padding: 56px 72px;
+    justify-content: flex-start !important;
+    align-content: flex-start !important;
+    place-content: flex-start !important;
   }
   section h1 {
+    margin-top: 0;
     font-size: 40px;
     line-height: 1.25;
     color: #111;
@@ -20,7 +24,7 @@ style: |
     padding-bottom: 10px;
     margin-bottom: 28px;
   }
-  section.title { text-align: center; }
+  section.title { text-align: center; justify-content: center !important; align-content: center !important; place-content: center !important; }
   section.title h1 { border-bottom: none; font-size: 52px; }
   section code, section pre {
     font-family: 'Courier New', Courier, monospace;
@@ -69,15 +73,15 @@ Summer 2026
 
 # The Pi's GPU is a strange optimization target: small limits, and a compiler that fails silently
 
-| | |
-|---|---|
-| Device | V3D 7.1.10.2 (VideoCore VII), Mesa v3dv 25.0.7 |
-| Max invocations per workgroup | 256 |
-| Shared memory per workgroup | 16 KB |
-| SIMD width | 16 lanes, fixed |
-| fp16 / matrix hardware | none |
-| Best measured kernel | ~13 GFLOP/s fp32 |
-| Four CPU cores, same workload | ~5.5 GFLOP/s |
+<table style="margin:16px auto 28px auto;">
+<tr><td>Device</td><td>V3D 7.1.10.2 (VideoCore VII), Mesa v3dv 25.0.7</td></tr>
+<tr><td>Max invocations per workgroup</td><td>256</td></tr>
+<tr><td>Shared memory per workgroup</td><td>16 KB</td></tr>
+<tr><td>SIMD width</td><td>16 lanes, fixed</td></tr>
+<tr><td>fp16 / matrix hardware</td><td>none</td></tr>
+<tr><td>Best measured kernel</td><td>~13 GFLOP/s fp32</td></tr>
+<tr><td>Four CPU cores, same workload</td><td>~5.5 GFLOP/s</td></tr>
+</table>
 
 When a shader wants more registers than exist, the driver does not fail. It silently retries with slower strategies. Optimizing this GPU is mostly register-allocator management.
 
@@ -93,9 +97,9 @@ Existing agentic optimizers steer the model with prompts and trust it to verify 
 
 # Seppa makes verification a state transition the model cannot skip
 
-![w:1050](fsm.png)
+![w:980](fsm.png)
 
-The model owns the two shaded states and nothing else. One MCP tool, `step(action, inputs)`; the server constrains `action` to the graph's legal moves. Skipping verification is not an expressible request.
+The model owns the two shaded states; the machine owns the rest. The server constrains `step(action, inputs)` to the graph's legal moves, so skipping verification is not an expressible request.
 
 ---
 
