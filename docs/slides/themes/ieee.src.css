@@ -1,0 +1,293 @@
+/* @theme ieee */
+
+/*
+ * Marp theme following the IEEE corporate presentation template conventions.
+ * Palette: IEEE Brand Colors HEX Formula Chart for Solids and Tints.
+ *   https://brand-experience.ieee.org/wp-content/uploads/2020/10/IEEE_Brand_Colors_Hex_Formulas_for_Solids_and_Tints.pdf
+ * Typeface: Open Sans, IEEE's preferred web font per the visual identity
+ * guidelines (Formata is primary but is not freely licensed; Calibri is the
+ * PowerPoint alternate). Fonts are vendored in ../fonts.
+ */
+
+@font-face {
+  font-family: 'Open Sans';
+  font-weight: 400;
+  src: url('../fonts/OpenSans-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-weight: 400;
+  font-style: italic;
+  src: url('../fonts/OpenSans-Italic.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-weight: 600;
+  src: url('../fonts/OpenSans-SemiBold.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-weight: 700;
+  src: url('../fonts/OpenSans-Bold.ttf') format('truetype');
+}
+
+:root {
+  --ieee-blue: #00629b;
+  --ieee-blue-80: #007dae;
+  --ieee-blue-60: #5d9cc3;
+  --ieee-blue-20: #e4e6ec;
+  --ieee-navy: #002855;
+  --ieee-red: #ba0c2f;
+  --ieee-green: #00843d;
+  --ieee-grey: #75787b;
+  --ieee-grey-20: #d1d3d4;
+  --ink: #1a1a1a;
+}
+
+section {
+  width: 1280px;
+  height: 720px;
+  padding: 34px 64px 62px 64px;
+  background: #ffffff;
+  color: var(--ink);
+  font-family: 'Open Sans', Calibri, Arial, sans-serif;
+  font-size: 23px;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-content: flex-start;
+  align-items: stretch;
+}
+
+section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: var(--ieee-blue);
+}
+
+section h1 {
+  margin: 0 0 18px 0;
+  font-size: 31px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ieee-blue);
+  letter-spacing: -0.01em;
+}
+
+section h1 code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: 0.88em;
+}
+
+section h2 {
+  font-size: 25px;
+  font-weight: 600;
+  color: var(--ieee-navy);
+  margin: 0 0 10px 0;
+}
+
+section p,
+section li {
+  margin: 0 0 12px 0;
+}
+
+section ul,
+section ol {
+  margin: 0 0 12px 0;
+  padding-left: 28px;
+}
+
+section li::marker {
+  color: var(--ieee-blue-60);
+}
+
+section strong {
+  font-weight: 700;
+  color: var(--ieee-navy);
+}
+
+section a {
+  color: var(--ieee-blue);
+}
+
+/* Title slide: full-bleed IEEE Blue, per the corporate template's title layout. */
+section.title {
+  background: var(--ieee-blue);
+  color: #ffffff;
+  justify-content: center;
+  align-content: center;
+  padding: 64px 96px;
+}
+section.title::before {
+  content: none;
+}
+section.title h1 {
+  color: #ffffff;
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.22;
+  margin-bottom: 34px;
+  padding-bottom: 26px;
+  border-bottom: 3px solid rgba(255, 255, 255, 0.45);
+}
+section.title p {
+  color: #ffffff;
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+section.title strong {
+  color: #ffffff;
+}
+section.title code {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+/* Section divider: solid IEEE Blue with the section name only. */
+section.divider {
+  background: var(--ieee-blue);
+  color: #ffffff;
+  justify-content: center;
+  align-content: center;
+  padding: 64px 96px;
+}
+section.divider::before {
+  content: none;
+}
+section.divider h1 {
+  color: #ffffff;
+  font-size: 40px;
+  font-weight: 700;
+}
+section.divider p {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 24px;
+  margin-top: 14px;
+}
+
+section code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.92em;
+  background: var(--ieee-blue-20);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+section pre {
+  background: #fbfcfd;
+  border: 1px solid var(--ieee-blue-60);
+  border-left: 5px solid var(--ieee-blue);
+  padding: 13px 18px;
+  margin: 4px 0 14px 0;
+  font-size: 19px;
+  line-height: 1.42;
+  overflow: visible;
+}
+section pre code {
+  background: none;
+  padding: 0;
+  font-size: 1em;
+}
+
+section table {
+  border-collapse: collapse;
+  font-size: 21px;
+  margin: 2px 0 14px 0;
+  width: 100%;
+}
+section th {
+  background: var(--ieee-blue);
+  color: #ffffff;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 14px;
+  border: none;
+}
+section td {
+  padding: 7px 14px;
+  border: none;
+  border-bottom: 1px solid var(--ieee-grey-20);
+}
+section tbody tr:nth-child(even) {
+  background: #f5f8fa;
+}
+
+section img {
+  display: block;
+  margin: 0 auto;
+}
+
+section footer {
+  position: absolute;
+  bottom: 22px;
+  left: 64px;
+  right: 110px;
+  font-size: 14px;
+  color: var(--ieee-grey);
+  margin: 0;
+}
+
+section::after {
+  position: absolute;
+  padding: 0;
+  margin: 0;
+  bottom: 18px;
+  right: 32px;
+  width: 40px;
+  height: 26px;
+  line-height: 26px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--ieee-blue);
+  content: attr(data-marpit-pagination);
+}
+section.title::after,
+section.divider::after {
+  background: rgba(255, 255, 255, 0.22);
+}
+section.title footer,
+section.divider footer {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Utility classes used by the deck. */
+.stat {
+  font-size: 52px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ieee-blue);
+  display: block;
+}
+.stat-red {
+  color: var(--ieee-red);
+}
+.caption {
+  font-size: 18px;
+  color: var(--ieee-grey);
+}
+.pass {
+  color: var(--ieee-green);
+  font-weight: 700;
+}
+.fail {
+  color: var(--ieee-red);
+  font-weight: 700;
+}
+.cols {
+  display: flex;
+  gap: 34px;
+  align-items: flex-start;
+}
+.cols > div {
+  flex: 1;
+  min-width: 0;
+}
