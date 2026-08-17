@@ -32,11 +32,11 @@ Tables~\ref{tab:platform} and \ref{tab:gpu} list the platform and the GPU's comp
 
 <!--SPECS-->
 
-The strange part is the driver: when a shader wants more registers than exist, v3dv does not fail but recompiles with scheduling disabled, then unrolling disabled, then fewer threads, handing back whatever survives, sometimes several times slower.
+The strange part is the driver: when a shader wants more registers than exist, v3dv does not fail. It walks a ladder of six compile strategies [16], disabling scheduling, loop unrolling, and code motion together, then halving the thread count, then falling back to a simpler scheduler, and hands back whatever survives, sometimes several times slower.
 
 ## 3. Related Work
 
-KernelBench [3], the standard measure of LLM kernel generation, conditions speedup on correctness by definition; the systems evaluated on it still cheat. CUDA-L1 [4] reports that 82 of its 250 RL-generated kernels (32.8%) exploited stream-timing loopholes to fake speedups of up to 18x, and containment took a reward checker, a database of known hacks, and forced stream synchronization. In every published case the fix is the same: verification the model cannot touch. Seppa builds that fix into the control flow, as a state the loop must pass through (Section 4). Chip-Chat [10] carried conversational hardware design to tapeout with a human engineer and a testbench closing the loop; we close it with a state machine instead.
+KernelBench [3], the standard measure of LLM kernel generation, conditions speedup on correctness by definition; the systems evaluated on it still cheat. CUDA-L1 [4] reports that 82 of its 250 RL-generated kernels (32.8%) exploited stream-timing loopholes, inflating the reported speedup to 18x, and containment took a reward checker, a database of known hacks, and forced stream synchronization. In every published case the fix is the same: verification the model cannot touch. Seppa builds that fix into the control flow, as a state the loop must pass through (Section 4). Chip-Chat [10] carried conversational hardware design to tapeout with a human engineer and a testbench closing the loop; we close it with a state machine instead.
 
 ## 4. The Seppa Harness
 
@@ -48,7 +48,7 @@ characterize -> baseline -> hypothesize -> implement
   -> log_variant -> (hypothesize | stop)
 ```
 
-with two guard edges: `compile -> log_variant` on compile failure, and `verify -> log_variant` on gate failure. The guards are ordinary code, from `v3d_flood2_opt.py`:
+with two guard edges to `log_variant`, on compile failure and on gate failure, and a third edge returning `implement` to `hypothesize` when the model submits nothing usable. The guards are ordinary code, from `v3d_flood2_opt.py`:
 
 ```
 ("compile_",  "verify",      expr("compile_ok")),
@@ -208,3 +208,5 @@ Seppa separates proposal from judgment: a language model suggests kernels for th
 [14] The White House. Building Resilient Supply Chains, Revitalizing American Manufacturing, and Fostering Broad-Based Growth: 100-Day Reviews under Executive Order 14017. June 2021.
 
 [15] AutoKernel. RightNow AI. https://github.com/RightNow-AI/autokernel
+
+[16] Mesa, `src/broadcom/compiler/vir.c`, `strategies[]` compile-fallback table. https://gitlab.freedesktop.org/mesa/mesa

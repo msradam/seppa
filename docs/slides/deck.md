@@ -150,7 +150,7 @@ of the benchmark suite affected
 <div>
 
 <span class="stat stat-red">18x</span>
-largest fabricated speedup reported
+the inflated speedup those kernels reported
 
 </div>
 </div>

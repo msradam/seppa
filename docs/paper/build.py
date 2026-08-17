@@ -42,12 +42,12 @@ characterize -> baseline -> hypothesize -> implement
   -> log_variant -> (hypothesize | stop)
 ```
 
-with two guard edges:""",
+with two guard edges to `log_variant`,""",
     """running on the Pi itself.
 
 \\input{fsm_fig}
 
-Fig.~\\ref{fig:fsm} shows the graph, with two guard edges:""",
+Fig.~\\ref{fig:fsm} shows the graph, with two guard edges to `log_variant`,""",
 )
 # tables become numbered floats; point the prose at them
 rep("every winning change in Table I lives outside the shader",

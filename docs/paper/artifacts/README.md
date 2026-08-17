@@ -1,0 +1,37 @@
+# Archived artifacts
+
+Raw logs, transcripts, and machine-collected system data behind the paper.
+The measurement hardware is no longer live, so these files are the record.
+
+| Directory | What it holds | Used by |
+|---|---|---|
+| `conc_steady_2026-08-10/` | Steady-state GPU/CPU concurrency campaign | Table IV |
+| `cpu_steady_2026-08-10/` | CPU-only counterfactual, partitioned and oversubscribed | Table V |
+| `passk_2026-08-09/` | Five scored reproductions, one JSONL per run plus `summary.json` | Section 6 |
+| `ab_vkvisible_2026-08-10/` | `GGML_VK_VISIBLE_DEVICES` A/B, with the run script | Section 7 |
+| `genload2_2026-08-10/` | GPU retention against generic CPU loads | Section 7 |
+| `specs_2026-08-10/` | `collect_specs.sh` output, `vulkaninfo` dump, `vcgencmd` | Tables I and II |
+| `mcp_flood2_recreation_2026-07-11.jsonl` | The machine-checked reproduction over MCP | Section 6 |
+| `claude_sessions/` | Complete agent session transcripts | Section 4 |
+| `genload_bench_2026-08-09/` | Earlier generic-load run; source of the gate-log excerpt | Section 4 |
+| `conc_bench/`, `conc_bench2/`, `cpu_flood_bench/`, `cpu_flood_bench2/` | Superseded short-window campaigns, kept because Section 7 cites them | Section 7 |
+
+## Reading the numbers
+
+Flood throughput is not stored as steps/s. Each run prints `steps=N time=Ts`,
+so steps/s is `N/T`. Concurrent phases additionally carry `llama_start=` and
+`llama_end=` markers, and a run counts only if it both began and finished
+inside that window, which is why the concurrent row counts (n=28, n=12, n=25,
+n=89) are smaller than the number of runs in the file. `notebooks/analysis_utils.py`
+implements this; `notebooks/02_concurrency_envelope.ipynb` reproduces the tables.
+
+## Known trap in the July transcript
+
+`mcp_flood2_recreation_2026-07-11.jsonl` contains a record with
+`"server_refused": false` sitting next to a response whose payload is
+`{"error": "invalid_transition", ...}`. The server did refuse. The flag is
+wrong because the driver of that era tested only the MCP `isError` bit, and
+the server returns a refusal as a normal tool result with `isError` unset.
+Both `drive_flood2_mcp.py` and `passk_flood2.py` now detect the refusal from
+the payload instead, and carry a comment saying so. Trust the `response`
+object, not the flag.

@@ -144,23 +144,25 @@ Cooperative matrix & no \\
 }
 
 The strange part is the driver: when a shader wants more registers than
-exist, v3dv does not fail but recompiles with scheduling disabled, then
-unrolling disabled, then fewer threads, handing back whatever survives,
-sometimes several times slower.
+exist, v3dv does not fail. It walks a ladder of six compile strategies
+{[}16{]}, disabling scheduling, loop unrolling, and code motion
+together, then halving the thread count, then falling back to a simpler
+scheduler, and hands back whatever survives, sometimes several times
+slower.
 
 \section{Related Work}\label{related-work}
 
 KernelBench {[}3{]}, the standard measure of LLM kernel generation,
 conditions speedup on correctness by definition; the systems evaluated
 on it still cheat. CUDA-L1 {[}4{]} reports that 82 of its 250
-RL-generated kernels (32.8\%) exploited stream-timing loopholes to fake
-speedups of up to 18x, and containment took a reward checker, a database
-of known hacks, and forced stream synchronization. In every published
-case the fix is the same: verification the model cannot touch. Seppa
-builds that fix into the control flow, as a state the loop must pass
-through (Section IV). Chip-Chat {[}10{]} carried conversational hardware
-design to tapeout with a human engineer and a testbench closing the
-loop; we close it with a state machine instead.
+RL-generated kernels (32.8\%) exploited stream-timing loopholes,
+inflating the reported speedup to 18x, and containment took a reward
+checker, a database of known hacks, and forced stream synchronization.
+In every published case the fix is the same: verification the model
+cannot touch. Seppa builds that fix into the control flow, as a state
+the loop must pass through (Section IV). Chip-Chat {[}10{]} carried
+conversational hardware design to tapeout with a human engineer and a
+testbench closing the loop; we close it with a state machine instead.
 
 \section{The Seppa Harness}\label{the-seppa-harness}
 
@@ -170,10 +172,10 @@ MCP by a wrapper (Theodosia) running on the Pi itself.
 
 \input{fsm_fig}
 
-Fig.~\ref{fig:fsm} shows the graph, with two guard
-edges: \texttt{compile\ -\textgreater{}\ log\_variant} on compile
-failure, and \texttt{verify\ -\textgreater{}\ log\_variant} on gate
-failure. The guards are ordinary code, from
+Fig.~\ref{fig:fsm} shows the graph, with two guard edges
+to \texttt{log\_variant}, on compile failure and on gate failure, and a
+third edge returning \texttt{implement} to \texttt{hypothesize} when the
+model submits nothing usable. The guards are ordinary code, from
 \texttt{v3d\_flood2\_opt.py}:
 
 \medskip\noindent\begin{minipage}{\linewidth}
@@ -531,7 +533,7 @@ suggestion is open-ended: commodity edge boards carry more usable
 silicon than their deployments exercise, and a loop that cannot lie
 about correctness is a reasonable way to get at it.
 
-\begin{thebibliography}{15}
+\begin{thebibliography}{16}
 \scriptsize
 \bibitem{r1} M. Guidolin, A. S. Chen, B. Ghimire, E. C. Keedwell, S.
 Djordjevic, and D. A. Savic. A weighted cellular automata 2D inundation
@@ -581,5 +583,9 @@ Reviews under Executive Order 14017. June 2021.
 
 \bibitem{r15} AutoKernel. RightNow AI.
 \url{https://github.com/RightNow-AI/autokernel}
+
+\bibitem{r16} Mesa, \texttt{src/broadcom/compiler/vir.c},
+\texttt{strategies{[}{]}} compile-fallback table.
+\url{https://gitlab.freedesktop.org/mesa/mesa}
 \end{thebibliography}
 \end{document}
