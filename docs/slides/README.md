@@ -52,15 +52,15 @@ npx @marp-team/marp-cli deck.md --html --theme themes/ieee.css \
   --allow-local-files --pdf -o deck.pdf
 
 npx @marp-team/marp-cli deck.md --html --theme themes/ieee.css \
-  --allow-local-files --images png -o frames/slide.png
+  --allow-local-files --images png --image-scale 1.5 -o frames/slide.png
 
-ffmpeg -y -f concat -safe 0 -i frames/concat.txt \
-  -vf "scale=1920:1080:flags=lanczos,format=yuv420p" \
-  -c:v libx264 -crf 20 -r 30 -t 900 defense.mp4
+ffmpeg -y -f concat -safe 0 -i frames/concat.txt -vf "format=yuv420p" \
+  -c:v libx264 -crf 18 -r 30 -t 900 defense.mp4
 ```
 
 `--html` is required: without it Marp strips the inline HTML the deck uses for
-two-column layouts. `frames/` is generated and not tracked; the per-slide
+two-column layouts. `--image-scale 1.5` renders frames at 1920x1080 so the
+video needs no upscale, which would otherwise soften every glyph. `frames/` is generated and not tracked; the per-slide
 durations live in `frames/concat.txt`, and `-t 900` trims the trailing entry
 that the concat demuxer would otherwise hold past the end.
 
@@ -68,7 +68,7 @@ Rebuilding `fsm.png` needs `pdflatex` and Pillow:
 
 ```sh
 pdflatex -interaction=nonstopmode fsm_standalone.tex
-sips -s format png --resampleWidth 3200 fsm_standalone.pdf --out /tmp/fsm_raw.png
+sips -s format png --resampleWidth 6400 fsm_standalone.pdf --out /tmp/fsm_raw.png
 ```
 
 then crop the result on its alpha channel and composite it onto white.
