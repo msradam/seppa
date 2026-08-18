@@ -141,7 +141,7 @@ docs/
              the rendered paper.pdf, and archived raw logs and
              transcripts (artifacts/, see its README).
   slides/    The 27-slide Marp deck, its IEEE theme, the narration
-             script, and the 15-minute silent video (defense.mp4).
+             script, and the silent video to record over (defense.mp4).
   notes/     Dated running notes and superseded planning documents,
              kept because the paper cites the notes as provenance for
              its unarchived numbers.

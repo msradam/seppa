@@ -1,6 +1,6 @@
 # Presentation kit
 
-A 27-slide deck and a silent video cut, sized for the 15-minute oral
+A 27-slide deck and a silent video cut for the oral
 presentation that the NYU Tandon MS program requires alongside the project
 report.
 
@@ -15,7 +15,7 @@ report.
   edit directly; run `build_theme.py`.
 - `fonts/`: Open Sans, vendored (SIL Open Font License, see
   `fonts/LICENSE-OpenSans.txt`).
-- `narration.md`: per-slide cue times and suggested narration, 15:00 total.
+- `narration.md`: per-slide cue times and suggested narration.
 - `defense.mp4`: the slides on the `narration.md` schedule, silent, for
   narrating over.
 - `fsm.png`: the state-machine figure, built from `fsm_standalone.tex`.
@@ -55,7 +55,7 @@ npx @marp-team/marp-cli deck.md --html --theme themes/ieee.css \
   --allow-local-files --images png --image-scale 3 -o frames/slide.png
 
 ffmpeg -y -f concat -safe 0 -i frames/concat.txt -vf "format=yuv420p" \
-  -c:v libx264 -crf 20 -r 30 -t 900 defense.mp4
+  -c:v libx264 -crf 20 -r 30 -t <sum of durations> defense.mp4
 ```
 
 `--html` is required: without it Marp strips the inline HTML the deck uses for
