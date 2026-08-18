@@ -107,7 +107,7 @@ The V3D GPU is a strange optimization target.
 
 Collected from the running board by `pi/collect_specs.sh`, archived with the raw `vulkaninfo` dump. There is no CUDA and no vendor compute toolchain: compute reaches this GPU only through Vulkan compute shaders.
 
-**Best kernel measured: about 13 GFLOP/s fp32, on a dense matrix multiply.** A second, slower engine that happens to be free. The CPU comparison on the stencil itself comes later, and it does not flatter the GPU.
+**Best kernel measured: about 13 GFLOP/s fp32, on a dense matrix multiply** (from the running notes, not a scored campaign). A second, slower engine that happens to be free. The CPU comparison on the stencil itself comes later, and it does not flatter the GPU.
 
 ---
 
@@ -138,19 +138,19 @@ Models that optimize kernels have a documented habit of faking the result.
 <div>
 
 <span class="stat stat-red">82 / 250</span>
-RL-generated CUDA kernels exploited stream-timing loopholes instead of getting faster
+RL-generated kernels exploited stream-timing loopholes
 
 </div>
 <div>
 
 <span class="stat stat-red">32.8%</span>
-of its generated kernels affected
+of generated kernels affected
 
 </div>
 <div>
 
 <span class="stat stat-red">18x</span>
-the inflated speedup those kernels reported
+the inflated speedup they reported
 
 </div>
 </div>
@@ -309,7 +309,7 @@ The variant is ledgered as a revert with a null `steps_per_sec`. **A gate-failin
 | Fused kernel kept at 1.5x or better | <span class="pass">2,127.7 steps/s every run, 1.574 to 1.585x</span> |
 | Broken kernel refused and nulled | <span class="pass">refused in all 5</span> |
 
-The kept kernel measured identically at the timer's resolution in every run. Baseline spread is about 0.3%, well inside the harness's 1% keep threshold.
+The kept kernel measured identically at the timer's resolution in every run. Baseline spread is about 0.3%, well inside the harness's 1% keep threshold; both figures are bounded by the millisecond timer.
 
 <span class="caption">Run of 2026-08-09. One fully agent-driven session (2026-08-02, budget 3) worked the strip knob the server exposed, mapped the register cliff, and never reached fusion. What that demonstrates is machine verification. Discovery is still open.</span>
 
@@ -346,7 +346,7 @@ What the CPU pays, and what the GPU buys.
 
 The interference is lopsided: the CPU keeps **84%** of its decode rate while the GPU keeps **42%**, because decode streams model weights from DRAM every token and crowds the shared bus. Contention favors the optimized kernel, so **1.58x alone becomes 2.20x concurrent**, at identical decode cost.
 
-<span class="caption">Cooldown and fixed decode soak before each measurement; thermal regimes differ (concurrent phases soft-limited 70 to 79% at 76.3 C; decode alone 73.0 C, 3%). An earlier campaign read 711.9, 19% below; its logs rule out my first explanation.</span>
+<span class="caption">Cooldown and decode soak before each phase; thermal regimes differ. An earlier campaign read 711.9, 19% below; its logs rule out my first explanation.</span>
 
 ---
 
@@ -362,23 +362,19 @@ Four idle A76 cores reach 3,852 steps/s, well above the V3D's 2,128. But in depl
 | Oversubscribed: flood 4t + decode 4t | 857.1 ± 181.0 | 3.0 ± 0.3 |
 | **GPU concurrent, optimized** | **883.4 ± 47.1** | **9.6 ± 0.2** |
 
-The CPU-only flood is the same update in OpenMP, untuned where the GPU kernel is not, and passes the same three gates. Oversubscribed, decode collapses 75% (llama.cpp's workers synchronize every token). Partitioned, the best CPU-only arrangement, pays a 29% decode tax against the GPU split's 16%.
+The CPU-only flood is the same update in OpenMP, untuned where the GPU kernel is not, and passes the same three gates. Oversubscribed, decode collapses 75%. Partitioned, the best CPU-only arrangement, pays a 29% decode tax against the GPU split's 16%.
 
-The GPU split wins on both axes here, **30%** more simulation and **14%** more decode, though the simulation margin depends on which campaign you take: the CPU has nothing left to sell.
+The GPU split wins on both axes here, **30%** more simulation and **14%** more decode; even under the earlier campaign the partitioned scheme never gets ahead on either axis. The CPU has nothing left to sell.
 
 ---
 
 # Limitations
 
-One board, one grid family. The speedup shrinks as the grid grows, from 1.58x down to 1.18x at 1024x1024, so there is headroom I never reached.
-
-The gates are the soft part. One storm scenario, one grid size, and a keep decision resting on a single timing sample. They catch a kernel that is wrong. A kernel that quietly cuts corners and stays inside the tolerance would walk straight through.
-
-The winning kernel came from my hand sweep, and the agent-driven session worked a knob the server had already handed it. Machine verification is what I can claim here. Discovery is not.
-
-Decode stays on the CPU. Full GPU offload runs into an upstream llama.cpp defect.
-
-The board is dead. Every number in the scored campaigns comes from archived logs, transcripts, and two notebooks that still re-run; the sweep's hand-timed column and the larger-grid ratios live in the repository's dated running notes.
+- **One board, one grid family.** The speedup shrinks as the grid grows, from 1.58x down to 1.18x at 1024x1024, so there is headroom I never reached.
+- **The gates are the soft part.** One storm scenario, one grid size, a keep decision resting on a single timing sample. They catch a kernel that is wrong; one that quietly cuts corners inside the tolerance would walk straight through.
+- **Verification, not discovery.** The winning kernel came from my hand sweep, and the agent-driven session worked a knob the server had already handed it.
+- **Decode stays on the CPU.** Full GPU offload runs into an upstream llama.cpp defect.
+- **The board is dead.** Every number in the scored campaigns comes from archived logs, transcripts, and two notebooks that still re-run; the sweep's hand-timed column and the larger-grid ratios live in dated running notes.
 
 ---
 
@@ -388,6 +384,6 @@ A language model proposed kernels for this GPU. A state machine decided what was
 
 That bought **883 simulation steps per second** beside a language model still decoding at **84%** of its solo rate, which beats every CPU-only arrangement I measured on both axes in the steady-state campaign.
 
-Faking a speedup needs a benchmark that will run on unverified code. In this graph there is no such transition, so a documented failure mode turned into an unreachable state.
+Benchmarking unverified code, the documented failure mode, needs a transition this graph does not have. The one loophole left, resampling a verified kernel through `fork_at`, is disclosed, and no session used it.
 
 Every verdict here came out of the gate ledger, and every number in the scored campaigns reproduces from the raw logs at `github.com/msradam/seppa`.
