@@ -13,24 +13,24 @@ CPU reference, mass conservation vs rain injected, and basin pooling.
 | 512²  | 1.128 s (2.04 GF/s) | 0.801 s (2.88 GF/s) | 1.41x |
 | 1024² | 4.701 s (1.96 GF/s) | 3.976 s (2.32 GF/s) | 1.18x |
 
-Long-horizon check: 4,000 steps at 256² — NMSE 1.3e-9, mass conserved,
+Long-horizon check: 4,000 steps at 256²: NMSE 1.3e-9, mass conserved,
 pools in basin.
 
-## What made it faster (measured, not assumed)
+## What made it faster, as measured
 
-The original kernels are bound by fixed per-invocation cost, not by
-memory-op count, bytes, dispatches, or barriers — each of those was
-falsified by a variant in this directory:
+The original kernels are bound by fixed per-invocation cost. Memory-op
+count, bytes, dispatches, and barriers were each falsified as the bound
+by a variant in this directory:
 
 - `flux2.comp`/`height2.comp` (packed (water, surface) vec2 state, half
-  the flux-pass loads): 1.93 GF/s — no change. Op count is not the bound.
+  the flux-pass loads): 1.93 GF/s: no change. Op count is not the bound.
 - `fused.comp` (one dispatch per step, flux buffer eliminated): 2.04 GF/s
-  — +5%. Traffic and barriers are not the bound.
-- `flux2s`/`height2s` (2 cells per invocation): 2.40 GF/s — +23%.
+  : +5%. Traffic and barriers are not the bound.
+- `flux2s`/`height2s` (2 cells per invocation): 2.40 GF/s: +23%.
   Per-invocation overhead is the bound.
-- `flux4s`/`height4s` (4 cells per invocation): 2.35 GF/s — register
+- `flux4s`/`height4s` (4 cells per invocation): 2.35 GF/s: register
   pressure eats the gain; 2 is the sweet spot.
-- **`fused2s.comp` (fused + 2 cells per invocation): 3.08 GF/s** — the
+- **`fused2s.comp` (fused + 2 cells per invocation): 3.08 GF/s**: the
   wins stack. This is the shipped kernel.
 
 Vertical strips keep the 16 lanes of a V3D subgroup on adjacent x

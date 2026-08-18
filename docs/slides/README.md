@@ -6,26 +6,26 @@ report.
 
 ## Contents
 
-- `deck.md` — the deck. Titles are full-sentence claims and the body carries
+- `deck.md`: the deck. Titles are full-sentence claims and the body carries
   the evidence for that claim (assertion-evidence style), inside the IEEE
   visual conventions.
-- `deck.pdf` — rendered deck.
-- `themes/ieee.src.css` — the Marp theme, editable source.
-- `themes/ieee.css` — generated from the source with the fonts inlined. Do not
+- `deck.pdf`: rendered deck.
+- `themes/ieee.src.css`: the Marp theme, editable source.
+- `themes/ieee.css`: generated from the source with the fonts inlined. Do not
   edit directly; run `build_theme.py`.
-- `fonts/` — Open Sans, vendored (SIL Open Font License, see
+- `fonts/`: Open Sans, vendored (SIL Open Font License, see
   `fonts/LICENSE-OpenSans.txt`).
-- `narration.md` — per-slide cue times and suggested narration, 15:00 total.
-- `defense.mp4` — the slides on the `narration.md` schedule, silent, for
+- `narration.md`: per-slide cue times and suggested narration, 15:00 total.
+- `defense.mp4`: the slides on the `narration.md` schedule, silent, for
   narrating over.
-- `fsm.png` — the state-machine figure, built from `fsm_standalone.tex`.
-- `gpu_retention.png` — the retention chart, produced by notebook 02.
+- `fsm.png`: the state-machine figure, built from `fsm_standalone.tex`.
+- `gpu_retention.png`: the retention chart, produced by notebook 02.
 
 ## The theme
 
 IEEE publishes presentation templates for PowerPoint and Google Slides, not
 for Marp or LaTeX, so `themes/ieee.css` follows the corporate template's
-conventions rather than being a conversion of it: IEEE Blue title slide and
+conventions, since IEEE publishes no Marp theme to convert: IEEE Blue title slide and
 section dividers, a blue rule above every content slide, and blue table
 headers. It carries no IEEE logo or wordmark, because the work is not an IEEE
 publication.
@@ -39,7 +39,7 @@ publication.
   licensed; Calibri is the alternate for PowerPoint and Word.)
 
 Marp inlines a theme's CSS into the output document, so relative `url()` paths
-in the theme would resolve against the output location rather than the theme
+in the theme would resolve against the output location instead of the theme
 file. `build_theme.py` embeds the fonts as data URIs to make the theme work
 for any output path.
 
@@ -61,7 +61,7 @@ ffmpeg -y -f concat -safe 0 -i frames/concat.txt -vf "format=yuv420p" \
 `--html` is required: without it Marp strips the inline HTML the deck uses for
 two-column layouts. `--image-scale 3` renders frames at 3840x2160. The deck is designed at
 1280x720, so anything less is upscaled by the player on a high-density display
-and reads as blurry even though the encode is lossless-looking. `frames/` is generated and not tracked; the per-slide
+and reads as blurry even though the encode is lossless-looking. `frames/` is generated output that git ignores; the per-slide
 durations live in `frames/concat.txt`, and `-t 900` trims the trailing entry
 that the concat demuxer would otherwise hold past the end.
 
@@ -73,7 +73,7 @@ pdftoppm -r 600 -png fsm_standalone.pdf fsm_raw
 ```
 
 then crop `fsm_raw-1.png` to its content box with a small margin. Rasterize
-with `pdftoppm` at high dpi, not `sips --resampleWidth`: sips rasterizes the
+with `pdftoppm` at high dpi; `sips --resampleWidth` rasterizes the
 PDF at its native size first and upscaling from there ships a blurry figure.
 
 ## Provenance

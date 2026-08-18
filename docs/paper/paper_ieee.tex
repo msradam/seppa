@@ -256,15 +256,15 @@ failures; here the verdict is a deterministic action the model cannot
 reach. A run ends after three consecutive non-improvements on
 gate-passing variants, or at the budget.
 
-For the division of labor, this paper follows Chip-Chat's disclosure
-convention. The author built the application and the harness, chose the
-physics gates, ran the hand-driven sweep of Section V-B, and supervised
-sessions. The language model, Claude Sonnet 5 (Anthropic), driven
-through the Claude Code client at high reasoning effort, wrote the
-content of \texttt{hypothesize} and \texttt{implement} (kernel source
-and host-side parameters) and nothing else. The machine did everything
-evidential; no proposed kernel was hand-edited (transcripts in
-\texttt{docs/paper/artifacts/claude\_sessions/}). Concretely: the
+The division of labor was fixed before the sessions ran, and it is worth
+stating exactly. The author built the application and the harness, chose
+the physics gates, ran the hand-driven sweep of Section V-B, and
+supervised sessions. The language model, Claude Sonnet 5 (Anthropic),
+driven through the Claude Code client at high reasoning effort, wrote
+the content of \texttt{hypothesize} and \texttt{implement} (kernel
+source and host-side parameters) and nothing else. The machine did
+everything evidential; no proposed kernel was hand-edited (transcripts
+in \texttt{docs/paper/artifacts/claude\_sessions/}). Concretely: the
 winning kernel came from the hand-driven sweep, the machine verified and
 reproduced it (Section VI), and the one fully agent-driven session
 worked a knob the server exposed without finding the fused kernel of
@@ -527,9 +527,9 @@ pairings also bound the thermal confound. Both ran at the same 76.3 C
 with the soft limit active for 80\% and 70\% of their phases, against a
 solo phase that never left 57.6 C, and the GPU still kept 99\% and 92\%.
 Clock governance therefore does not explain decode's 42\% on its own.
-The GPU is the robust side of every pairing except decode, which streams
-model weights from DRAM every token: interference tracks the CPU load's
-memory traffic.
+The GPU is the steadier side of every pairing except decode, which
+streams model weights from DRAM every token: interference tracks the CPU
+load's memory traffic.
 
 \subsection{The CPU-Only
 Counterfactual}\label{the-cpu-only-counterfactual}

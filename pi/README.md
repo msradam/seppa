@@ -46,15 +46,15 @@ export GGML_VK_MMV_MAX_COLS=1 GGML_VK_DISABLE_FLASH_ATTN=1
 The first run compiles GPU pipelines through the driver's slow register
 allocator (minutes); results are disk-cached afterwards.
 
-## Verified envelope — read this before relying on output
+## Verified envelope: read this before relying on output
 
 - Coherent, NMSE-verified: `-ngl 6`, short prompts, via
   `llama-completion`, `llama-bench`, or `llama-server`.
 - NOT verified / known broken (upstream ggml-vulkan defect, reproducible
-  on llvmpipe, not V3D-specific): `-ngl` above 6, prompts beyond ~25
+  on llvmpipe, so it is independent of V3D): `-ngl` above 6, prompts beyond ~25
   tokens, `GGML_VK_ALLOW_MM=1` (GPU prompt processing; per-op correct,
   composed output wrong), and `llama-cli` (broken at this commit even on
-  CPU — use `llama-completion`).
+  CPU; use `llama-completion`).
 
 To re-verify numerics on your board:
 
@@ -69,15 +69,15 @@ fallback); any FAIL means the GPU computed wrong numbers on your setup.
 
 ## Files
 
-- `setup-llama-v3d.sh` — one-shot build script
-- `llama-cpp-v3d-fixes.patch` — cap all >256-invocation workgroups (V3D
+- `setup-llama-v3d.sh`: one-shot build script
+- `llama-cpp-v3d-fixes.patch`: cap all >256-invocation workgroups (V3D
   executes them silently wrong), gate the never-terminating multi-column
   matvec pipeline compiles, gate flash attention (driver compiler abort)
-- `llama-cpp-v3d-mmv-deunroll.patch` — de-unrolled `mul_mat_vec` shader:
+- `llama-cpp-v3d-mmv-deunroll.patch`: de-unrolled `mul_mat_vec` shader:
   +28% decode (4.32 to 5.55 t/s); manual unrolling forces the v3dv
   register allocator off its best strategy
-- `llama-cpp-v3d-mm-path.patch` — opt-in tiled-matmul path
+- `llama-cpp-v3d-mm-path.patch`: opt-in tiled-matmul path
   (`GGML_VK_ALLOW_MM=1`), per-op verified, blocked for real use by the
   upstream defect above
-- `gemm-best.comp`, `vkgemm_nmse.cpp` — standalone SGEMM demo
-- `gemm.comp` — original 7.02 GFLOP/s baseline shader, kept for reference
+- `gemm-best.comp`, `vkgemm_nmse.cpp`: standalone SGEMM demo
+- `gemm.comp`: original 7.02 GFLOP/s baseline shader, kept for reference

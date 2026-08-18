@@ -41,7 +41,7 @@ M.S. Computer Engineering, NYU Tandon School of Engineering
 </div>
 </div>
 
-One line to hold onto: every verdict in this talk came out of the gate ledger, and the model never got to write in it.
+The claim I will defend: every verdict in this talk came from the gate ledger, which the model cannot write to.
 
 ---
 
@@ -82,7 +82,7 @@ Can it run beside a busy CPU on a shared LPDDR memory bus?
 </div>
 </div>
 
-Both answers had to be measured. The optimization work itself is what I wanted to hand to a language model, and that is where the trust problem starts.
+Both answers had to be measured. I also wanted a language model to do the optimization work, and handing a model a benchmark turns out to need some machinery.
 
 ---
 
@@ -107,7 +107,7 @@ The V3D GPU is a strange optimization target.
 
 Collected from the running board by `pi/collect_specs.sh`, archived with the raw `vulkaninfo` dump. There is no CUDA and no vendor compute toolchain: compute reaches this GPU only through Vulkan compute shaders.
 
-**Best kernel measured: about 13 GFLOP/s fp32, on a dense matrix multiply** (recorded in the running notes only). A second, slower engine that happens to be free. The CPU comparison on the stencil itself comes later, and it does not flatter the GPU.
+**Best kernel measured: about 13 GFLOP/s fp32, on a dense matrix multiply** (recorded in the running notes only). The four CPU cores are often faster; Section 7 compares the two processors on the stencil. What the GPU offers is that it is otherwise idle.
 
 ---
 
@@ -117,10 +117,10 @@ Asked for more registers than exist, `v3dv` recompiles with the register-hungry 
 
 Two consequences for anyone optimizing this GPU:
 
-- Your performance cliffs are register allocation. The arithmetic you wrote has less to do with it than you would expect.
+- Performance cliffs trace back to register allocation, and the compiler gives no warning when one of its retries downgrades the code.
 - Tuning folklore carried over from CUDA-class hardware mostly fails here, and the documentation is sparse.
 
-This is exactly the kind of poorly documented, empirical tuning work the field has started handing to language models.
+Tuning this GPU is poorly documented, empirical work, and that is the category of work the field has started handing to language models.
 
 ---
 
@@ -157,7 +157,7 @@ the inflated speedup they reported
 
 Reported by CUDA-L1 (arXiv:2507.14111). Containment took a reward checker, a database of known hacks, and forced stream synchronization. KernelBench, the standard measure of LLM kernel generation, conditions speedup on correctness by definition, and the systems evaluated on it still cheat.
 
-Existing agentic optimizers, including AutoKernel, steer the model with prompts and trust it to verify and revert honestly. **In the published cases the remedy is the same: verification the model cannot touch.**
+Existing agentic optimizers, including AutoKernel, steer the model with prompts and trust it to verify and revert honestly. Each published fix moves verification somewhere the model cannot modify it, and that is the idea Seppa builds on.
 
 ---
 
@@ -188,7 +188,7 @@ Make verification a state transition instead of an instruction.
 ("evaluate", "log_variant"),
 ```
 
-The agent advances the loop through one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves. Skipping verification is not a request the protocol can express. The server does also expose a `fork_at` rewind that no session used, and a caller could abuse it to resample a marginal kernel; the 1% threshold would not catch that.
+The agent advances the loop through one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves. No sequence of legal calls reaches `benchmark` without a passing `verify`. The server does also expose a `fork_at` rewind that no session used, and a caller could abuse it to resample a marginal kernel; the 1% threshold would not catch that.
 
 For the flood target, `verify` runs 400 steps at 256x256 and demands three things: NMSE below 1e-3 against a double-precision CPU reference, total water within 2% of injected rainfall, and maximum depth pooling inside the terrain basin.
 
@@ -202,9 +202,9 @@ For the flood target, `verify` runs 400 steps at 256x256 and demands three thing
 | **Language model**<br/>Claude Sonnet 5, over MCP | the content of `hypothesize` and `implement`: kernel source and host-side parameters, and nothing else |
 | **Machine** | compilation, verification, benchmarking, every verdict, the ledger |
 
-No proposed kernel was hand-edited. A proposal either passed the machine's gates or was reverted. Complete session transcripts are archived in the repository.
+No proposed kernel was hand-edited. A proposal either passed the machine's gates or was reverted.
 
-<span class="caption">Disclosure convention follows Chip-Chat (Blocklove, Garg, Karri, and Pearce, MLCAD 2023), which carried conversational hardware design to tapeout with a human engineer and a testbench closing the loop. Here a state machine closes it.</span>
+<span class="caption">Model: Claude Sonnet 5, driven through the Claude Code client at high reasoning effort; complete transcripts under `docs/paper/artifacts/claude_sessions/`.</span>
 
 ---
 
@@ -212,7 +212,7 @@ No proposed kernel was hand-edited. A proposal either passed the machine's gates
 
 # 5. Case study: the flood stencil
 
-Five hypotheses, priced by the machine. Most were wrong.
+Five hypotheses went through the loop, and the two I believed most turned out wrong.
 
 ---
 
@@ -236,7 +236,7 @@ Every variant passed all three gates. I would have started with the two memory-s
 
 Strip-2 removes **65,536 invocations per step** and saves about **140 microseconds**.
 
-That is near 2 nanoseconds, roughly **two clock cycles per invocation**. Thread issue happens at that scale. Arithmetic and memory traffic do not. Each invocation does so little work that the cost of starting it swamps the work itself.
+That is near 2 nanoseconds, roughly **two clock cycles per invocation**, which is the cost scale of issuing a thread. Each invocation does so little arithmetic that the overhead of starting it outweighs the work it performs.
 
 Two hardware details shaped the final kernel:
 
@@ -257,7 +257,7 @@ The problem was the **action space**. That version of `implement` accepted shade
 - fusion deletes a host-loop pipeline stage,
 - strip-mining changes the dispatch shape.
 
-Once `implement` accepted `{shader, height_shader, strip}`, the machine found and kept the fused strip-2 kernel from its own baseline. **The negative result was about my harness.** The GPU had plenty left in it.
+Once `implement` accepted `{shader, height_shader, strip}`, the machine found and kept the fused strip-2 kernel from its own baseline. The plateau had been a property of my harness's action space, and the hardware still had headroom.
 
 ---
 
@@ -279,7 +279,7 @@ The machine re-derives the numbers itself.
  "steps_per_sec": 2116.4, "best_sps": 2116.4, "verdict": "keep"}
 ```
 
-Every field in that record was produced by the machine, on hardware the model never touched, and reported back to a driver running somewhere else entirely.
+Every field in that record was measured and written by the machine on the Pi. The driver on the second computer only issues requests.
 
 ---
 
@@ -295,7 +295,7 @@ The driver resubmits the same kernel with rainfall injection doubled in one of t
              Valid actions now: ['log_variant']."}
 ```
 
-The variant is ledgered as a revert with a null `steps_per_sec`. **A gate-failing kernel can be seen, but it cannot be kept, and its verdict is never the model's to write.**
+The variant is ledgered as a revert with a null `steps_per_sec`. The caller does still see the failing kernel's timing, since gates and timing come from one execution; what the refusal protects is the ledger, the verdict, and the kept kernel.
 
 ---
 
@@ -311,7 +311,7 @@ The variant is ledgered as a revert with a null `steps_per_sec`. **A gate-failin
 
 The kept kernel measured identically at the timer's resolution in every run. Baseline spread is about 0.3%, well inside the harness's 1% keep threshold; both figures are bounded by the millisecond timer.
 
-<span class="caption">Run of 2026-08-09. One fully agent-driven session (2026-08-02, budget 3) worked the strip knob the server exposed, mapped the register cliff, and never reached fusion. What that demonstrates is machine verification. Discovery is still open.</span>
+<span class="caption">Run of 2026-08-09. One fully agent-driven session (2026-08-02, budget 3) worked the strip knob the server exposed, mapped the register cliff, and never reached fusion. That session demonstrates the enforcement; it does not demonstrate discovery.</span>
 
 ---
 
@@ -364,23 +364,23 @@ Four idle A76 cores reach 3,852 steps/s, well above the V3D's 2,128. But in depl
 
 The CPU-only flood is the same update in OpenMP, untuned where the GPU kernel is not, and passes the same three gates. Oversubscribed, decode collapses 75%. Partitioned, the best CPU-only arrangement, pays a 29% decode tax against the GPU split's 16%.
 
-The GPU split wins on both axes here, **30%** more simulation and **14%** more decode; even under the earlier campaign the partitioned scheme never gets ahead on either axis. The CPU has nothing left to sell.
+The GPU split wins on both axes here, **30%** more simulation and **14%** more decode, and even under the earlier campaign the partitioned scheme never gets ahead on either axis. In deployment the CPU has no spare cycles to sell.
 
 ---
 
 # Limitations
 
-- **One board, one grid family.** The speedup shrinks as the grid grows, from 1.58x down to 1.18x at 1024x1024, so there is headroom I never reached.
-- **The gates are the soft part.** One storm scenario, one grid size, a keep decision resting on a single timing sample. They catch a kernel that is wrong; one that quietly cuts corners inside the tolerance would walk straight through.
-- **Verification is the claim; discovery stays open.** The winning kernel came from my hand sweep, and the agent-driven session worked a knob the server had already handed it.
-- **Decode stays on the CPU.** Full GPU offload runs into an upstream llama.cpp defect.
-- **The board is dead.** Every number in the scored campaigns comes from archived logs, transcripts, and two notebooks that still re-run; the sweep's hand-timed column and the larger-grid ratios live in dated running notes.
+- One board and one grid family: the speedup shrinks from 1.58x at 256x256 to 1.18x at 1024x1024, so there is headroom I never reached.
+- The gates cover one storm scenario at one grid size, and the keep decision rests on a single timing sample. They catch a kernel that is wrong; one that cuts corners inside the tolerance would pass.
+- The winning kernel came from my hand sweep, and the agent-driven session worked a knob the server had already exposed. The project demonstrates verification and leaves discovery open.
+- Decode stays on the CPU; full GPU offload hits an upstream llama.cpp defect.
+- The board is dead. The scored campaigns re-derive from archived logs and two notebooks that still run; the hand-timed sweep column and the larger-grid ratios live in dated running notes.
 
 ---
 
 # Conclusions
 
-A language model proposed kernels for this GPU. A state machine decided what was true about them, and the model had no standing to argue.
+A language model proposed kernels for this GPU, and a state machine decided what was true about them.
 
 That bought **883 simulation steps per second** beside a language model still decoding at **84%** of its solo rate, which beats every CPU-only arrangement I measured on both axes in the steady-state campaign.
 
