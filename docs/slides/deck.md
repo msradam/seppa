@@ -155,7 +155,7 @@ the inflated speedup they reported
 </div>
 </div>
 
-Reported by CUDA-L1 (arXiv:2507.14111). Containment took a reward checker, a database of known hacks, and forced stream synchronization. KernelBench, the standard measure of LLM kernel generation, conditions speedup on correctness by definition, and the systems evaluated on it still cheat.
+Reported by CUDA-L1 (arXiv:2507.14111). Containment took a reward checker, a database of known hacks, and forced stream synchronization. KernelBench, the field's standard benchmark, only credits a speedup when the kernel also passes its correctness check, and the systems evaluated on it still cheat.
 
 Existing agentic optimizers, including AutoKernel, steer the model with prompts and trust it to verify and revert honestly. Each published fix moves verification somewhere the model cannot modify it, and that is the idea Seppa builds on.
 
@@ -173,7 +173,7 @@ Make verification a state transition instead of an instruction.
 
 ![w:1000](fsm.png)
 
-<span class="caption">Seppa ports AutoKernel onto a Burr finite-state machine, served over the Model Context Protocol by a wrapper running on the Pi itself. The model owns the two shaded states. The machine owns compilation, verification, benchmarking, and the verdict.</span>
+<span class="caption">Seppa ports AutoKernel onto an Apache Burr finite-state machine, served over the Model Context Protocol by the Theodosia adapter on the Pi itself. The model owns the two shaded states. The machine owns compilation, verification, benchmarking, and the verdict.</span>
 
 ---
 
@@ -190,7 +190,7 @@ Make verification a state transition instead of an instruction.
 
 The agent advances the loop through one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves. No sequence of legal calls reaches `benchmark` without a passing `verify`. The server does also expose a `fork_at` rewind that no session used, and a caller could abuse it to resample a marginal kernel; the 1% threshold would not catch that.
 
-For the flood target, `verify` runs 400 steps at 256x256 and demands three things: NMSE below 1e-3 against a double-precision CPU reference, total water within 2% of injected rainfall, and maximum depth pooling inside the terrain basin.
+For the flood target, `verify` runs 400 steps at 256x256 and applies three checks: accuracy against a double-precision CPU reference (NMSE below 1e-3), water totals within 2% of the rainfall, since the model conserves mass, and the deepest water inside the terrain basin, since water flows downhill.
 
 ---
 
@@ -271,7 +271,7 @@ The machine re-derives the numbers itself.
 
 # The machine measured its own baseline, judged the kernel, and kept it
 
-`drive_flood2_mcp.py` runs on a second computer and drives the Pi-resident state machine through the whole cycle over MCP. The FSM measures its own baseline at 1,346.8 steps/s with gates green, receives the fused strip-2 kernel as experiment 1, compiles it, gates it, benchmarks it, and issues its own verdict:
+The Pi runs the Theodosia server; a laptop on the same network runs `drive_flood2_mcp.py`, driving the state machine through the whole cycle over MCP. The FSM measures its own baseline at 1,346.8 steps/s with gates green, receives the fused strip-2 kernel as experiment 1, compiles it, gates it, benchmarks it, and issues its own verdict:
 
 ```json
 {"exp": 1, "fused": true, "strip": 2,
@@ -372,7 +372,7 @@ The GPU split wins on both axes here, **30%** more simulation and **14%** more d
 
 - One board and one grid family: the speedup shrinks from 1.58x at 256x256 to 1.18x at 1024x1024, so there is headroom I never reached.
 - The gates cover one storm scenario at one grid size, and the keep decision rests on a single timing sample. They catch a kernel that is wrong; one that cuts corners inside the tolerance would pass.
-- The winning kernel came from my hand sweep, and the agent-driven session worked a knob the server had already exposed. The project demonstrates verification and leaves discovery open.
+- The winning kernel came from my hand sweep, and the agent-driven session worked a knob the server had already exposed. The project shows the machine can verify; whether the model can find optimizations on its own stays untested.
 - Decode stays on the CPU; full GPU offload hits an upstream llama.cpp defect.
 - The board is dead. The scored campaigns re-derive from archived logs and two notebooks that still run; the hand-timed sweep column and the larger-grid ratios live in dated running notes.
 

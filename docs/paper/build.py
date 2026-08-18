@@ -74,13 +74,13 @@ rep(
     "so every comparison in this paper is within `vkflood2`. Table~\\ref{tab:sweep} shows the sweep.",
 )
 rep(
-    "Results from the steady-state run of 2026-08-10 (raw logs in",
-    "Results from the steady-state run of 2026-08-10 are in Table~\\ref{tab:conc} (raw logs in",
+    "Results from the steady-state run of 2026-08-10 (raw logs under",
+    "Results from the steady-state run of 2026-08-10 are in Table~\\ref{tab:conc} (raw logs under",
 )
-rep("`docs/paper/artifacts/`, conc_steady):", "`docs/paper/artifacts/`, conc_steady).")
+rep("`conc_steady` in `docs/paper/artifacts/`):", "`conc_steady` in `docs/paper/artifacts/`).")
 rep(
-    "The same soak-and-measure protocol applied; raw logs are in `docs/paper/artifacts/`, cpu_steady.",
-    "The same soak-and-measure protocol applied; raw logs are in `docs/paper/artifacts/`, cpu_steady. Table~\\ref{tab:cpu} presents the outcome.",
+    "The same soak-and-measure protocol applied; raw logs are under `cpu_steady` in `docs/paper/artifacts/`.",
+    "The same soak-and-measure protocol applied; raw logs are under `cpu_steady` in `docs/paper/artifacts/`. Table~\\ref{tab:cpu} presents the outcome.",
 )
 
 
@@ -222,6 +222,7 @@ tex = r"""\documentclass[conference]{IEEEtran}
 GPU kernel optimization, LLM agents, correctness verification, edge computing, Vulkan
 \end{IEEEkeywords}
 %s
+\IEEEtriggeratref{16}
 \begin{thebibliography}{%d}
 \scriptsize
 %s
