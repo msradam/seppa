@@ -49,7 +49,7 @@ def rep(old, new):
 
 # the ASCII FSM sketch becomes the TikZ figure (raw latex passes through pandoc)
 rep(
-    """running on the Pi itself. The graph is:
+    """serves it from the Pi itself. The graph is:
 
 ```
 characterize -> baseline -> hypothesize -> implement
@@ -58,7 +58,7 @@ characterize -> baseline -> hypothesize -> implement
 ```
 
 with two guard edges to `log_variant`,""",
-    """running on the Pi itself.
+    """serves it from the Pi itself.
 
 \\input{fsm_fig}
 

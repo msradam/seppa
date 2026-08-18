@@ -352,7 +352,7 @@ The interference is lopsided: the CPU keeps **84%** of its decode rate while the
 
 # The obvious objection: four idle cores run this stencil faster than the GPU does
 
-Four idle A76 cores reach 3,852 steps/s, well above the V3D's 2,128. But in deployment the cores are never idle, because decode is always running.
+Four idle A76 cores reach 3,852 steps/s, above the V3D's 2,128; in deployment decode is always running.
 
 | Condition | Flood (steps/s) | Decode (t/s) |
 |---|---|---|
@@ -364,7 +364,7 @@ Four idle A76 cores reach 3,852 steps/s, well above the V3D's 2,128. But in depl
 
 The CPU-only flood is the same update in OpenMP, untuned where the GPU kernel is not, and passes the same three gates. Oversubscribed, decode collapses 75%. Partitioned, the best CPU-only arrangement, pays a 29% decode tax against the GPU split's 16%.
 
-The GPU split wins on both axes here, **30%** more simulation and **14%** more decode, and even under the earlier campaign the partitioned scheme never gets ahead on either axis. In deployment the CPU has no spare cycles to sell.
+The GPU split wins on both axes here, **30%** more simulation and **14%** more decode, and no measured campaign puts the partitioned scheme ahead on either axis. The CPU has no spare cycles to sell.
 
 ---
 

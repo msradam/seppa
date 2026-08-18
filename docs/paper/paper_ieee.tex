@@ -28,7 +28,7 @@ and decides keep or revert, refusing to benchmark any kernel that failed
 verification. On the flood-simulation stencil (a kernel in which each
 grid cell updates from its neighbors) of an offline flood-guidance
 application for the Raspberry Pi 5, a hand-driven sweep through the same
-gates produced a kernel 1.58x faster than the original; the machine
+gates produced a kernel 1.58x faster than the original. The machine
 re-measured and re-judged the result in five consecutive runs driven
 from a second computer, and in every run it refused to benchmark a
 kernel that failed its gate. With CPU inference running concurrently the
@@ -46,7 +46,7 @@ GPU kernel optimization, LLM agents, correctness verification, edge computing, V
 Raspberry Pi class boards are a common platform for edge AI in
 emergency-response and field settings, where power, connectivity, and
 budget are constrained {[}12{]} and inference must happen on-device once
-the network is gone {[}11{]}; a Pi 5 runs a quantized billion-parameter
+the network is gone {[}11{]}. A Pi 5 runs a quantized billion-parameter
 model (weights compressed to low-precision integers) on its CPU cores
 {[}8{]}, generating text one token, roughly a word fragment, at a time,
 in the phase called decode. AI capability is usually added with
@@ -223,8 +223,8 @@ machine instead.
 
 Seppa is a port of AutoKernel {[}15{]}, an open-source
 kernel-optimization loop, onto a finite-state machine built with Apache
-Burr, served over MCP by Theodosia, an adapter that mounts a Burr state
-machine as an MCP server, running on the Pi itself.
+Burr. Theodosia, an adapter that mounts a Burr state machine as an MCP
+server, serves it from the Pi itself.
 
 \input{fsm_fig}
 
