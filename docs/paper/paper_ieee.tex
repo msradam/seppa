@@ -107,9 +107,10 @@ Tables~\ref{tab:platform} and \ref{tab:gpu} list the
 platform and the GPU's compute limits, collected from the running board
 by \texttt{pi/collect\_specs.sh} (archived with the raw vulkaninfo
 dump). The limits are tight, and the scale is modest: the best kernel we
-measured sustains about 13 GFLOP/s in fp32, while the four CPU cores
-manage about 5.5 GFLOP/s on comparable work. The GPU is a second, slower
-engine that happens to be free.
+measured sustains about 13 GFLOP/s in fp32, and that was a dense matrix
+multiply rather than the stencil this paper optimizes (Section VII-A
+compares the two processors on the stencil itself). The GPU is a second,
+slower engine that happens to be free.
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{table}[!t]\caption{Platform, collected from the running board by \mbox{collect\_specs.sh}}\label{tab:platform}\centering\footnotesize\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}
@@ -189,10 +190,14 @@ model submits nothing usable. The guards are ordinary code, from
 \end{Verbatim}
 \end{minipage}\medskip
 
-The benchmark state is reachable only through a green verify. The
-agent's entire interface is one MCP tool,
-\texttt{step(action,\ inputs)}, and the server constrains
-\texttt{action} to the graph's legal next moves.
+The benchmark state is reachable only through a green verify. The agent
+advances the loop through one MCP tool, \texttt{step(action,\ inputs)},
+and the server constrains \texttt{action} to the graph's legal next
+moves. The server also exposes session utilities
+(\texttt{reset\_session}, \texttt{fork\_at}, and resource reads) that no
+archived session used; \texttt{fork\_at} rewinds to an earlier state,
+which would let a caller resample a measurement, and the 1\% keep
+threshold does not defend against that (Section VIII).
 
 The port preserves AutoKernel's loop discipline: one focused change per
 experiment, a baseline measured first, correctness and timing taken from
@@ -295,10 +300,11 @@ invocation, the scale of thread issue rather than of arithmetic or
 memory traffic. Two hardware details shaped the final kernel. Strips run
 vertically because that keeps a subgroup's 16 lanes on adjacent
 addresses, and the kernel consumes each flux value as it is produced;
-holding all four alive fails register allocation. Across every
-machine-checked run the shipped kernel is 1.58x at 256x256 (1.574 to
-1.585; the hand-timed sweep pair reads 1.59x). It is 1.41x at 512x512
-and 1.18x at 1024x1024, and it holds all gates over 4,000 steps.
+holding all four alive fails register allocation. The shipped kernel is
+1.58x at 256x256: 1.574 to 1.585 across the five scored reproductions,
+1.571 in the July transcript quoted in Section VI, and 1.59x hand-timed
+in the sweep. It is 1.41x at 512x512 and 1.18x at 1024x1024, and it
+holds all gates over 4,000 steps.
 
 \subsection{Action-Space Limits}\label{action-space-limits}
 
@@ -396,14 +402,17 @@ which the application ships.
 
 \texttt{pi/flood/conc\_steady\_bench.sh} measures each kernel alone
 (cool starts, finished before heat accumulates), decode alone, and each
-kernel looping while decode runs. Concurrent and decode-alone phases are
-measured only after a decode soak reaches the firmware's governed regime
-(74 to 76 C, soft-limit bit active). Each window is long enough for 12
-to 28 flood completions (llama-bench tg64, r=20), and a flood run counts
-only if it fits inside the window. An earlier short-window campaign,
-preserved in \texttt{conc\_bench2/}, read up to 19\% differently in both
-directions because it measured the thermal transient. Results from the
-steady-state run of 2026-08-10 are in
+kernel looping while decode runs. Each phase is preceded by a cooldown
+and a fixed eight-repetition decode soak. That soak is not gated on the
+throttle bit, and the conditions did not end up in the same thermal
+regime: the concurrent windows ran with the firmware's soft-temperature
+limit active 70 to 79\% of the time and peaked at 76.3 C, while decode
+alone reached 73.0 C and was limited for 3\% of its window. Each window
+is long enough for 12 to 28 flood completions (llama-bench tg64, r=20),
+and a flood run counts only if it fits inside the window. An earlier
+short-window campaign, preserved in \texttt{conc\_bench2/}, read up to
+19\% differently in both directions because it measured the thermal
+transient. Results from the steady-state run of 2026-08-10 are in
 Table~\ref{tab:conc} (raw logs in
 \texttt{docs/paper/artifacts/}, conc\_steady).
 
@@ -463,7 +472,7 @@ cpu\_steady. Table~\ref{tab:cpu} presents the outcome.
 Condition & Flood (steps/s) & CPU decode (t/s) \\
 \midrule
 CPU flood alone, 1 / 2 / 4 threads & 992.5 / 1,980.5 / 3,852.4 & \\
-Decode alone, 3 threads (pinned, soaked) & & 11.8 ± 0.0 \\
+Decode alone, 3 threads (pinned) & & 11.9 ± 0.0 \\
 Partitioned: flood 1t + decode 3t & 678.8 ± 10.6 (n=25) & 8.4 ± 0.1 \\
 Oversubscribed: flood 4t + decode 4t & 857.1 ± 181.0 (n=89) & 3.0 ±
 0.3 \\
@@ -495,16 +504,30 @@ verification covers one storm scenario at one grid size, and the keep
 decision rests on a single timing sample against a 1\% threshold,
 although Section VI's five-run repeatability (baseline spread about
 0.3\%, kept kernel identical at timer resolution) bounds that noise well
-inside the threshold. The 3,852 steps/s CPU figure assumed a
-cache-resident 256x256 working set and may not survive larger grids. The
+inside the threshold. That bound is an upper bound rather than a
+measured spread: the harness prints elapsed time to milliseconds, so at
+the kept kernel's 0.188 s one digit is 0.53\%, and ``identical'' means
+the last printed digit did not move. The 3,852 steps/s CPU figure
+assumed a cache-resident 256x256 working set and may not survive larger
+grids. Three asymmetries qualify Section VII. The GPU kernel was
+optimized and \texttt{cpuflood.cpp} was not: it is the original two-pass
+scheme, so the counterfactual compares a tuned GPU against an untuned
+CPU, and fusing its flux array would cut DRAM traffic on the axis that
+contends with decode. The conditions were not measured at a matched
+thermal operating point, so part of the 16\% decode cost is governance
+rather than contention. And the steady-state campaign is a single run:
+an earlier campaign at the same configuration, kept in
+\texttt{conc\_bench2/}, reads 711.9 rather than 883.4 steps/s
+concurrent, which is the least reproducible quantity in the paper. The
 scripted reproduction's kernel came from the hand sweep, and the
 agent-driven session worked a knob the server itself exposed. The
 demonstrated property is machine verification; autonomous discovery
 remains open. Full GPU offload of the language model is blocked by an
 upstream llama.cpp Vulkan defect. Numbers without an archived log (the
 original harness's 1,045 steps/s, the sweep's GFLOP/s column and
-hand-timed ratios, and the GEMM and matrix-vector results) come from the
-repository's dated running notes.
+hand-timed ratios, the 1.41x and 1.18x at the larger grids, and the GEMM
+and matrix-vector results) come from the repository's dated running
+notes.
 
 \section{The Sample Application}\label{the-sample-application}
 

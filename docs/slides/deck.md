@@ -107,7 +107,7 @@ The V3D GPU is a strange optimization target.
 
 Collected from the running board by `pi/collect_specs.sh`, archived with the raw `vulkaninfo` dump. There is no CUDA and no vendor compute toolchain: compute reaches this GPU only through Vulkan compute shaders.
 
-**Best kernel measured: about 13 GFLOP/s fp32, against about 5.5 GFLOP/s for the four CPU cores.** A second, slower engine that happens to be free.
+**Best kernel measured: about 13 GFLOP/s fp32, on a dense matrix multiply.** A second, slower engine that happens to be free. The CPU comparison on the stencil itself comes later, and it does not flatter the GPU.
 
 ---
 
@@ -188,7 +188,7 @@ Make verification a state transition instead of an instruction.
 ("evaluate",  "log_variant"),
 ```
 
-The agent's entire interface is one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves. Skipping verification is not a request the protocol can express.
+The agent advances the loop through one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves. Skipping verification is not a request the protocol can express.
 
 For the flood target, `verify` runs 400 steps at 256x256 and demands three things: NMSE below 1e-3 against a double-precision CPU reference, total water equal to injected rainfall, and maximum depth pooling inside the terrain basin.
 
@@ -293,7 +293,7 @@ The driver resubmits the same kernel with rainfall injection doubled in one of t
              Valid actions now: ['log_variant']."}
 ```
 
-The variant is ledgered as a revert with a null `steps_per_sec`. **There is no path through this graph to a performance number for broken physics.**
+The variant is ledgered as a revert with a null `steps_per_sec`. **A kernel that fails its gate cannot reach the ledger, the verdict, or the kept kernel.**
 
 ---
 

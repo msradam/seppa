@@ -1,6 +1,6 @@
 # Notebooks
 
-Executed Jupyter notebooks that derive every measured number in the paper
+Executed Jupyter notebooks that derive the Section VI and VII results in the paper
 (`../docs/paper/paper.pdf`) from the raw artifacts committed under
 `../docs/paper/artifacts/`. They run offline; no hardware is needed.
 Shared log parsers live in `analysis_utils.py`. Each notebook opens with
