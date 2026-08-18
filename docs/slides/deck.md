@@ -41,7 +41,7 @@ M.S. Computer Engineering, NYU Tandon School of Engineering
 </div>
 </div>
 
-The claim I want to defend: **the evidence is the gate ledger, not the model's account of its work.**
+One line to hold onto: every number in this talk came out of the gate ledger, and the model never got to write in it.
 
 ---
 
@@ -117,7 +117,7 @@ Asked for more registers than exist, `v3dv` recompiles with scheduling disabled,
 
 Two consequences for anyone optimizing this GPU:
 
-- Performance cliffs come from the register allocator, not from the arithmetic you wrote.
+- Your performance cliffs are register allocation. The arithmetic you wrote has less to do with it than you would expect.
 - Tuning folklore carried over from CUDA-class hardware mostly fails here, and the documentation is sparse.
 
 This is exactly the kind of poorly documented, empirical tuning work the field has started handing to language models.
@@ -234,7 +234,7 @@ Every variant passed all three gates. The two memory-system hypotheses, which is
 
 Strip-2 removes **65,536 invocations per step** and saves about **140 microseconds**.
 
-That is near 2 nanoseconds, roughly **two clock cycles per invocation**: the scale of thread issue, not of arithmetic or memory traffic. Each invocation does so little work that launch overhead swamps it.
+That is near 2 nanoseconds, roughly **two clock cycles per invocation**. Thread issue happens at that scale. Arithmetic and memory traffic do not. Each invocation does so little work that the cost of starting it swamps the work itself.
 
 Two hardware details shaped the final kernel:
 
@@ -255,7 +255,7 @@ The problem was the **action space**. That version of `implement` accepted shade
 - fusion deletes a host-loop pipeline stage,
 - strip-mining changes the dispatch shape.
 
-Once `implement` accepted `{shader, height_shader, strip}`, the machine found and kept the fused strip-2 kernel from its own baseline. **The negative result was about my harness, not about the GPU.**
+Once `implement` accepted `{shader, height_shader, strip}`, the machine found and kept the fused strip-2 kernel from its own baseline. **The negative result was about my harness.** The GPU had plenty left in it.
 
 ---
 
@@ -309,7 +309,7 @@ The variant is ledgered as a revert with a null `steps_per_sec`. **A kernel that
 
 The kept kernel measured identically at the timer's resolution in every run. Baseline spread is about 0.3%, well inside the harness's 1% keep threshold.
 
-<span class="caption">Run of 2026-08-09. One fully agent-driven session (2026-08-02, budget 3) worked the strip knob the server exposed, mapped the register cliff, and never reached fusion. The demonstrated property is machine verification, not autonomous discovery.</span>
+<span class="caption">Run of 2026-08-09. One fully agent-driven session (2026-08-02, budget 3) worked the strip knob the server exposed, mapped the register cliff, and never reached fusion. What that demonstrates is machine verification. Discovery is still open.</span>
 
 ---
 
@@ -367,20 +367,24 @@ The CPU-only flood is the same update in OpenMP and passes the same three gates.
 
 # Limitations
 
-- **One board, one grid family.** Pi 5, V3D 7.1.10.2, Mesa v3dv 25.0.7. Speedups shrink as the grid grows, from 1.58x to 1.18x at 1024x1024. Headroom likely remains.
-- **The gates are necessary, not sufficient.** Verification covers one storm scenario at one grid size, and the keep decision rests on a single timing sample against a 1% threshold.
-- **The winning kernel came from my hand sweep,** and the agent-driven session worked a knob the server itself exposed. Machine verification is demonstrated; autonomous discovery is not.
-- **Full GPU offload of the language model is blocked** by an upstream llama.cpp Vulkan defect, so decode stays on the CPU.
-- **The measurement hardware is no longer live.** Every number in this talk comes from archived logs, transcripts, and two executed notebooks in the repository.
+One board, one grid family. The speedup shrinks as the grid grows, from 1.58x down to 1.18x at 1024x1024, so there is headroom I never reached.
+
+The gates are the soft part. One storm scenario, one grid size, and a keep decision resting on a single timing sample. They catch a kernel that is wrong. A kernel that quietly cuts corners and stays inside the tolerance would walk straight through.
+
+The winning kernel came from my hand sweep, and the agent-driven session worked a knob the server had already handed it. Machine verification is what I can claim here. Discovery is not.
+
+Decode stays on the CPU. Full GPU offload runs into an upstream llama.cpp defect.
+
+The board is dead, so everything above comes from archived logs, transcripts, and two notebooks that still re-run.
 
 ---
 
 # Conclusions
 
-**Seppa separates proposal from judgment.** A language model suggests kernels for the Pi 5's integrated GPU, and a state machine the model cannot argue with decides what is true about them.
+A language model proposed kernels for this GPU. A state machine decided what was true about them, and the model had no standing to argue.
 
-**The idle GPU is usable compute, measured.** 883 simulation steps per second beside a language model holding 84% of its solo decode rate, beating the best CPU-only arrangement on both axes.
+That bought **883 simulation steps per second** beside a language model still decoding at **84%** of its solo rate, which beats every CPU-only arrangement I measured on both axes.
 
-**A documented failure mode became an unreachable state.** Faked speedups need a benchmark that runs on unverified code, and here that transition does not exist.
+Faking a speedup needs a benchmark that will run on unverified code. In this graph there is no such transition, so a documented failure mode turned into an unreachable state.
 
-**The evidence is the gate ledger, not the model's account of its work.** Everything reproduces from the raw logs at `github.com/msradam/seppa`.
+Every number here came out of the gate ledger, and all of it reproduces from the raw logs at `github.com/msradam/seppa`.

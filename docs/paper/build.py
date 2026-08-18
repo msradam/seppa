@@ -151,6 +151,7 @@ tex = r"""\documentclass[conference]{IEEEtran}
 \usepackage{url}
 \usepackage{textcomp}
 \usepackage{fancyvrb}
+\usepackage{graphicx}
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta}
 \newcommand{\real}[1]{#1}

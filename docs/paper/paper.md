@@ -36,7 +36,11 @@ The strange part is the driver: when a shader wants more registers than exist, v
 
 ## 3. Related Work
 
-KernelBench [3], the standard measure of LLM kernel generation, conditions speedup on correctness by definition; the systems evaluated on it still cheat. CUDA-L1 [4] reports that 82 of its 250 RL-generated kernels (32.8%) exploited stream-timing loopholes, inflating the reported speedup to 18x, and containment took a reward checker, a database of known hacks, and forced stream synchronization. In every published case the fix is the same: verification the model cannot touch. Seppa builds that fix into the control flow, as a state the loop must pass through (Section 4). Chip-Chat [10] carried conversational hardware design to tapeout with a human engineer and a testbench closing the loop; we close it with a state machine instead.
+Kernel generation is now a standard LLM task. KernelBench [3] conditions speedup on correctness by definition, Kevin [17] trains multi-turn reinforcement learning on kernel writing with correctness and runtime as verifiable rewards, and TritonRL [18] puts the difficulty in its title, training a Triton model "without cheating." The systems still cheat. CUDA-L1 [4] reports that 82 of its 250 RL-generated kernels (32.8%) exploited stream-timing loopholes, inflating the reported speedup to 18x; containment took a reward checker, a database of known hacks, and forced stream synchronization. Wherever the reward is a measured number, the model eventually optimizes the measurement rather than the kernel.
+
+A weaker assumption sits underneath all of this: that a passing check means a correct kernel. Sarkar [19] tests the oracles these benchmarks use, fixed-shape allclose comparisons at fixed tolerance, and finds them systematically optimistic, with seeded-buggy kernels passing the benchmark oracle while failing a stricter one. SpecBench [20] states the general form: when oversight collapses onto an automated suite, the agent optimizes the suite. Our physics gates are the same kind of instrument and inherit the same weakness, which is why Section 8 calls them necessary rather than sufficient.
+
+A second line puts the evaluator outside the model instead of arguing with it. FunSearch [21] and AlphaEvolve [22] use the model as a mutation operator inside an evolutionary loop scored by a fixed evaluator; AlphaEvolve found a 48-multiplication procedure for 4x4 complex matrix multiplication, the first improvement on Strassen in that setting in 56 years. That structural commitment, the model proposing and something else scoring, is the one Seppa makes, at a far smaller scale and with the scoring expressed as reachability in a graph rather than as a fitness function (Section 4). In hardware design the same split appears with a human in it: Chip-Chat [10] carried conversational design to tapeout with an engineer and a testbench closing the loop, and VeriGen [23] fine-tunes open models for Verilog. We close the loop with a state machine instead.
 
 ## 4. The Seppa Harness
 
@@ -149,6 +153,13 @@ The campaign turned up one configuration surprise first. With any Vulkan device 
 
 Three things follow. Co-processing costs the CPU 16% of its decode and buys a continuous 883 steps/s of simulation that a CPU-only deployment does not have. The interference is lopsided: the CPU keeps 84% of its rate while the GPU keeps 42%, as decode traffic crowds the shared bus. And contention favors the optimized kernel: 1.58x over the original alone becomes 2.20x concurrent, at identical decode cost (9.6 t/s under either kernel). One residual: the optimized-kernel window still drifts upward (first-half mean 852, second-half 915 steps/s) as governance slows decode, so 883.4 is conservative relative to the late-window rate.
 
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{gpu_retention.png}
+\caption{GPU flood throughput retained beside three concurrent CPU loads, as a percentage of the same kernel running alone. Compute-bound and memory-bound CPU work barely disturb the GPU; language-model decode, which streams weights from DRAM every token, takes it to 42\%. Raw logs in \texttt{docs/paper/artifacts/}, genload2 and conc\_steady.}
+\label{fig:retention}
+\end{figure}
+
 Decode is also the GPU's worst case. Paired with a compute-bound CPU load (openssl SHA-256, four threads) the GPU keeps 99% and the load keeps 88% of its 16 KB-block throughput; paired with the memory-bound four-thread CPU flood the GPU keeps 92% and the load keeps 75% (continuous sim-mode probes over cool-start 60 s windows, both sides logged; `docs/paper/artifacts/`, genload2). The GPU is the robust side of every pairing except decode, which streams model weights from DRAM every token and drives GPU retention to 42%: interference tracks the CPU load's memory traffic.
 
 ### 7.1 The CPU-Only Counterfactual
@@ -210,3 +221,17 @@ Seppa separates proposal from judgment: a language model suggests kernels for th
 [15] AutoKernel. RightNow AI. https://github.com/RightNow-AI/autokernel
 
 [16] Mesa, `src/broadcom/compiler/vir.c`, `strategies[]` compile-fallback table. https://gitlab.freedesktop.org/mesa/mesa
+
+[17] C. Baronio, P. Marsella, B. Pan, et al. Kevin: Multi-Turn RL for Generating CUDA Kernels. arXiv:2507.11948, 2025.
+
+[18] J. Woo, S. Zhu, A. Nie, Z. Jia, Y. Wang, and Y. Park. TritonRL: Training LLMs to Think and Code Triton Without Cheating. arXiv:2510.17891, 2025.
+
+[19] D. Sarkar. The Correctness Illusion in LLM-Generated GPU Kernels. arXiv:2606.20128, 2026.
+
+[20] B. Zhao, D. Srikanth, Y. Wu, and Z. Jiang. SpecBench: Measuring Reward Hacking in Long-Horizon Coding Agents. arXiv:2605.21384, 2026.
+
+[21] B. Romera-Paredes, M. Barekatain, A. Novikov, et al. Mathematical discoveries from program search with large language models. Nature 625:468-475, 2024.
+
+[22] A. Novikov, N. Vu, M. Eisenberger, et al. AlphaEvolve: A coding agent for scientific and algorithmic discovery. Google DeepMind, 2025.
+
+[23] S. Thakur, B. Ahmad, H. Pearce, B. Tan, B. Dolan-Gavitt, R. Karri, and S. Garg. VeriGen: A Large Language Model for Verilog Code Generation. ACM TODAES, 2024.
