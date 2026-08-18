@@ -56,16 +56,12 @@ def characterize(state: State) -> tuple[dict, State]:
         "fp16_arith": False,
         "coop_matrix": False,
     }
-    return {"caps": caps}, state.update(
-        hardware_constraints=caps, started_at=time.time()
-    )
+    return {"caps": caps}, state.update(hardware_constraints=caps, started_at=time.time())
 
 
 @action(reads=["baseline_ts"], writes=["best_ts"])
 def baseline(state: State) -> tuple[dict, State]:
-    return {"baseline_ts": state["baseline_ts"]}, state.update(
-        best_ts=state["baseline_ts"]
-    )
+    return {"baseline_ts": state["baseline_ts"]}, state.update(best_ts=state["baseline_ts"])
 
 
 @action(
@@ -154,9 +150,7 @@ def evaluate(state: State) -> tuple[dict, State]:
     # Deterministic keep/revert. The agent does not decide this.
     ts, best = state["measured_ts"], state["best_ts"]
     if ts > best * 1.02:  # >2% improvement
-        return {"verdict": "keep"}, state.update(
-            verdict="keep", best_ts=ts, consecutive_no_gain=0
-        )
+        return {"verdict": "keep"}, state.update(verdict="keep", best_ts=ts, consecutive_no_gain=0)
     return {"verdict": "noise"}, state.update(
         verdict="noise", consecutive_no_gain=state["consecutive_no_gain"] + 1
     )
@@ -213,9 +207,7 @@ def stop(state: State) -> tuple[dict, State]:
         "kept": len(kept),
         "baseline_ts": state["baseline_ts"],
         "best_ts": state["best_ts"],
-        "speedup": state["best_ts"] / state["baseline_ts"]
-        if state["baseline_ts"]
-        else 0.0,
+        "speedup": state["best_ts"] / state["baseline_ts"] if state["baseline_ts"] else 0.0,
     }
     return {"summary": summary}, state.update(final_summary=summary)
 
@@ -301,12 +293,8 @@ def _replay_demo() -> tuple[RunFn, list[dict]]:
     """Canned variants exercising every path, including a partial-output kernel."""
     rng = np.random.default_rng(0)
     good = rng.standard_normal((8, 16)).astype(np.float32)
-    ok_stdout = (
-        "  MUL_MAT(m=16,n=1,k=256): OK\n  1/1 tests passed\n  Backend Vulkan0: OK\n"
-    )
-    fail_stdout = (
-        "  MUL_MAT(m=64,n=64,k=64): NMSE = 0.5 > 0.0005 FAIL\n  0/1 tests passed\n"
-    )
+    ok_stdout = "  MUL_MAT(m=16,n=1,k=256): OK\n  1/1 tests passed\n  Backend Vulkan0: OK\n"
+    fail_stdout = "  MUL_MAT(m=64,n=64,k=64): NMSE = 0.5 > 0.0005 FAIL\n  0/1 tests passed\n"
 
     partial = good.copy()
     partial[4:, :] = np.nan  # wrote half the output channels; a partial-output kernel

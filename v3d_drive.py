@@ -187,10 +187,7 @@ async def main() -> None:
         elif isinstance(msg, ToolResultBlock):
             pass
         elif isinstance(msg, ResultMessage):
-            print(
-                f"\n=== done: {steps} step() calls, "
-                f"{getattr(msg, 'num_turns', '?')} turns ==="
-            )
+            print(f"\n=== done: {steps} step() calls, {getattr(msg, 'num_turns', '?')} turns ===")
 
 
 if __name__ == "__main__":

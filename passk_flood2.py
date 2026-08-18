@@ -34,7 +34,9 @@ OUT = HERE / "docs" / "paper" / "artifacts" / f"passk_{date.today().isoformat()}
 def soc_temp() -> float:
     p = subprocess.run(
         ["ssh", "-o", "BatchMode=yes", PI, "vcgencmd measure_temp"],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True,
+        text=True,
+        timeout=15,
     )
     return float(p.stdout.split("=")[1].split("'")[0])
 
@@ -71,10 +73,13 @@ def score(lines: list[dict]) -> dict:
             )
     ok = (
         r.get("baseline_gate") is True
-        and r["baseline"] is not None and 1300 <= r["baseline"] <= 1400
-        and r["kept"] is not None and r["kept"] / r["baseline"] >= 1.5
+        and r["baseline"] is not None
+        and 1300 <= r["baseline"] <= 1400
+        and r["kept"] is not None
+        and r["kept"] / r["baseline"] >= 1.5
         and r["verdicts"][:2] == ["keep", "revert"]
-        and r["refused"] and r["broken_null"]
+        and r["refused"]
+        and r["broken_null"]
     )
     r["pass"] = ok
     return r
@@ -86,7 +91,9 @@ def main():
         t = cool_start()
         p = subprocess.run(
             [str(HERE / ".venv" / "bin" / "python"), str(HERE / "drive_flood2_mcp.py"), URL],
-            capture_output=True, text=True, timeout=600,
+            capture_output=True,
+            text=True,
+            timeout=600,
         )
         (OUT / f"run{i}.jsonl").write_text(p.stdout)
         if p.returncode != 0:
@@ -107,7 +114,9 @@ def main():
         "baseline_stdev": round(statistics.stdev(baselines), 1) if len(baselines) > 1 else 0.0,
         "kept_mean": round(statistics.mean(kepts), 1),
         "kept_stdev": round(statistics.stdev(kepts), 1) if len(kepts) > 1 else 0.0,
-        "speedups": [round(r["kept"] / r["baseline"], 3) for r in runs if r["kept"] and r["baseline"]],
+        "speedups": [
+            round(r["kept"] / r["baseline"], 3) for r in runs if r["kept"] and r["baseline"]
+        ],
     }
     (OUT / "summary.json").write_text(json.dumps({"runs": runs, "summary": summary}, indent=1))
     print(json.dumps(summary))

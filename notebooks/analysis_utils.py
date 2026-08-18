@@ -34,7 +34,9 @@ def windowed(path, start="llama_start", end="llama_end", steps=4000):
 def fmt(values):
     """mean ± sample stdev (n=...) for a list of throughputs."""
     if len(values) > 1:
-        return f"{statistics.mean(values):8.1f} ± {statistics.stdev(values):6.1f}  (n={len(values)})"
+        return (
+            f"{statistics.mean(values):8.1f} ± {statistics.stdev(values):6.1f}  (n={len(values)})"
+        )
     return f"{values[0]:8.1f}"
 
 

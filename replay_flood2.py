@@ -1,5 +1,6 @@
 """Recreate the flood optimization through the FSM: baseline, then submit
 the fused strip-2 kernel as experiment 1 and let the machine judge it."""
+
 import json
 import os
 

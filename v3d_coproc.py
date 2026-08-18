@@ -49,9 +49,7 @@ def read_temp() -> float:
 
 
 def measure_cpu_baseline() -> float:
-    out = _ssh(
-        f"{LLAMA_BENCH} -m {MODEL} -ngl 0 -p 0 -n 48 -r 2 2>/dev/null | grep tg48"
-    )
+    out = _ssh(f"{LLAMA_BENCH} -m {MODEL} -ngl 0 -p 0 -n 48 -r 2 2>/dev/null | grep tg48")
     m = re.search(r"\|\s*([0-9.]+)\s*±", out)
     return float(m.group(1)) if m else 0.0
 
@@ -108,9 +106,7 @@ def cooldown(state: State) -> tuple[dict, State]:
     too_hot = t >= COOL_START_C
     if too_hot:
         _ssh("sleep 15")  # let it cool before the next trial
-    return {"temp_now": t, "too_hot": too_hot}, state.update(
-        too_hot=too_hot, temp_now=t
-    )
+    return {"temp_now": t, "too_hot": too_hot}, state.update(too_hot=too_hot, temp_now=t)
 
 
 @action(reads=[], writes=["current_trial"])
@@ -126,10 +122,7 @@ def validate(state: State) -> tuple[dict, State]:
     # the measurement actually produced numbers.
     throttled = (int(r["thr1"], 16) & 0xF) != 0
     valid = (
-        not throttled
-        and r["temp1"] < TEMP_THROTTLE_C
-        and r["cpu_tps"] > 0
-        and r["gpu_gflops"] > 0
+        not throttled and r["temp1"] < TEMP_THROTTLE_C and r["cpu_tps"] > 0 and r["gpu_gflops"] > 0
     )
     return {
         "trial_valid": valid,
@@ -164,9 +157,7 @@ def aggregate(state: State) -> tuple[dict, State]:
         "cpu_concurrent_tps_std": round(_std(cpu), 3),
         "gpu_concurrent_gflops_mean": round(_mean(gpu), 3),
         "gpu_concurrent_gflops_std": round(_std(gpu), 3),
-        "cpu_degradation_pct": round((base - _mean(cpu)) / base * 100, 2)
-        if base
-        else 0,
+        "cpu_degradation_pct": round((base - _mean(cpu)) / base * 100, 2) if base else 0,
         "peak_temp_c": max((t["temp1"] for t in trials), default=0),
     }
     return {"summary": summary}, state.update(summary=summary)
@@ -238,9 +229,7 @@ def main() -> None:
                 f"  trial: CPU={t['cpu_tps']:.2f} t/s  GPU={t['gpu_gflops']:.2f} GFLOP/s  temp {t['temp0']:.0f}->{t['temp1']:.0f}C  thr={t['thr1']}"
             )
         elif name == "validate":
-            print(
-                f"    -> {'VALID' if res['trial_valid'] else 'DISCARDED (throttled/temp)'}"
-            )
+            print(f"    -> {'VALID' if res['trial_valid'] else 'DISCARDED (throttled/temp)'}")
         elif name == "aggregate":
             s = res["summary"]
             print("\n=== RESULT ===")

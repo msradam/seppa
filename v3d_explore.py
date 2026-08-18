@@ -31,18 +31,14 @@ SPV = f"{RESEARCH}/gemm.spv"
 
 # vkgemm_nmse prints "correct=perf" (regex won't match) for perf-only sizes and
 # "correct=yes|no" (NMSE-checked) for correctness sizes, so only checked sizes count.
-_VKGEMM_LINE = re.compile(
-    r"SZ=(\d+)\s+([\d.]+)\s+GFLOP/s.*?correct=(yes|no)", re.IGNORECASE
-)
+_VKGEMM_LINE = re.compile(r"SZ=(\d+)\s+([\d.]+)\s+GFLOP/s.*?correct=(yes|no)", re.IGNORECASE)
 _METRIC_SZ = "512"  # largest NMSE-checked size; keep/revert metric
 
 
 # ---------------------------------------------------------------------------
 # Pi interaction (SSH). These are the live-hardware side-effects the FSM drives.
 # ---------------------------------------------------------------------------
-def _ssh(
-    cmd: str, timeout: int = 120, stdin: str | None = None
-) -> subprocess.CompletedProcess:
+def _ssh(cmd: str, timeout: int = 120, stdin: str | None = None) -> subprocess.CompletedProcess:
     return subprocess.run(
         ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", PI_HOST, cmd],
         capture_output=True,
@@ -98,9 +94,7 @@ def characterize(state: State) -> tuple[dict, State]:
     return {"caps": caps}, state.update(hardware_constraints=caps)
 
 
-@action(
-    reads=[], writes=["current_shader", "best_gflops", "baseline_gflops", "best_shader"]
-)
+@action(reads=[], writes=["current_shader", "best_gflops", "baseline_gflops", "best_shader"])
 def baseline(state: State) -> tuple[dict, State]:
     src = read_shader()
     write_shader(src)
@@ -110,9 +104,7 @@ def baseline(state: State) -> tuple[dict, State]:
         "baseline_gflops": gflops,
         "correct": correct,
         "compile_ok": ok,
-    }, state.update(
-        current_shader=src, best_shader=src, best_gflops=gflops, baseline_gflops=gflops
-    )
+    }, state.update(current_shader=src, best_shader=src, best_gflops=gflops, baseline_gflops=gflops)
 
 
 @action(reads=["best_shader", "best_gflops", "variant_log"], writes=["exp_idx"])
@@ -181,9 +173,7 @@ def evaluate(state: State) -> tuple[dict, State]:
     g, best = state["measured_gflops"], state["best_gflops"]
     if g > best * 1.01:  # >1% real improvement
         with open(BEST_PATH, "w") as f:
-            f.write(
-                f"// best: {g:.2f} GFLOP/s (SZ={_METRIC_SZ})\n{state['proposed_shader']}"
-            )
+            f.write(f"// best: {g:.2f} GFLOP/s (SZ={_METRIC_SZ})\n{state['proposed_shader']}")
         return {"verdict": "keep", "gflops": g}, state.update(
             verdict="keep",
             best_gflops=g,
@@ -236,9 +226,7 @@ def log_variant(state: State) -> tuple[dict, State]:
     )
 
 
-@action(
-    reads=["variant_log", "best_gflops", "baseline_gflops"], writes=["final_summary"]
-)
+@action(reads=["variant_log", "best_gflops", "baseline_gflops"], writes=["final_summary"])
 def stop(state: State) -> tuple[dict, State]:
     summary = {
         "experiments": len(state["variant_log"]),

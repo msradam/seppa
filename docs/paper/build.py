@@ -11,7 +11,9 @@ from pathlib import Path
 src = Path("paper.md").read_text()
 
 title = re.match(r"# (.+)", src).group(1)
-abstract_md = src[src.index("## Abstract") + len("## Abstract") : src.index("## 1. Introduction")].strip()
+abstract_md = src[
+    src.index("## Abstract") + len("## Abstract") : src.index("## 1. Introduction")
+].strip()
 body_md = src[src.index("## 1. Introduction") : src.index("## References")]
 refs_md = src[src.index("## References") :].split("\n", 1)[1].strip()
 
@@ -20,9 +22,22 @@ body_md = re.sub(r"^## \d+\. ", "# ", body_md, flags=re.M)
 body_md = re.sub(r"^### \d+\.\d+ ", "## ", body_md, flags=re.M)
 # textual cross-references -> IEEE roman style (longest first)
 body_md = body_md.replace("Sections 5 and 6 answer", "Sections V and VI answer")
-for a, b in [("5.1", "V-A"), ("5.2", "V-B"), ("5.3", "V-C"), ("7.1", "VII-A"),
-             ("10", "X"), ("11", "XI"), ("2", "II"), ("3", "III"), ("4", "IV"),
-             ("5", "V"), ("6", "VI"), ("7", "VII"), ("8", "VIII"), ("9", "IX")]:
+for a, b in [
+    ("5.1", "V-A"),
+    ("5.2", "V-B"),
+    ("5.3", "V-C"),
+    ("7.1", "VII-A"),
+    ("10", "X"),
+    ("11", "XI"),
+    ("2", "II"),
+    ("3", "III"),
+    ("4", "IV"),
+    ("5", "V"),
+    ("6", "VI"),
+    ("7", "VII"),
+    ("8", "VIII"),
+    ("9", "IX"),
+]:
     body_md = body_md.replace(f"Section {a}", f"Section {b}")
 
 
@@ -50,17 +65,23 @@ with two guard edges to `log_variant`,""",
 Fig.~\\ref{fig:fsm} shows the graph, with two guard edges to `log_variant`,""",
 )
 # tables become numbered floats; point the prose at them
-rep("every winning change in Table I lives outside the shader",
-    "every winning change in Table~\\ref{tab:sweep} lives outside the shader")
-rep("so every comparison in this paper is within `vkflood2`.",
-    "so every comparison in this paper is within `vkflood2`. Table~\\ref{tab:sweep} shows the sweep.")
-rep("Results from the steady-state run of 2026-08-10 (raw logs in",
-    "Results from the steady-state run of 2026-08-10 are in Table~\\ref{tab:conc} (raw logs in")
-rep("`docs/paper/artifacts/`, conc_steady):",
-    "`docs/paper/artifacts/`, conc_steady).")
-rep("The same soak-and-measure protocol applied; raw logs are in `docs/paper/artifacts/`, cpu_steady.",
-    "The same soak-and-measure protocol applied; raw logs are in `docs/paper/artifacts/`, cpu_steady. Table~\\ref{tab:cpu} presents the outcome.")
-
+rep(
+    "every winning change in Table I lives outside the shader",
+    "every winning change in Table~\\ref{tab:sweep} lives outside the shader",
+)
+rep(
+    "so every comparison in this paper is within `vkflood2`.",
+    "so every comparison in this paper is within `vkflood2`. Table~\\ref{tab:sweep} shows the sweep.",
+)
+rep(
+    "Results from the steady-state run of 2026-08-10 (raw logs in",
+    "Results from the steady-state run of 2026-08-10 are in Table~\\ref{tab:conc} (raw logs in",
+)
+rep("`docs/paper/artifacts/`, conc_steady):", "`docs/paper/artifacts/`, conc_steady).")
+rep(
+    "The same soak-and-measure protocol applied; raw logs are in `docs/paper/artifacts/`, cpu_steady.",
+    "The same soak-and-measure protocol applied; raw logs are in `docs/paper/artifacts/`, cpu_steady. Table~\\ref{tab:cpu} presents the outcome.",
+)
 
 
 # spec tables are generated from the archived system capture, not typed in
@@ -85,18 +106,32 @@ _gpu_rows = [
     ("fp16 arithmetic", "yes" if _gpu["shader_float16"] else "no"),
     ("Cooperative matrix", "yes" if _gpu["cooperative_matrix"] else "no"),
 ]
+
+
 def _md_table(rows):
     out = ["| | |", "|---------|---------|"]
     out += [f"| {k} | {v} |" for k, v in rows]
     return "\n".join(out)
+
+
 assert "<!--SPECS-->" in body_md
 body_md = body_md.replace("<!--SPECS-->", _md_table(_plat_rows) + "\n\n" + _md_table(_gpu_rows))
 
+
 def pandoc(text):
     return subprocess.run(
-        ["pandoc", "-f", "markdown+autolink_bare_uris", "-t", "latex",
-         "--syntax-highlighting=none"],
-        input=text, capture_output=True, text=True, check=True,
+        [
+            "pandoc",
+            "-f",
+            "markdown+autolink_bare_uris",
+            "-t",
+            "latex",
+            "--syntax-highlighting=none",
+        ],
+        input=text,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
 
 
@@ -106,28 +141,43 @@ abstract = pandoc(abstract_md).strip()
 # pandoc escapes the ~ in "Fig.~\ref{...}" while passing \ref through raw
 body = body.replace("\\textasciitilde{}\\ref", "~\\ref")
 # keep code blocks on one column
-body = body.replace("\\begin{verbatim}",
-                    "\\medskip\\noindent\\begin{minipage}{\\linewidth}\n"
-                    "\\begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\\scriptsize]")
-body = body.replace("\\end{verbatim}",
-                    "\\end{Verbatim}\n\\end{minipage}\\medskip")
+body = body.replace(
+    "\\begin{verbatim}",
+    "\\medskip\\noindent\\begin{minipage}{\\linewidth}\n"
+    "\\begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\\scriptsize]",
+)
+body = body.replace("\\end{verbatim}", "\\end{Verbatim}\n\\end{minipage}\\medskip")
 
 # tables: drop pandoc's minipage header cells, rewrap longtable (illegal in
 # two-column mode) as an IEEE table float with caption above
 body = re.sub(
     r"\\begin\{minipage\}\[[bt]\]\{\\linewidth\}\\raggedright\s*(.*?)\s*\\end\{minipage\}",
-    r"\1", body, flags=re.S)
-captions = iter([
-    ("tab:platform", "Platform, collected from the running board by \\mbox{collect\\_specs.sh}"),
-    ("tab:gpu", "GPU compute limits, collected live (vulkaninfo)"),
-    ("tab:sweep", "Falsification sweep: 400 steps at 256x256 in the \\mbox{vkflood2} harness"),
-    ("tab:conc", "Concurrent GPU flood and CPU LLM decode"),
-    ("tab:cpu", "The CPU-only counterfactual"),
-])
+    r"\1",
+    body,
+    flags=re.S,
+)
+captions = iter(
+    [
+        (
+            "tab:platform",
+            "Platform, collected from the running board by \\mbox{collect\\_specs.sh}",
+        ),
+        ("tab:gpu", "GPU compute limits, collected live (vulkaninfo)"),
+        ("tab:sweep", "Falsification sweep: 400 steps at 256x256 in the \\mbox{vkflood2} harness"),
+        ("tab:conc", "Concurrent GPU flood and CPU LLM decode"),
+        ("tab:cpu", "The CPU-only counterfactual"),
+    ]
+)
+
+
 def table_open(_m):
     lab, cap = next(captions)
-    return ("\\begin{table}[!t]\\caption{%s}\\label{%s}\\centering\\footnotesize"
-            "\\renewcommand{\\arraystretch}{1.15}\\begin{tabular}{" % (cap, lab))
+    return (
+        "\\begin{table}[!t]\\caption{%s}\\label{%s}\\centering\\footnotesize"
+        "\\renewcommand{\\arraystretch}{1.15}\\begin{tabular}{" % (cap, lab)
+    )
+
+
 body = re.sub(r"\\begin\{longtable\}\[\]\{", table_open, body)
 body = body.replace("\\end{longtable}", "\\bottomrule\n\\end{tabular}\\end{table}")
 body = body.replace("\\noalign{}", "")
@@ -182,7 +232,8 @@ Path("paper_ieee.tex").write_text(tex)
 for _ in range(2):
     r = subprocess.run(
         ["/Library/TeX/texbin/pdflatex", "-interaction=nonstopmode", "paper_ieee.tex"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
 if r.returncode != 0:
     print("\n".join(ln for ln in r.stdout.splitlines() if ln.startswith("!") or "Error" in ln))

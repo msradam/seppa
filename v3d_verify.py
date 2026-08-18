@@ -64,9 +64,7 @@ class OpResult:
     raw_summary: str = ""
 
 
-def parse_test_backend_ops(
-    stdout: str, returncode: int, op: str | None = None
-) -> OpResult:
+def parse_test_backend_ops(stdout: str, returncode: int, op: str | None = None) -> OpResult:
     """Parse `test-backend-ops test -b VulkanN [-o OP]` output into a verdict.
 
     Authoritative pass signal is: returncode == 0 AND the "N/M tests passed"
@@ -143,9 +141,7 @@ class CompletenessResult:
     reasons: list[str] = field(default_factory=list)
 
 
-def check_completeness(
-    output: np.ndarray, poison_was_nan: bool = True
-) -> CompletenessResult:
+def check_completeness(output: np.ndarray, poison_was_nan: bool = True) -> CompletenessResult:
     """Anti-gaming filters for a controlled output buffer.
 
     Pre-condition: the buffer was poison-filled (NaN) before the kernel ran, so
@@ -181,9 +177,7 @@ def check_completeness(
                 continue
             axis_std = out.std(axis=ax)
             if float(axis_std.mean()) <= _MIN_STD:
-                reasons.append(
-                    f"axes: axis {ax} variation {axis_std.mean():.4g} <= {_MIN_STD}"
-                )
+                reasons.append(f"axes: axis {ax} variation {axis_std.mean():.4g} <= {_MIN_STD}")
 
     return CompletenessResult(not reasons, reasons)
 
@@ -205,9 +199,7 @@ def verify(op_result: OpResult, output: np.ndarray | None = None) -> VerifyResul
     comp = check_completeness(output) if output is not None else None
     verify_complete = comp.complete if comp is not None else True
     verdict = "pass" if (verify_ok and verify_complete) else "revert"
-    return VerifyResult(
-        verify_ok, verify_complete, verdict, op=op_result, completeness=comp
-    )
+    return VerifyResult(verify_ok, verify_complete, verdict, op=op_result, completeness=comp)
 
 
 def _demo() -> None:
@@ -261,9 +253,7 @@ def _demo() -> None:
     assert not check_completeness(np.full((8, 16), 0.5, np.float32)).complete
 
     # clamped into trivial band
-    assert not check_completeness(
-        rng.standard_normal((8, 16)).astype(np.float32) * 1e-4
-    ).complete
+    assert not check_completeness(rng.standard_normal((8, 16)).astype(np.float32) * 1e-4).complete
 
     # a constant axis (unwritten-channel / broadcast signature): axis 0 identical
     # across rows, columns still vary -> axes filter must still reject it.

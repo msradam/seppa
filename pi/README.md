@@ -10,7 +10,7 @@ llama.cpp's CPU backend with its own NMSE thresholds (`test-backend-ops`).
 
 - `llama-completion`, `llama-bench`, `llama-server` with working V3D
   decode: ~5.5 t/s token generation on granite-4.0-1b Q4_0 at `-ngl 6`
-  (Pi 5, Mesa 25.0.7). CPU-only decode on the same board is ~10.9 t/s, so
+  (Pi 5, Mesa 25.0.7). CPU-only decode on the same board is 11.4 t/s soaked, 11.59 t/s from a cool start (`docs/paper/artifacts/`, conc_steady and ab_vkvisible), so
   the value is co-processing: the GPU decodes while the CPU does other
   work.
 - `vkgemm_nmse` + `gemm.comp`: standalone 13.42 GFLOP/s SGEMM

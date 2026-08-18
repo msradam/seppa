@@ -24,8 +24,9 @@ simulation on the GPU while the CPU runs routing and a language model.
 
 All measured on a Pi 5 (V3D 7.1.10.2, Mesa v3dv 25.0.7), every number
 gated on correctness against a double-precision CPU reference. Raw logs
-and transcripts for each claim are in `docs/paper/artifacts/`; the
-notebooks below recompute the Section VI and VII results from them.
+and transcripts for each claim are in `docs/paper/artifacts/`; notebook
+02 recomputes the Section VII tables from them, and notebook 01 replays
+the Section VI transcripts.
 
 - **Flood stencil (the paper's case study):** 1.58x at 256x256
   (2,127.7 vs 1,348.6 steps/s) via a fused, strip-mined kernel, verified by

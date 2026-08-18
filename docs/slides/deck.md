@@ -53,7 +53,7 @@ One board has to do two jobs at once, offline.
 
 ---
 
-# The deployment runs a simulation and a language model on one Pi 5, with no network
+# One Pi 5 runs a flood simulation and a language model, offline
 
 - The application simulates surface flooding over real terrain, finds shelter routes by mobility profile, and explains the result in plain language. Everything runs on-device once the network is gone.
 - Both halves are **continuous**: the simulation must keep stepping while the model keeps decoding.
@@ -111,7 +111,7 @@ Collected from the running board by `pi/collect_specs.sh`, archived with the raw
 
 ---
 
-# When a shader asks for too many registers, the driver does not fail. It quietly gets slower.
+# Ask for too many registers and the driver does not fail. It quietly gets slower.
 
 Asked for more registers than exist, `v3dv` recompiles with scheduling disabled, then with unrolling disabled, then with fewer threads, and hands back whatever survives. Sometimes several times slower, with no diagnostic.
 
@@ -188,7 +188,7 @@ Make verification a state transition instead of an instruction.
 ("evaluate",  "log_variant"),
 ```
 
-The agent advances the loop through one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves. Skipping verification is not a request the protocol can express.
+The agent advances the loop through one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves. Skipping verification is not a request the protocol can express. The server does also expose a `fork_at` rewind that no session used, and a caller could abuse it to resample a marginal kernel; the 1% threshold would not catch that.
 
 For the flood target, `verify` runs 400 steps at 256x256 and demands three things: NMSE below 1e-3 against a double-precision CPU reference, total water equal to injected rainfall, and maximum depth pooling inside the terrain basin.
 
@@ -199,7 +199,7 @@ For the flood target, `verify` runs 400 steps at 256x256 and demands three thing
 | Who | Did what |
 |---|---|
 | **Author** | the application, the harness, the three physics gates, the hand-driven sweep, session supervision |
-| **Language model** (Claude Sonnet 5, over MCP) | the content of `hypothesize` and `implement`: kernel source and host-side parameters, and nothing else |
+| **Language model**<br/>Claude Sonnet 5, over MCP | the content of `hypothesize` and `implement`: kernel source and host-side parameters, and nothing else |
 | **Machine** | compilation, verification, benchmarking, every verdict, the ledger |
 
 No proposed kernel was hand-edited. A proposal either passed the machine's gates or was reverted. Complete session transcripts are archived in the repository.
@@ -226,7 +226,7 @@ Five hypotheses, priced by the machine. Most were wrong.
 | 4 cells per invocation | More strip is better | 2.35 GF/s: <span class="fail">falsified</span>, register pressure |
 | Fused + 2 cells per invocation | The wins stack | <span class="pass">3.08 GF/s, +59%</span> |
 
-Every variant passed all three gates. The two memory-system hypotheses, which is where I would have started by hand, are the two that failed.
+Every variant passed all three gates. I would have started with the two memory-system hypotheses if I had been guessing, and those are precisely the two that came back falsified.
 
 ---
 
@@ -245,7 +245,7 @@ Across every machine-checked run the shipped kernel is **1.58x** at 256x256. It 
 
 ---
 
-# A plateau can mean the search space is too small, not that the hardware is exhausted
+# A plateau can mean your search space is too small
 
 An earlier session pointed the FSM at this stencil and came back empty. I nearly concluded the kernel was at its limit.
 
@@ -277,7 +277,7 @@ Not "trust my numbers." The machine re-derives them.
  "steps_per_sec": 2116.4, "best_sps": 2116.4, "verdict": "keep"}
 ```
 
-Every field in that record was produced by the machine. Nothing in it is the model's report of its own work.
+Every field in that record was produced by the machine, on hardware the model never touched, and reported back to a driver running somewhere else entirely.
 
 ---
 
@@ -344,7 +344,7 @@ What the CPU pays, and what the GPU buys.
 
 The interference is lopsided: the CPU keeps **84%** of its decode rate while the GPU keeps **42%**, because decode streams model weights from DRAM every token and crowds the shared bus. Contention favors the optimized kernel, so **1.58x alone becomes 2.20x concurrent**, at identical decode cost.
 
-<span class="caption">Measured at thermal steady state, only after a decode soak reaches the firmware's governed regime, 74 to 76 C. An earlier short-window campaign read up to 19% differently in both directions because it measured the thermal transient.</span>
+<span class="caption">Measured after a cooldown and a fixed decode soak. The conditions did not land in the same thermal regime: the concurrent windows ran soft-limited 70 to 79% of the time at 76.3 C, decode alone reached 73.0 C and 3%. An earlier campaign read 711.9 here, and its thermal logs rule out the transient explanation I first reached for. That 24% gap is the least reproducible number in this work.</span>
 
 ---
 
@@ -361,7 +361,7 @@ Four idle A76 cores reach 3,852 steps/s, well above the V3D's 2,128. But in depl
 
 The CPU-only flood is the same update in OpenMP and passes the same three gates. Oversubscribed, decode collapses 75%, because llama.cpp's workers synchronize every token. Partitioned is the best CPU-only arrangement, and decode there pays a 29% tax against the GPU split's 16%.
 
-**The GPU split wins on both axes: 30% more simulation and 14% more decode.** The slower processor still wins, because the CPU has no spare cycles to sell.
+The GPU split wins on both axes here, **30%** more simulation and **14%** more decode, though the simulation margin depends on which campaign you take. The slower processor comes out ahead because the CPU has nothing left to sell.
 
 ---
 

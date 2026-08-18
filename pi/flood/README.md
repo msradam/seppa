@@ -1,7 +1,7 @@
 # Optimized V3D flood stencil (bonbibi's GPU flood sim)
 
 Fused, strip-mined variant of bonbibi's two-pass WCA2D flood kernels for
-the Pi 5 V3D GPU. **1.59x faster at 256², identical physics**, verified by
+the Pi 5 V3D GPU. **1.59x faster at 256² hand-timed, 1.58x under the machine-checked runs, identical physics**, verified by
 the same three gates as the original harness: NMSE vs a double-precision
 CPU reference, mass conservation vs rain injected, and basin pooling.
 
@@ -9,7 +9,7 @@ CPU reference, mass conservation vs rain injected, and basin pooling.
 
 | grid  | original (flux+height) | fused2s | speedup |
 |-------|------------------------|---------|---------|
-| 256²  | 0.297 s (1.94 GF/s, 1,345 steps/s) | 0.187 s (3.08 GF/s, 2,140 steps/s) | 1.59x |
+| 256²  | 0.297 s (1.94 GF/s, 1,345 steps/s) | 0.187 s (3.08 GF/s, 2,140 steps/s) | 1.59x (hand-timed) |
 | 512²  | 1.128 s (2.04 GF/s) | 0.801 s (2.88 GF/s) | 1.41x |
 | 1024² | 4.701 s (1.96 GF/s) | 3.976 s (2.32 GF/s) | 1.18x |
 
@@ -42,6 +42,25 @@ addresses (lane contiguity matters more than load count on this GPU).
 g++ -O3 -o vkflood2 vkflood2.cpp -lvulkan
 glslangValidator -V fused2s.comp -o fused2s.spv
 STRIP=2 FUSED=1 FLUX_SPV=fused2s.spv ./vkflood2 256 400
+
+Environment variables read by `vkflood2` (all optional):
+
+| Variable | Meaning |
+|---|---|
+| `FLUX_SPV` | flux-pass (or fused) shader binary |
+| `HEIGHT_SPV` | height-pass shader; leave unset for a fused single-dispatch step |
+| `FUSED` | 1 selects the fused step |
+| `STRIP` | cells per invocation in y |
+| `DEM` | terrain file; synthetic basin if unset |
+| `RAIN` | rainfall rate |
+| `DUMP_FULL` | dump the full-resolution depth grid |
+
+The two-pass baseline in the table above needs both shaders, so it is
+`FLUX_SPV=flux.spv HEIGHT_SPV=height.spv ./vkflood2 256 400`.
+
+The benchmark scripts under this directory assume the tree they were run
+from, `RES=/root/v3d-research`, and a GGUF at `$RES/models/`. Adjust
+`RES` at the top of each script to re-run them elsewhere.
 ```
 
 Expect all three gate lines to say yes. `DEM=<file>` loads real terrain

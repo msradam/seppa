@@ -30,9 +30,7 @@ _MASS = re.compile(r"conserved vs rain=(yes|NO)")
 _POOL = re.compile(r"pools in basin=(yes|no)")
 
 
-def _ssh(
-    cmd: str, timeout: int = 180, stdin: str | None = None
-) -> subprocess.CompletedProcess:
+def _ssh(cmd: str, timeout: int = 180, stdin: str | None = None) -> subprocess.CompletedProcess:
     return subprocess.run(
         ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", PI_HOST, cmd],
         capture_output=True,
@@ -92,9 +90,7 @@ def baseline(state: State) -> tuple[dict, State]:
     )
 
 
-@action(
-    reads=["cur_flux", "cur_height", "best_gflops", "variant_log"], writes=["exp_idx"]
-)
+@action(reads=["cur_flux", "cur_height", "best_gflops", "variant_log"], writes=["exp_idx"])
 def hypothesize(state: State) -> tuple[dict, State]:
     idx = state["exp_idx"] + 1
     return {
@@ -229,9 +225,7 @@ def log_variant(state: State) -> tuple[dict, State]:
     )
 
 
-@action(
-    reads=["variant_log", "best_gflops", "baseline_gflops"], writes=["final_summary"]
-)
+@action(reads=["variant_log", "best_gflops", "baseline_gflops"], writes=["final_summary"])
 def stop(state: State) -> tuple[dict, State]:
     summary = {
         "experiments": len(state["variant_log"]),

@@ -109,9 +109,9 @@ platform and the GPU's compute limits, collected from the running board
 by \texttt{pi/collect\_specs.sh} (archived with the raw vulkaninfo
 dump). The limits are tight, and the scale is modest: the best kernel we
 measured sustains about 13 GFLOP/s in fp32, and that was a dense matrix
-multiply rather than the stencil this paper optimizes (Section VII-A
-compares the two processors on the stencil itself). The GPU is a second,
-slower engine that happens to be free.
+multiply, not the stencil this paper optimizes (Section VII-A compares
+the two processors on the stencil itself). The GPU is a second, slower
+engine that happens to be free.
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{table}[!t]\caption{Platform, collected from the running board by \mbox{collect\_specs.sh}}\label{tab:platform}\centering\footnotesize\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}
@@ -174,7 +174,7 @@ the benchmark oracle while failing a stricter one. SpecBench {[}20{]}
 states the general form: when oversight collapses onto an automated
 suite, the agent optimizes the suite. Our physics gates are the same
 kind of instrument and inherit the same weakness, which is why Section
-VIII calls them necessary rather than sufficient.
+VIII stops short of calling them sufficient.
 
 A second line puts the evaluator outside the model instead of arguing
 with it. FunSearch {[}21{]} and AlphaEvolve {[}22{]} use the model as a
@@ -183,12 +183,12 @@ evaluator; AlphaEvolve found a 48-multiplication procedure for 4x4
 complex matrix multiplication, the first improvement on Strassen in that
 setting in 56 years. That structural commitment, the model proposing and
 something else scoring, is the one Seppa makes, at a far smaller scale
-and with the scoring expressed as reachability in a graph rather than as
-a fitness function (Section IV). In hardware design the same split
-appears with a human in it: Chip-Chat {[}10{]} carried conversational
-design to tapeout with an engineer and a testbench closing the loop, and
-VeriGen {[}23{]} fine-tunes open models for Verilog. We close the loop
-with a state machine instead.
+and with the scoring expressed as reachability in a graph instead of a
+fitness function (Section IV). In hardware design the same split appears
+with a human in it: Chip-Chat {[}10{]} carried conversational design to
+tapeout with an engineer and a testbench closing the loop, and VeriGen
+{[}23{]} fine-tunes open models for Verilog. We close the loop with a
+state machine instead.
 
 \section{The Seppa Harness}\label{the-seppa-harness}
 
@@ -206,12 +206,12 @@ model submits nothing usable. The guards are ordinary code, from
 
 \medskip\noindent\begin{minipage}{\linewidth}
 \begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\scriptsize]
-("compile_",  "verify",      expr("compile_ok")),
-("compile_",  "log_variant", expr("not compile_ok")),
-("verify",    "benchmark",   expr("verify_ok")),
-("verify",    "log_variant", expr("not verify_ok")),
+("compile_", "verify", expr("compile_ok")),
+("compile_", "log_variant", expr("not compile_ok")),
+("verify", "benchmark", expr("verify_ok")),
+("verify", "log_variant", expr("not verify_ok")),  # THE GUARD
 ("benchmark", "evaluate"),
-("evaluate",  "log_variant"),
+("evaluate", "log_variant"),
 \end{Verbatim}
 \end{minipage}\medskip
 
@@ -280,10 +280,10 @@ other than register pressure.
 
 \subsection{Falsification Sweep}\label{falsification-sweep}
 
-Rather than guess the bottleneck, we wrote one variant per hypothesis
-and let the loop measure each. The variants pack the state into wider
-loads, fuse the two passes into one dispatch, or strip-mine, meaning
-each thread updates a short vertical run of cells to amortize its launch
+We did not guess the bottleneck. We wrote one variant per hypothesis and
+let the loop measure each. The variants pack the state into wider loads,
+fuse the two passes into one dispatch, or strip-mine, meaning each
+thread updates a short vertical run of cells to amortize its launch
 cost. Every variant passed all three gates. Speeds are 400 steps at
 256x256 on the parameterized \texttt{vkflood2} harness. Its host loop is
 faster than the original's for identical kernels (about 1,345 steps/s
@@ -321,8 +321,8 @@ each thread two cells beat every memory-system optimization we tried;
 four cells gave the gain back to register pressure. The sweep's own
 numbers size that cost: strip-2 removes 65,536 invocations per step and
 saves about 140 microseconds, near 2 ns, two clock cycles, per
-invocation, the scale of thread issue rather than of arithmetic or
-memory traffic. Two hardware details shaped the final kernel. Strips run
+invocation, the scale of thread issue, not of arithmetic or memory
+traffic. Two hardware details shaped the final kernel. Strips run
 vertically because that keeps a subgroup's 16 lanes on adjacent
 addresses, and the kernel consumes each flux value as it is produced;
 holding all four alive fails register allocation. The shipped kernel is
@@ -346,13 +346,13 @@ can mean the search space is too small, not that the hardware is
 exhausted. Two other targets ran under the same gates: a GEMM (dense
 matrix multiply) went from 7.02 to 13.42 GFLOP/s over two rounds, and
 de-unrolling llama.cpp's matrix-vector kernel gained 28\% end-to-end
-decode. Both are recorded in the running notes rather than archived
-logs, and neither is claimed at Section VI's evidentiary standard.
+decode. Both are recorded in the running notes, not in archived logs,
+and neither is claimed at Section VI's evidentiary standard.
 
 \section{Machine-Checked Reproduction over
 MCP}\label{machine-checked-reproduction-over-mcp}
 
-Rather than ask a reader to trust Section V's numbers,
+Section V's numbers do not have to be taken on trust.
 \texttt{drive\_flood2\_mcp.py} runs on a second computer and drives the
 Pi-resident state machine through the whole cycle via the \texttt{step}
 tool.
@@ -389,6 +389,11 @@ elided):
 \end{minipage}\medskip
 
 The variant is ledgered as revert with a null \texttt{steps\_per\_sec}.
+Gates and timing come from one execution, so \texttt{verify} does return
+the failing kernel's speed to the caller as
+\texttt{steps\_per\_sec\_if\_kept}; what the green gate controls is
+entry to the ledger, the verdict, and the kept kernel, not the caller's
+sight of the number.
 
 How repeatable is this? \texttt{passk\_flood2.py} runs the two-cycle
 reproduction k times from cool starts, scoring a pass when the baseline
@@ -436,8 +441,14 @@ alone reached 73.0 C and was limited for 3\% of its window. Each window
 is long enough for 12 to 28 flood completions (llama-bench tg64, r=20),
 and a flood run counts only if it fits inside the window. An earlier
 short-window campaign, preserved in \texttt{conc\_bench2/}, read up to
-19\% differently in both directions because it measured the thermal
-transient. Results from the steady-state run of 2026-08-10 are in
+19\% differently in both directions. We first attributed that to a
+thermal transient, but the logs do not support it: the earlier campaign
+ran cooler (68.7 C mean, soft limit active 46\% of the window, hard
+throttle never) than this one (72.7 C, 70\%, 9\%) and still read lower,
+so heat does not explain the gap. Within this window the rate also
+climbs, from 818.6 steps/s over the first quarter to 919.1 over the
+last, so the figure below is a window mean on a rising curve and not a
+plateau. Results from the steady-state run of 2026-08-10 are in
 Table~\ref{tab:conc} (raw logs in
 \texttt{docs/paper/artifacts/}, conc\_steady).
 
@@ -448,7 +459,7 @@ Condition & GPU flood (steps/s) & CPU decode (t/s) \\
 \midrule
 Optimized kernel alone & 2,128.0 ± 1.7 (n=3) & \\
 Original kernel alone & 1,351.4 ± 0.5 (n=3) & \\
-Decode alone (soaked) & & 11.4 ± 0.0 \\
+Decode alone, 4 threads (post-soak) & & 11.4 ± 0.0 \\
 Concurrent, optimized kernel & 883.4 ± 47.1 (n=28) & 9.6 ± 0.2 \\
 Concurrent, original kernel & 401.8 ± 8.3 (n=12) & 9.6 ± 0.2 \\
 \bottomrule
@@ -477,10 +488,14 @@ load (openssl SHA-256, four threads) the GPU keeps 99\% and the load
 keeps 88\% of its 16 KB-block throughput; paired with the memory-bound
 four-thread CPU flood the GPU keeps 92\% and the load keeps 75\%
 (continuous sim-mode probes over cool-start 60 s windows, both sides
-logged; \texttt{docs/paper/artifacts/}, genload2). The GPU is the robust
-side of every pairing except decode, which streams model weights from
-DRAM every token and drives GPU retention to 42\%: interference tracks
-the CPU load's memory traffic.
+logged; \texttt{docs/paper/artifacts/}, genload2). These two pairings
+also bound the thermal confound. Both ran at the same 76.3 C with the
+soft limit active for 80\% and 70\% of their windows, against a solo
+window that never left 57.6 C, and the GPU still kept 99\% and 92\%.
+Clock governance alone therefore does not explain decode's 42\%. The GPU
+is the robust side of every pairing except decode, which streams model
+weights from DRAM every token: interference tracks the CPU load's memory
+traffic.
 
 \subsection{The CPU-Only
 Counterfactual}\label{the-cpu-only-counterfactual}
@@ -504,7 +519,7 @@ cpu\_steady. Table~\ref{tab:cpu} presents the outcome.
 Condition & Flood (steps/s) & CPU decode (t/s) \\
 \midrule
 CPU flood alone, 1 / 2 / 4 threads & 992.5 / 1,980.5 / 3,852.4 & \\
-Decode alone, 3 threads (pinned) & & 11.9 ± 0.0 \\
+Decode alone, 3 threads (pinned, post-soak) & & 11.9 ± 0.0 \\
 Partitioned: flood 1t + decode 3t & 678.8 ± 10.6 (n=25) & 8.4 ± 0.1 \\
 Oversubscribed: flood 4t + decode 4t & 857.1 ± 181.0 (n=89) & 3.0 ±
 0.3 \\
@@ -536,30 +551,38 @@ verification covers one storm scenario at one grid size, and the keep
 decision rests on a single timing sample against a 1\% threshold,
 although Section VI's five-run repeatability (baseline spread about
 0.3\%, kept kernel identical at timer resolution) bounds that noise well
-inside the threshold. That bound is an upper bound rather than a
-measured spread: the harness prints elapsed time to milliseconds, so at
-the kept kernel's 0.188 s one digit is 0.53\%, and ``identical'' means
-the last printed digit did not move. The 3,852 steps/s CPU figure
-assumed a cache-resident 256x256 working set and may not survive larger
-grids. Three asymmetries qualify Section VII. The GPU kernel was
-optimized and \texttt{cpuflood.cpp} was not: it is the original two-pass
-scheme, so the counterfactual compares a tuned GPU against an untuned
-CPU, and fusing its flux array would cut DRAM traffic on the axis that
-contends with decode. The conditions were not measured at a matched
-thermal operating point, so part of the 16\% decode cost is governance
-rather than contention. And the steady-state campaign is a single run:
-an earlier campaign at the same configuration, kept in
-\texttt{conc\_bench2/}, reads 711.9 rather than 883.4 steps/s
-concurrent, which is the least reproducible quantity in the paper. The
+inside the threshold. That bound is an upper bound, not a measured
+spread: the harness prints elapsed time to milliseconds, so at the kept
+kernel's 0.188 s one digit is 0.53\%, and ``identical'' means the last
+printed digit did not move. The 3,852 steps/s CPU figure assumed a
+cache-resident 256x256 working set and may not survive larger grids.
+Three asymmetries qualify Section VII. The GPU kernel was optimized and
+\texttt{cpuflood.cpp} was not: it is the original two-pass scheme, so
+the counterfactual compares a tuned GPU against an untuned CPU, and
+fusing its flux array would cut DRAM traffic on the axis that contends
+with decode. The conditions were not measured at a matched thermal
+operating point, so part of the 16\% decode cost is governance, not
+contention. And the steady-state campaign is a single run: an earlier
+campaign at the same configuration, kept in \texttt{conc\_bench2/},
+reads 711.9 steps/s concurrent against this run's 883.4, which is the
+least reproducible quantity in the paper. That matters for how far
+Section VII-A reaches. Under the earlier campaign the simulation axis is
+within noise of the partitioned CPU scheme (711.9 ± 76.1, n=5, against
+678.8 ± 10.6, n=25), so the two-axis claim rests on the later campaign;
+the decode axis holds under both (9.6 and 10.3 against 8.4). The
 scripted reproduction's kernel came from the hand sweep, and the
 agent-driven session worked a knob the server itself exposed. The
-demonstrated property is machine verification; autonomous discovery
-remains open. Full GPU offload of the language model is blocked by an
-upstream llama.cpp Vulkan defect. Numbers without an archived log (the
-original harness's 1,045 steps/s, the sweep's GFLOP/s column and
-hand-timed ratios, the 1.41x and 1.18x at the larger grids, and the GEMM
-and matrix-vector results) come from the repository's dated running
-notes.
+server's \texttt{fork\_at} utility rewinds to an earlier state, so a
+caller could in principle resample a marginal kernel until a draw
+cleared the 1\% threshold; \texttt{evaluate} compares one fresh sample
+against a frozen incumbent and would not notice. No archived session
+used it. The demonstrated property is machine verification; autonomous
+discovery remains open. Full GPU offload of the language model is
+blocked by an upstream llama.cpp Vulkan defect. Numbers without an
+archived log (the original harness's 1,045 steps/s, the sweep's GFLOP/s
+column and hand-timed ratios, the 1.41x and 1.18x at the larger grids,
+and the GEMM and matrix-vector results) come from the repository's dated
+running notes.
 
 \section{The Sample Application}\label{the-sample-application}
 
@@ -567,13 +590,17 @@ The sample application {[}7{]} simulates surface flooding over real
 terrain {[}1{]}, finds shelter routes by mobility profile {[}2{]}, and
 explains the result in plain language, entirely offline; the model never
 makes a safety decision, only narrating what the deterministic code
-computed. The application lives at github.com/msradam/bonbibi, distinct
-from this paper's contributions; the harness at
-github.com/msradam/seppa. Measurements used its Granite 4.0 1B
-configuration, whose 1.63 B GGUF llama-bench prints under a granite-3B
-size label (the application has since moved to a larger model); build
-commands are in \texttt{pi/flood/README.md}, and cited references are
-archived in \texttt{docs/paper/references/}.
+computed. The application lives at github.com/msradam/bonbibi and was
+built as an Arm AI Optimization Challenge entry; the harness at
+github.com/msradam/seppa. Everything this paper claims was built on top
+of that application rather than as part of it: the state machine and its
+gates, the falsification sweep of Section V, the machine-checked
+reproduction and pass criterion of Section VI, and the concurrency and
+CPU-counterfactual campaigns of Section VII. Measurements used its
+Granite 4.0 1B configuration, whose 1.63 B GGUF llama-bench prints under
+a granite-3B size label (the application has since moved to a larger
+model); build commands are in \texttt{pi/flood/README.md}, and cited
+references are archived in \texttt{docs/paper/references/}.
 
 \section{Conclusion}\label{conclusion}
 
