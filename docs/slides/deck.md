@@ -265,7 +265,7 @@ Once `implement` accepted `{shader, height_shader, strip}`, the machine found an
 
 # 6. Machine-checked evidence
 
-Not "trust my numbers." The machine re-derives them.
+The machine re-derives the numbers itself.
 
 ---
 

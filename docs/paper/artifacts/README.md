@@ -34,5 +34,5 @@ implements this; `notebooks/02_concurrency_envelope.ipynb` reproduces the tables
 wrong because the driver of that era tested only the MCP `isError` bit, and
 the server returns a refusal as a normal tool result with `isError` unset.
 Both `drive_flood2_mcp.py` and `passk_flood2.py` now detect the refusal from
-the payload instead, and carry a comment saying so. Trust the `response`
-object, not the flag.
+the payload instead, and carry a comment saying so. The `response` object is
+authoritative; the flag is stale.
