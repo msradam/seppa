@@ -22,10 +22,12 @@ simulation on the GPU while the CPU runs routing and a language model.
 
 ## Results
 
-All measured on a Pi 5 (V3D 7.1.10.2, Mesa v3dv 25.0.7), every number
-gated on correctness against a double-precision CPU reference. Raw logs
-and transcripts for each claim are in `docs/paper/artifacts/`; notebook
-02 recomputes the Section VII tables from them, and notebook 01 replays
+All measured on a Pi 5 (V3D 7.1.10.2, Mesa v3dv 25.0.7); every kernel
+was kept only after passing its target's correctness oracle (for the
+flood stencil, three physics gates against a double-precision CPU
+reference). Raw logs and transcripts for the flood-stencil and
+concurrency claims are in `docs/paper/artifacts/`; notebook 02
+recomputes the Section VII tables from them, and notebook 01 replays
 the Section VI transcripts.
 
 - **Flood stencil (the paper's case study):** 1.58x at 256x256
@@ -43,7 +45,9 @@ the Section VI transcripts.
   the harshest measured case.
 - **Other targets, same harness:** a GEMM kernel from 7.02 to 13.42
   GFLOP/s over two FSM rounds; llama.cpp's matrix-vector kernel
-  de-unrolled for +28% end-to-end decode.
+  de-unrolled for +28% end-to-end decode. Both are recorded in dated
+  running notes (`docs/notes/`) and are not claimed at the flood
+  target's evidentiary standard.
 
 The paper (`docs/paper/paper.pdf`, built from `paper.md` by `build.py`)
 documents the method, the falsification sweep, and the measurement
@@ -134,9 +138,8 @@ notebooks/   Two executed notebooks that re-derive the paper's Section VI
              parsers (analysis_utils.py). They run offline.
 docs/
   paper/     Paper source (paper.md), the build pipeline (build.py),
-             the rendered paper.pdf, archived raw logs and transcripts
-             (artifacts/, see its README), and every cited reference
-             as a local PDF (references/).
+             the rendered paper.pdf, and archived raw logs and
+             transcripts (artifacts/, see its README).
   slides/    The 27-slide Marp deck, its IEEE theme, the narration
              script, and the 15-minute silent video (defense.mp4).
   notes/     Dated running notes and superseded planning documents,

@@ -61,8 +61,9 @@ ffmpeg -y -f concat -safe 0 -i frames/concat.txt -vf "format=yuv420p" \
 `--html` is required: without it Marp strips the inline HTML the deck uses for
 two-column layouts. `--image-scale 3` renders frames at 3840x2160. The deck is designed at
 1280x720, so anything less is upscaled by the player on a high-density display
-and reads as blurry even though the encode is lossless-looking. `frames/` is generated output that git ignores; the per-slide
-durations live in `frames/concat.txt`, and `-t 900` trims the trailing entry
+and reads as blurry even though the encode is lossless-looking. The frame
+PNGs are generated output that git ignores; the per-slide durations are
+tracked in `frames/concat.txt`, and `-t 900` trims the trailing entry
 that the concat demuxer would otherwise hold past the end.
 
 Rebuilding `fsm.png` needs `pdflatex`, `pdftoppm`, and Pillow:
@@ -78,6 +79,8 @@ PDF at its native size first and upscaling from there ships a blurry figure.
 
 ## Provenance
 
-Every number on the slides comes from the archived artifacts under
+Every number in the scored campaigns comes from the archived artifacts under
 `../paper/artifacts/`, and the two executed notebooks under `../../notebooks/`
-re-derive the tables. The measurement hardware is no longer live.
+re-derive the tables; the hand-timed and larger-grid figures live in the
+dated running notes, as the slides that use them state. The measurement
+hardware is no longer live.

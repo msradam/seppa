@@ -190,7 +190,7 @@ The scripted reproduction's kernel came from the hand sweep, and the agent-drive
 
 ## 9. The Sample Application
 
-The sample application [7] simulates surface flooding over real terrain [1], finds shelter routes by mobility profile [2], and explains the result in plain language, entirely offline; the model never makes a safety decision, only narrating what the deterministic code computed. The application lives at github.com/msradam/bonbibi and was built as an Arm AI Optimization Challenge entry; the harness at github.com/msradam/seppa. Everything this paper claims was built for this course, on top of that application. Measurements used its Granite 4.0 1B configuration; the model file (a 1.63 B-parameter GGUF, llama.cpp's weight format) appears in llama-bench logs under a granite-3B size label (the application has since moved to a larger model); build commands are in `pi/flood/README.md`, and cited references are archived in `docs/paper/references/`.
+The sample application [7] simulates surface flooding over real terrain [1], finds shelter routes by mobility profile [2], and explains the result in plain language, entirely offline; the model never makes a safety decision, only narrating what the deterministic code computed. The application lives at github.com/msradam/bonbibi and was built as an Arm AI Optimization Challenge entry; the harness at github.com/msradam/seppa. Everything this paper claims was built for this course, on top of that application. Measurements used its Granite 4.0 1B configuration; the model file (a 1.63 B-parameter GGUF, llama.cpp's weight format) appears in llama-bench logs under a granite-3B size label (the application has since moved to a larger model); build commands are in `pi/flood/README.md`.
 
 ## 10. Conclusion
 
