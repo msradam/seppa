@@ -180,12 +180,12 @@ Make verification a state transition instead of an instruction.
 # The guard edges are ordinary code, and `benchmark` sits behind a green verify
 
 ```python
-("compile_",  "verify",      expr("compile_ok")),
-("compile_",  "log_variant", expr("not compile_ok")),
-("verify",    "benchmark",   expr("verify_ok")),
-("verify",    "log_variant", expr("not verify_ok")),
+("compile_", "verify", expr("compile_ok")),
+("compile_", "log_variant", expr("not compile_ok")),
+("verify", "benchmark", expr("verify_ok")),
+("verify", "log_variant", expr("not verify_ok")),  # THE GUARD
 ("benchmark", "evaluate"),
-("evaluate",  "log_variant"),
+("evaluate", "log_variant"),
 ```
 
 The agent advances the loop through one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves. Skipping verification is not a request the protocol can express. The server does also expose a `fork_at` rewind that no session used, and a caller could abuse it to resample a marginal kernel; the 1% threshold would not catch that.

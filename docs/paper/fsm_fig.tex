@@ -6,7 +6,7 @@
     inner xsep=3pt, inner ysep=1.2pt, minimum width=18mm},
   agent/.style={state, fill=black!12},
   glab/.style={font=\tiny\itshape, inner sep=1pt, fill=white},
-  node distance=1.2mm]
+  node distance=3.4mm]
 \node[state] (ch) {characterize};
 \node[state, below=of ch] (ba) {baseline};
 \node[agent, below=of ba] (hy) {hypothesize};
@@ -19,8 +19,8 @@
 \node[state, below=of lv] (st) {stop};
 \foreach \a/\b in {ch/ba, ba/hy, hy/im, im/co, co/ve, ve/be, be/ev}
   \draw[->] (\a) -- (\b);
-\draw[->] (ev) -- node[glab, right=1pt] {keep / revert} (lv);
-\draw[->] (lv) -- node[glab, right=1pt] {budget or plateau} (st);
+\draw[->] (ev) -- node[glab, right=3pt, inner sep=0pt] {keep / revert} (lv);
+\draw[->] (lv) -- node[glab, right=3pt, inner sep=0pt] {budget or plateau} (st);
 \draw[->] (lv.east) to[out=15, in=-15, looseness=2.0]
   node[glab, right=-1pt] {next experiment} (hy.east);
 \draw[->, dashed] (co.west) to[out=195, in=165, looseness=2.0]

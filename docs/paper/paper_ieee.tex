@@ -472,9 +472,8 @@ does not have. The interference is lopsided: the CPU keeps 84\% of its
 rate while the GPU keeps 42\%, as decode traffic crowds the shared bus.
 And contention favors the optimized kernel: 1.58x over the original
 alone becomes 2.20x concurrent, at identical decode cost (9.6 t/s under
-either kernel). One residual: the optimized-kernel window still drifts
-upward (first-half mean 852, second-half 915 steps/s) as governance
-slows decode, so 883.4 is conservative relative to the late-window rate.
+either kernel). Because the window is still rising, 883.4 is a
+conservative estimate of the late-window rate.
 
 \begin{figure}[!t]
 \centering
@@ -546,16 +545,19 @@ The envelope is one board (Pi 5, V3D 7.1.10.2, Mesa v3dv 25.0.7) and one
 grid family, with speedups that shrink as the grid grows; headroom
 likely remains. The July and August campaigns straddle an OS update
 (kernel 6.12 to 6.18); flood baselines agree across it (1,346.8 before,
-1,348.6 ± 4.1 after). The gates are necessary rather than sufficient:
-verification covers one storm scenario at one grid size, and the keep
-decision rests on a single timing sample against a 1\% threshold,
-although Section VI's five-run repeatability (baseline spread about
-0.3\%, kept kernel identical at timer resolution) bounds that noise well
-inside the threshold. That bound is an upper bound, not a measured
-spread: the harness prints elapsed time to milliseconds, so at the kept
-kernel's 0.188 s one digit is 0.53\%, and ``identical'' means the last
-printed digit did not move. The 3,852 steps/s CPU figure assumed a
-cache-resident 256x256 working set and may not survive larger grids.
+1,348.6 ± 4.1 after).
+
+The gates are necessary rather than sufficient: verification covers one
+storm scenario at one grid size, and the keep decision rests on a single
+timing sample against a 1\% threshold, although Section VI's five-run
+repeatability (baseline spread about 0.3\%, kept kernel identical at
+timer resolution) bounds that noise well inside the threshold. That
+bound is an upper bound, not a measured spread: the harness prints
+elapsed time to milliseconds, so at the kept kernel's 0.188 s one digit
+is 0.53\%, and ``identical'' means the last printed digit did not move.
+The 3,852 steps/s CPU figure assumed a cache-resident 256x256 working
+set and may not survive larger grids.
+
 Three asymmetries qualify Section VII. The GPU kernel was optimized and
 \texttt{cpuflood.cpp} was not: it is the original two-pass scheme, so
 the counterfactual compares a tuned GPU against an untuned CPU, and
@@ -569,8 +571,9 @@ least reproducible quantity in the paper. That matters for how far
 Section VII-A reaches. Under the earlier campaign the simulation axis is
 within noise of the partitioned CPU scheme (711.9 ± 76.1, n=5, against
 678.8 ± 10.6, n=25), so the two-axis claim rests on the later campaign;
-the decode axis holds under both (9.6 and 10.3 against 8.4). The
-scripted reproduction's kernel came from the hand sweep, and the
+the decode axis holds under both (9.6 and 10.3 against 8.4).
+
+The scripted reproduction's kernel came from the hand sweep, and the
 agent-driven session worked a knob the server itself exposed. The
 server's \texttt{fork\_at} utility rewinds to an earlier state, so a
 caller could in principle resample a marginal kernel until a draw
