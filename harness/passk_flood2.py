@@ -28,7 +28,8 @@ K = int(sys.argv[1]) if len(sys.argv) > 1 else 5
 URL = sys.argv[2] if len(sys.argv) > 2 else "http://pi.local:8000/mcp"
 PI = os.environ.get("PI_SSH") or f"root@{urlparse(URL).hostname}"
 HERE = Path(__file__).resolve().parent
-OUT = HERE / "docs" / "paper" / "artifacts" / f"passk_{date.today().isoformat()}"
+ROOT = HERE.parent
+OUT = ROOT / "docs" / "paper" / "artifacts" / f"passk_{date.today().isoformat()}"
 
 
 def soc_temp() -> float:
@@ -90,7 +91,7 @@ def main():
     for i in range(1, K + 1):
         t = cool_start()
         p = subprocess.run(
-            [str(HERE / ".venv" / "bin" / "python"), str(HERE / "drive_flood2_mcp.py"), URL],
+            [str(ROOT / ".venv" / "bin" / "python"), str(HERE / "drive_flood2_mcp.py"), URL],
             capture_output=True,
             text=True,
             timeout=600,

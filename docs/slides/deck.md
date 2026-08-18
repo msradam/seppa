@@ -107,7 +107,7 @@ The V3D GPU is a strange optimization target.
 
 Collected from the running board by `pi/collect_specs.sh`, archived with the raw `vulkaninfo` dump. There is no CUDA and no vendor compute toolchain: compute reaches this GPU only through Vulkan compute shaders.
 
-**Best kernel measured: about 13 GFLOP/s fp32, on a dense matrix multiply** (from the running notes, not a scored campaign). A second, slower engine that happens to be free. The CPU comparison on the stencil itself comes later, and it does not flatter the GPU.
+**Best kernel measured: about 13 GFLOP/s fp32, on a dense matrix multiply** (recorded in the running notes only). A second, slower engine that happens to be free. The CPU comparison on the stencil itself comes later, and it does not flatter the GPU.
 
 ---
 
@@ -372,7 +372,7 @@ The GPU split wins on both axes here, **30%** more simulation and **14%** more d
 
 - **One board, one grid family.** The speedup shrinks as the grid grows, from 1.58x down to 1.18x at 1024x1024, so there is headroom I never reached.
 - **The gates are the soft part.** One storm scenario, one grid size, a keep decision resting on a single timing sample. They catch a kernel that is wrong; one that quietly cuts corners inside the tolerance would walk straight through.
-- **Verification, not discovery.** The winning kernel came from my hand sweep, and the agent-driven session worked a knob the server had already handed it.
+- **Verification is the claim; discovery stays open.** The winning kernel came from my hand sweep, and the agent-driven session worked a knob the server had already handed it.
 - **Decode stays on the CPU.** Full GPU offload runs into an upstream llama.cpp defect.
 - **The board is dead.** Every number in the scored campaigns comes from archived logs, transcripts, and two notebooks that still re-run; the sweep's hand-timed column and the larger-grid ratios live in dated running notes.
 

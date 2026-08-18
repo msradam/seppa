@@ -81,8 +81,8 @@ narration on one board; its stencil is the optimization target, and its
 CPU-plus-GPU split is what we measure (Section IX describes the
 application).
 
-The claim throughout is machine verification, not autonomous discovery;
-this paper reports:
+The claim throughout is machine verification, with autonomous discovery
+left open; this paper reports:
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
@@ -122,13 +122,13 @@ Tables~\ref{tab:platform} and \ref{tab:gpu} list the
 platform and the GPU's compute limits, collected from the running board
 by \texttt{pi/collect\_specs.sh} (archived with the raw vulkaninfo
 dump). The limits are tight, and the scale is modest: the best kernel we
-measured sustains about 13 GFLOP/s in fp32, and that was a dense matrix
-multiply, not the stencil this paper optimizes. The GPU is a second,
-slower engine that happens to be free. In Vulkan's terms, a dispatch is
-one launch of a kernel over the whole grid; one invocation is one
-execution of the kernel by one GPU thread; invocations are grouped into
-workgroups, and the hardware runs them in lockstep bundles of 16 called
-subgroups.
+measured sustains about 13 GFLOP/s in fp32, and that figure belongs to a
+dense matrix multiply; Section VII-A compares the two processors on the
+stencil this paper optimizes. The GPU is a second, slower engine that
+happens to be free. In Vulkan's terms, a dispatch is one launch of a
+kernel over the whole grid; one invocation is one execution of the
+kernel by one GPU thread; invocations are grouped into workgroups, and
+the hardware runs them in lockstep bundles of 16 called subgroups.
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{table}[!t]\caption{Platform, collected from the running board by \mbox{collect\_specs.sh}}\label{tab:platform}\centering\footnotesize\setlength{\tabcolsep}{2.5pt}\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}
@@ -184,8 +184,7 @@ stream-timing loopholes, arranging the GPU's work queues so the timed
 section ended before the real work did, inflating the reported speedup
 to 18x; containment took a reward checker, a database of known hacks,
 and forced stream synchronization. Wherever the reward is a measured
-number, the model eventually optimizes the measurement rather than the
-kernel.
+number, the model eventually learns to optimize the measurement itself.
 
 A weaker assumption sits underneath all of this: that a passing check
 means a correct kernel. Sarkar {[}19{]} tests the oracles these
@@ -206,7 +205,7 @@ evaluator; AlphaEvolve found a 48-multiplication procedure for 4x4
 complex matrix multiplication, the first improvement in that setting in
 56 years. That structural commitment, the model proposing and something
 else scoring, is the one Seppa makes, at a far smaller scale and with
-the scoring expressed as reachability in a graph rather than a fitness
+the scoring expressed as reachability in a graph instead of a fitness
 function (Section IV). In hardware design the same split appears with a
 human in it: Chip-Chat {[}10{]} carried conversational design to tapeout
 with an engineer and a testbench closing the loop, and VeriGen {[}23{]}
@@ -349,16 +348,16 @@ each thread two cells beat every memory-system optimization we tried;
 four cells gave the gain back to register pressure. The sweep's own
 numbers size that cost: strip-2 removes 65,536 invocations per step and
 saves about 140 microseconds, near 2 ns per invocation, about two clock
-cycles, the scale of starting a thread rather than of arithmetic or
-memory traffic. Two hardware details shaped the final kernel. Strips run
-vertically: a subgroup's 16 lanes are horizontal neighbors, so when each
-lane walks down its own short column, the subgroup's loads at every row
-stay on adjacent addresses. The kernel also consumes each flux value as
-it is produced; holding all four alive fails register allocation. The
-shipped kernel is 1.58x at 256x256: 1.574 to 1.585 across the five
-scored reproductions, 1.571 in the July transcript quoted in Section VI,
-and 1.59x hand-timed in the sweep. It is 1.41x at 512x512 and 1.18x at
-1024x1024, and it holds all gates over 4,000 steps.
+cycles, the scale of starting a thread itself. Two hardware details
+shaped the final kernel. Strips run vertically: a subgroup's 16 lanes
+are horizontal neighbors, so when each lane walks down its own short
+column, the subgroup's loads at every row stay on adjacent addresses.
+The kernel also consumes each flux value as it is produced; holding all
+four alive fails register allocation. The shipped kernel is 1.58x at
+256x256: 1.574 to 1.585 across the five scored reproductions, 1.571 in
+the July transcript quoted in Section VI, and 1.59x hand-timed in the
+sweep. It is 1.41x at 512x512 and 1.18x at 1024x1024, and it holds all
+gates over 4,000 steps.
 
 \subsection{Action-Space Limits}\label{action-space-limits}
 
@@ -375,9 +374,8 @@ can mean the search space is too small even when the hardware has
 headroom left. Two other targets ran under the same gates: a GEMM (dense
 matrix multiply) went from 7.02 to 13.42 GFLOP/s over two rounds, and
 de-unrolling llama.cpp's matrix-vector kernel gained 28\% in end-to-end
-text-generation speed. Both are recorded in the running notes, not in
-archived logs, and neither is claimed at Section VI's evidentiary
-standard.
+text-generation speed. Both are recorded only in the running notes, and
+neither is claimed at Section VI's evidentiary standard.
 
 \section{Machine-Checked Reproduction over
 MCP}\label{machine-checked-reproduction-over-mcp}
@@ -435,11 +433,10 @@ baselines 1,348.6 ± 4.1 steps/s, the kept kernel 2,127.7 in every run
 One session was fully agent-driven (2026-08-02, budget three). The
 server's \texttt{characterize} payload names fixed per-invocation cost
 as the bound and exposes the strip parameter, so the session
-demonstrates the loop's enforcement, not autonomous discovery: the model
-worked the exposed knob (strip 4 kept at 1,470.6, +8.8\%), hit the
-register cliff at strip 8 (921.7, reverted), probed it at strip 6
-(1,298.7, reverted), and never reached fusion; all of its reported
-numbers came from the machine.
+demonstrates the loop's enforcement alone: the model worked the exposed
+knob (strip 4 kept at 1,470.6, +8.8\%), hit the register cliff at strip
+8 (921.7, reverted), probed it at strip 6 (1,298.7, reverted), and never
+reached fusion; all of its reported numbers came from the machine.
 
 \section{Concurrent CPU and GPU
 Execution}\label{concurrent-cpu-and-gpu-execution}
@@ -448,8 +445,8 @@ In deployment the GPU loops the simulation while the CPU routes and
 decodes (Granite 4.0 1B on llama.cpp with \texttt{-ngl\ 0}, no layers
 offloaded to the GPU; 4 threads). Decode, the token-by-token generation
 phase, is memory-bound: its speed is set by how fast model weights
-stream from memory, not by how fast the cores compute, and that matters
-because the two processors share one LPDDR bus.
+stream from memory, and that matters because the two processors share
+one LPDDR bus.
 
 The campaign turned up one configuration surprise first. With any Vulkan
 device visible, llama.cpp places CPU-resident model weights in memory
@@ -470,8 +467,8 @@ measurement begins. The kernel-alone phases run from the cooldown
 directly. The Pi's firmware defends the chip against heat by lowering
 clock speeds, gently once past a soft temperature limit and sharply at a
 hard throttle, and the logs record which was active. The soak runs a
-fixed count rather than waiting for those flags to clear, and the
-conditions did not end up in the same thermal regime: the concurrent
+fixed repetition count instead of waiting for those flags to clear, and
+the conditions did not end up in the same thermal regime: the concurrent
 phases ran with the soft limit active 70 to 79\% of the time and peaked
 at 76.3 C, while decode alone reached 73.0 C and was limited for 3\% of
 its phase. Each window is long enough for 12 to 28 flood completions
@@ -591,8 +588,8 @@ likely remains. The July and August campaigns straddle an OS update
 1,348.6 ± 4.1 after). The board itself failed after the August campaign,
 so no quantity in this paper can be re-measured.
 
-The gates are necessary rather than sufficient: verification covers one
-storm scenario at one grid size, and the keep decision rests on a single
+The gates are only necessary conditions: verification covers one storm
+scenario at one grid size, and the keep decision rests on a single
 timing sample against a 1\% threshold, although Section VI's five-run
 repeatability (baseline spread about 0.3\%, kept kernel identical at
 timer resolution) bounds that noise well inside the threshold. That
@@ -607,15 +604,15 @@ Three asymmetries qualify Section VII. The GPU kernel was optimized and
 the counterfactual compares a tuned GPU against an untuned CPU, and
 fusing its flux array would cut DRAM traffic on the axis that contends
 with decode. The conditions were not measured at a matched thermal
-operating point, so part of the 16\% decode cost is clock governance
-rather than bus contention. And the steady-state campaign is a single
-run: an earlier campaign at the same configuration, kept in
-\texttt{conc\_bench2/}, reads 711.9 steps/s concurrent against this
-run's 883.4, which is the least reproducible quantity in the paper.
-Under the earlier campaign the simulation axis is within noise of the
-partitioned CPU scheme (711.9 ± 76.1, n=5, against 678.8 ± 10.6, n=25),
-so the two-axis claim rests on the later campaign; the decode axis holds
-under both (9.6 and 10.3 against 8.4).
+operating point, so clock governance accounts for part of the 16\%
+decode cost. And the steady-state campaign is a single run: an earlier
+campaign at the same configuration, kept in \texttt{conc\_bench2/},
+reads 711.9 steps/s concurrent against this run's 883.4, which is the
+least reproducible quantity in the paper. Under the earlier campaign the
+simulation axis is within noise of the partitioned CPU scheme (711.9 ±
+76.1, n=5, against 678.8 ± 10.6, n=25), so the two-axis claim rests on
+the later campaign; the decode axis holds under both (9.6 and 10.3
+against 8.4).
 
 The scripted reproduction's kernel came from the hand sweep, and the
 agent-driven session worked a knob the server itself exposed. The
@@ -638,9 +635,9 @@ explains the result in plain language, entirely offline; the model never
 makes a safety decision, only narrating what the deterministic code
 computed. The application lives at github.com/msradam/bonbibi and was
 built as an Arm AI Optimization Challenge entry; the harness at
-github.com/msradam/seppa. Everything this paper claims was built on top
-of that application rather than as part of it. Measurements used its
-Granite 4.0 1B configuration; the model file (a 1.63 B-parameter GGUF,
+github.com/msradam/seppa. Everything this paper claims was built for
+this course, on top of that application. Measurements used its Granite
+4.0 1B configuration; the model file (a 1.63 B-parameter GGUF,
 llama.cpp's weight format) appears in llama-bench logs under a
 granite-3B size label (the application has since moved to a larger
 model); build commands are in \texttt{pi/flood/README.md}, and cited
@@ -657,8 +654,8 @@ of five times, and in the steady-state campaign it holds in deployment:
 883 steps/s of simulation beside decode at 84\% of its solo speed. The
 evidence in this paper is the gate ledger. The suggestion is open-ended:
 commodity edge boards carry more usable silicon than their deployments
-exercise, and a loop that cannot misreport its own verdicts is a
-reasonable way to get at it.
+exercise, and a loop that cannot misreport its own verdicts is a sound
+way to put that silicon to work.
 
 \begin{thebibliography}{23}
 \scriptsize

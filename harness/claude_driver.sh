@@ -34,7 +34,7 @@ printf '{"mcpServers":{"seppa":{"type":"http","url":"%s"}}}\n' "$URL" > "$OUT/mc
     echo "client=$(claude --version 2>/dev/null)"
 } > "$OUT/run_meta.txt"
 
-PROMPT="$(cat claude_driver_prompt.md)
+PROMPT="$(cat "$(dirname "$0")/claude_driver_prompt.md")
 
 Experiment budget for this session: $MAX_EXPERIMENTS."
 

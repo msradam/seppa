@@ -71,15 +71,15 @@ On the Pi (needs `glslangValidator`, a Vulkan-enabled Mesa, and the
 harness binaries; build commands in `pi/flood/README.md`):
 
 ```
-.venv/bin/python theodosia_server.py --http --flood2
+.venv/bin/python harness/theodosia_server.py --http --flood2
 ```
 
 From any machine on the network:
 
 ```
-.venv/bin/python drive_flood2_mcp.py http://<pi>:8000/mcp  # scripted reproduction
-python3 passk_flood2.py 5 http://<pi>:8000/mcp             # scored repeatability campaign
-./claude_driver.sh http://<pi>:8000/mcp                    # an LLM drives the loop
+.venv/bin/python harness/drive_flood2_mcp.py http://<pi>:8000/mcp  # scripted reproduction
+python3 harness/passk_flood2.py 5 http://<pi>:8000/mcp             # scored repeatability campaign
+./harness/claude_driver.sh http://<pi>:8000/mcp                    # an LLM drives the loop
 ```
 
 `claude_driver.sh` uses the signed-in Claude Code session (model,
@@ -114,31 +114,34 @@ characterize -> baseline -> hypothesize -> implement -> compile -> verify
 
 ## Layout
 
-- `v3d_flood2_opt.py` — the paper's FSM target: flood stencil with the
-  host contract (fusion, strip) in the action space
-- `theodosia_server.py` — mounts an FSM target as an MCP server
-- `drive_flood2_mcp.py`, `passk_flood2.py`, `replay_flood2.py` —
-  scripted reproduction, scored repeatability, in-process replay
-- `claude_driver.sh` + `claude_driver_prompt.md` — an LLM as the proposer
-- `v3d_explore.py`, `v3d_llama_mmv.py`, `v3d_flood_opt.py`, `v3d_fsm.py`
-  — the other FSM targets and the original single-kernel loop
-- `v3d_verify.py` — the GEMM-path oracle (NMSE parse + completeness checks)
-- `pi/` — on-device evaluators, kernels, benchmark scripts
-  (`pi/flood/` is the flood kit)
-- `notebooks/` — executed notebooks deriving the paper's numbers
-- `docs/paper/` — paper source, build pipeline, artifacts, archived
-  references
-- `docs/notes/NOTES.md` — running log, one entry per confirmed win and
-  dead end
-
-## Attribution
-
-The optimization-loop concept (edit a kernel, benchmark against a
-reference, keep or revert, log the variant) is from AutoKernel by
-RightNow AI, MIT licensed. This repository reimplements that loop as a
-state machine with an enforced correctness gate and a Vulkan/V3D
-backend.
-
-## License
-
-MIT. See `LICENSE`.
+```
+harness/     The optimization loop and everything that talks to it.
+             v3d_flood2_opt.py is the paper's FSM target (flood stencil,
+             host contract in the action space); theodosia_server.py
+             mounts a target as an MCP server; drive_flood2_mcp.py,
+             passk_flood2.py, and replay_flood2.py are the scripted
+             reproduction, the scored repeatability campaign, and the
+             in-process replay; claude_driver.sh puts an LLM in the
+             proposer seat. The other v3d_*.py files are earlier FSM
+             targets (GEMM, llama.cpp matrix-vector, shader-only flood)
+             kept because the paper's Section V-C tells their story.
+pi/          Everything that ran on the board: Vulkan/GLSL kernels, the
+             vkflood2 evaluator, the CPU counterfactual, benchmark and
+             spec-collection scripts. pi/flood/README.md has build
+             commands and the kernel inventory.
+notebooks/   Two executed notebooks that re-derive the paper's Section VI
+             and VII results from the archived logs, plus the shared
+             parsers (analysis_utils.py). They run offline.
+docs/
+  paper/     Paper source (paper.md), the build pipeline (build.py),
+             the rendered paper.pdf, archived raw logs and transcripts
+             (artifacts/, see its README), and every cited reference
+             as a local PDF (references/).
+  slides/    The 27-slide Marp deck, its IEEE theme, the narration
+             script, and the 15-minute silent video (defense.mp4).
+  notes/     Dated running notes and superseded planning documents,
+             kept because the paper cites the notes as provenance for
+             its unarchived numbers.
+  autokernel_fidelity.md   Audit of the AutoKernel port, cited in
+             Section IV.
+```
