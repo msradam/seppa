@@ -174,6 +174,7 @@ def table_open(_m):
     lab, cap = next(captions)
     return (
         "\\begin{table}[!t]\\caption{%s}\\label{%s}\\centering\\footnotesize"
+        "\\setlength{\\tabcolsep}{2.5pt}"
         "\\renewcommand{\\arraystretch}{1.15}\\begin{tabular}{" % (cap, lab)
     )
 
@@ -212,7 +213,7 @@ tex = r"""\documentclass[conference]{IEEEtran}
 \begin{document}
 \title{%s}
 \author{\IEEEauthorblockN{Adam Munawar Rahman}
-\IEEEauthorblockA{New York University \\ New York, NY, USA \\ msr541@nyu.edu}}
+\IEEEauthorblockA{New York University \\ New York, NY, USA \\ msr541@nyu.edu \\ ECE-GY 9953 Advanced Project. Adviser: Prof.\ Brandon Reagen}}
 \maketitle
 \begin{abstract}
 %s

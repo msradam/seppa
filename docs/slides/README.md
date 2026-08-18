@@ -65,14 +65,16 @@ and reads as blurry even though the encode is lossless-looking. `frames/` is gen
 durations live in `frames/concat.txt`, and `-t 900` trims the trailing entry
 that the concat demuxer would otherwise hold past the end.
 
-Rebuilding `fsm.png` needs `pdflatex` and Pillow:
+Rebuilding `fsm.png` needs `pdflatex`, `pdftoppm`, and Pillow:
 
 ```sh
 pdflatex -interaction=nonstopmode fsm_standalone.tex
-sips -s format png --resampleWidth 6400 fsm_standalone.pdf --out /tmp/fsm_raw.png
+pdftoppm -r 600 -png fsm_standalone.pdf fsm_raw
 ```
 
-then crop the result on its alpha channel and composite it onto white.
+then crop `fsm_raw-1.png` to its content box with a small margin. Rasterize
+with `pdftoppm` at high dpi, not `sips --resampleWidth`: sips rasterizes the
+PDF at its native size first and upscaling from there ships a blurry figure.
 
 ## Provenance
 

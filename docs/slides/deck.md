@@ -41,7 +41,7 @@ M.S. Computer Engineering, NYU Tandon School of Engineering
 </div>
 </div>
 
-One line to hold onto: every number in this talk came out of the gate ledger, and the model never got to write in it.
+One line to hold onto: every verdict in this talk came out of the gate ledger, and the model never got to write in it.
 
 ---
 
@@ -111,9 +111,9 @@ Collected from the running board by `pi/collect_specs.sh`, archived with the raw
 
 ---
 
-# Ask for too many registers and the driver does not fail. It quietly gets slower.
+# Ask for too many registers and the driver does not fail; it quietly gets slower
 
-Asked for more registers than exist, `v3dv` recompiles with scheduling disabled, then with unrolling disabled, then with fewer threads, and hands back whatever survives. Sometimes several times slower, with no diagnostic.
+Asked for more registers than exist, `v3dv` recompiles with the register-hungry optimizations disabled all at once, then with half the threads, then on a fallback scheduler, and hands back whatever survives. Sometimes several times slower.
 
 Two consequences for anyone optimizing this GPU:
 
@@ -144,7 +144,7 @@ RL-generated CUDA kernels exploited stream-timing loopholes instead of getting f
 <div>
 
 <span class="stat stat-red">32.8%</span>
-of the benchmark suite affected
+of its generated kernels affected
 
 </div>
 <div>
@@ -157,7 +157,7 @@ the inflated speedup those kernels reported
 
 Reported by CUDA-L1 (arXiv:2507.14111). Containment took a reward checker, a database of known hacks, and forced stream synchronization. KernelBench, the standard measure of LLM kernel generation, conditions speedup on correctness by definition, and the systems evaluated on it still cheat.
 
-Existing agentic optimizers, including AutoKernel, steer the model with prompts and trust it to verify and revert honestly. **In every published case the remedy is the same: verification the model cannot touch.**
+Existing agentic optimizers, including AutoKernel, steer the model with prompts and trust it to verify and revert honestly. **In the published cases the remedy is the same: verification the model cannot touch.**
 
 ---
 
@@ -183,14 +183,14 @@ Make verification a state transition instead of an instruction.
 ("compile_", "verify", expr("compile_ok")),
 ("compile_", "log_variant", expr("not compile_ok")),
 ("verify", "benchmark", expr("verify_ok")),
-("verify", "log_variant", expr("not verify_ok")),  # THE GUARD
+("verify", "log_variant", expr("not verify_ok")),  # guard
 ("benchmark", "evaluate"),
 ("evaluate", "log_variant"),
 ```
 
 The agent advances the loop through one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves. Skipping verification is not a request the protocol can express. The server does also expose a `fork_at` rewind that no session used, and a caller could abuse it to resample a marginal kernel; the 1% threshold would not catch that.
 
-For the flood target, `verify` runs 400 steps at 256x256 and demands three things: NMSE below 1e-3 against a double-precision CPU reference, total water equal to injected rainfall, and maximum depth pooling inside the terrain basin.
+For the flood target, `verify` runs 400 steps at 256x256 and demands three things: NMSE below 1e-3 against a double-precision CPU reference, total water within 2% of injected rainfall, and maximum depth pooling inside the terrain basin.
 
 ---
 
@@ -226,7 +226,9 @@ Five hypotheses, priced by the machine. Most were wrong.
 | 4 cells per invocation | More strip is better | 2.35 GF/s: <span class="fail">falsified</span>, register pressure |
 | Fused + 2 cells per invocation | The wins stack | <span class="pass">3.08 GF/s, +59%</span> |
 
-Every variant passed all three gates. I would have started with the two memory-system hypotheses if I had been guessing, and those are precisely the two that came back falsified.
+Every variant passed all three gates. I would have started with the two memory-system hypotheses if I had been guessing, and the sweep priced them at no change and +5%.
+
+<span class="caption">Percentages are relative to the vkflood2 baseline, about 1,345 steps/s (1.94 GF/s); the packed variant's 1.93 is within noise of it.</span>
 
 ---
 
@@ -241,7 +243,7 @@ Two hardware details shaped the final kernel:
 - Strips run **vertically**, which keeps a subgroup's 16 lanes on adjacent addresses.
 - The kernel consumes each flux value **as it is produced**. Holding all four alive fails register allocation, the same cliff that took back the 4-cell variant.
 
-Across every machine-checked run the shipped kernel is **1.58x** at 256x256. It is 1.41x at 512x512, 1.18x at 1024x1024, and holds all gates over 4,000 steps.
+The shipped kernel is **1.58x** at 256x256 (1.574 to 1.585 across the five scored runs; 1.571 in the July transcript). It is 1.41x at 512x512, 1.18x at 1024x1024, and holds all gates over 4,000 steps.
 
 ---
 
@@ -293,13 +295,13 @@ The driver resubmits the same kernel with rainfall injection doubled in one of t
              Valid actions now: ['log_variant']."}
 ```
 
-The variant is ledgered as a revert with a null `steps_per_sec`. **A kernel that fails its gate cannot reach the ledger, the verdict, or the kept kernel.**
+The variant is ledgered as a revert with a null `steps_per_sec`. **A gate-failing kernel can be seen, but it cannot be kept, and its verdict is never the model's to write.**
 
 ---
 
 # Five of five scored reproductions passed, from cool starts
 
-`passk_flood2.py` runs the two-cycle reproduction k times, scoring a pass only when all three conditions hold. The criterion was fixed in advance:
+`passk_flood2.py` runs the two-cycle reproduction k times, scoring a pass only when the three conditions it defines all hold:
 
 | Pass condition | Result over 5 runs |
 |---|---|
@@ -326,7 +328,7 @@ What the CPU pays, and what the GPU buys.
 <div class="cols">
 <div>
 
-| Condition | Flood | Decode |
+| Condition | Flood (steps/s) | Decode (t/s) |
 |---|---|---|
 | Optimized alone | 2,128.0 ± 1.7 | |
 | Original alone | 1,351.4 ± 0.5 | |
@@ -337,14 +339,14 @@ What the CPU pays, and what the GPU buys.
 </div>
 <div>
 
-![w:440](gpu_retention.png)
+![w:520](gpu_retention.png)
 
 </div>
 </div>
 
 The interference is lopsided: the CPU keeps **84%** of its decode rate while the GPU keeps **42%**, because decode streams model weights from DRAM every token and crowds the shared bus. Contention favors the optimized kernel, so **1.58x alone becomes 2.20x concurrent**, at identical decode cost.
 
-<span class="caption">Measured after a cooldown and a fixed decode soak. The conditions did not land in the same thermal regime: the concurrent windows ran soft-limited 70 to 79% of the time at 76.3 C, decode alone reached 73.0 C and 3%. An earlier campaign read 711.9 here, and its thermal logs rule out the transient explanation I first reached for. That 24% gap is the least reproducible number in this work.</span>
+<span class="caption">Cooldown and fixed decode soak before each measurement; thermal regimes differ (concurrent phases soft-limited 70 to 79% at 76.3 C; decode alone 73.0 C, 3%). An earlier campaign read 711.9, 19% below; its logs rule out my first explanation.</span>
 
 ---
 
@@ -355,13 +357,14 @@ Four idle A76 cores reach 3,852 steps/s, well above the V3D's 2,128. But in depl
 | Condition | Flood (steps/s) | Decode (t/s) |
 |---|---|---|
 | CPU flood alone, 1 / 2 / 4 threads | 992.5 / 1,980.5 / 3,852.4 | |
+| Decode alone, 3 threads (pinned) | | 11.9 |
 | Partitioned: flood 1t + decode 3t | 678.8 ± 10.6 | 8.4 ± 0.1 |
 | Oversubscribed: flood 4t + decode 4t | 857.1 ± 181.0 | 3.0 ± 0.3 |
 | **GPU concurrent, optimized** | **883.4 ± 47.1** | **9.6 ± 0.2** |
 
-The CPU-only flood is the same update in OpenMP and passes the same three gates. Oversubscribed, decode collapses 75%, because llama.cpp's workers synchronize every token. Partitioned is the best CPU-only arrangement, and decode there pays a 29% tax against the GPU split's 16%.
+The CPU-only flood is the same update in OpenMP, untuned where the GPU kernel is not, and passes the same three gates. Oversubscribed, decode collapses 75% (llama.cpp's workers synchronize every token). Partitioned, the best CPU-only arrangement, pays a 29% decode tax against the GPU split's 16%.
 
-The GPU split wins on both axes here, **30%** more simulation and **14%** more decode, though the simulation margin depends on which campaign you take. The slower processor comes out ahead because the CPU has nothing left to sell.
+The GPU split wins on both axes here, **30%** more simulation and **14%** more decode, though the simulation margin depends on which campaign you take: the CPU has nothing left to sell.
 
 ---
 
@@ -375,7 +378,7 @@ The winning kernel came from my hand sweep, and the agent-driven session worked 
 
 Decode stays on the CPU. Full GPU offload runs into an upstream llama.cpp defect.
 
-The board is dead, so everything above comes from archived logs, transcripts, and two notebooks that still re-run.
+The board is dead. Every number in the scored campaigns comes from archived logs, transcripts, and two notebooks that still re-run; the sweep's hand-timed column and the larger-grid ratios live in the repository's dated running notes.
 
 ---
 
@@ -383,8 +386,8 @@ The board is dead, so everything above comes from archived logs, transcripts, an
 
 A language model proposed kernels for this GPU. A state machine decided what was true about them, and the model had no standing to argue.
 
-That bought **883 simulation steps per second** beside a language model still decoding at **84%** of its solo rate, which beats every CPU-only arrangement I measured on both axes.
+That bought **883 simulation steps per second** beside a language model still decoding at **84%** of its solo rate, which beats every CPU-only arrangement I measured on both axes in the steady-state campaign.
 
 Faking a speedup needs a benchmark that will run on unverified code. In this graph there is no such transition, so a documented failure mode turned into an unreachable state.
 
-Every number here came out of the gate ledger, and all of it reproduces from the raw logs at `github.com/msradam/seppa`.
+Every verdict here came out of the gate ledger, and every number in the scored campaigns reproduces from the raw logs at `github.com/msradam/seppa`.

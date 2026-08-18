@@ -304,7 +304,7 @@ def build_flood2_app(max_experiments: int = 12):
             ("compile_", "verify", expr("compile_ok")),
             ("compile_", "log_variant", expr("not compile_ok")),
             ("verify", "benchmark", expr("verify_ok")),
-            ("verify", "log_variant", expr("not verify_ok")),  # THE GUARD
+            ("verify", "log_variant", expr("not verify_ok")),  # guard
             ("benchmark", "evaluate"),
             ("evaluate", "log_variant"),
             ("log_variant", "stop", expr("should_stop")),

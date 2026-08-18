@@ -12,6 +12,7 @@ The measurement hardware is no longer live, so these files are the record.
 | `genload2_2026-08-10/` | GPU retention against generic CPU loads | Section 7 |
 | `specs_2026-08-10/` | `collect_specs.sh` output, `vulkaninfo` dump, `vcgencmd` | Tables I and II |
 | `mcp_flood2_recreation_2026-07-11.jsonl` | The machine-checked reproduction over MCP | Section 6 |
+| `mcp_flood2_recreation_run1_2026-07-11.jsonl` | Aborted first attempt at the same reproduction; the driver crashed on an assertion before the refusal cycle, and its fused benchmark (2105.3 steps/s, 1.563x) is superseded by the completed transcript above | not cited |
 | `claude_sessions/` | Complete agent session transcripts | Section 4 |
 | `genload_bench_2026-08-09/` | Earlier generic-load run; source of the gate-log excerpt | Section 4 |
 | `conc_bench/`, `conc_bench2/`, `cpu_flood_bench/`, `cpu_flood_bench2/` | Superseded short-window campaigns, kept because Section 7 cites them | Section 7 |
