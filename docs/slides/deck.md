@@ -41,7 +41,7 @@ M.S. Computer Engineering, NYU Tandon School of Engineering
 </div>
 </div>
 
-The claim I will defend: every verdict in this talk came from the gate ledger, which the model cannot write to.
+The claim I will defend: every verdict here came from the gate ledger, which the model cannot write to.
 
 ---
 
@@ -113,7 +113,7 @@ Collected from the running board by `pi/collect_specs.sh`, archived with the raw
 
 # Ask for too many registers and the driver does not fail; it quietly gets slower
 
-Asked for more registers than exist, `v3dv` recompiles with the register-hungry optimizations disabled all at once, then with half the threads, then on a fallback scheduler, and hands back whatever survives. Sometimes several times slower.
+Asked for more registers than exist, `v3dv` recompiles with the register-hungry optimizations disabled one at a time, then with half the threads, then on a fallback scheduler, and hands back whatever survives. Sometimes several times slower.
 
 Two consequences for anyone optimizing this GPU:
 
@@ -190,7 +190,7 @@ Make verification a state transition instead of an instruction.
 
 The agent advances the loop through one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves. No sequence of legal calls reaches `benchmark` without a passing `verify`. The server does also expose a `fork_at` rewind that no session used, and a caller could abuse it to resample a marginal kernel; the 1% threshold would not catch that.
 
-For the flood target, `verify` runs 400 steps at 256x256 and applies three checks: accuracy against a double-precision CPU reference (NMSE below 1e-3), water totals within 2% of the rainfall, since the model conserves mass, and the deepest water inside the terrain basin, since water flows downhill.
+For the flood target, `verify` runs 400 steps at 256x256 and applies three checks: accuracy against a double-precision CPU reference (NMSE below 1e-3), water totals within 2% of the rainfall, since the simulation conserves mass, and the deepest water inside the terrain basin, since water flows downhill.
 
 ---
 
@@ -199,12 +199,12 @@ For the flood target, `verify` runs 400 steps at 256x256 and applies three check
 | Who | Did what |
 |---|---|
 | **Author** | the application, the harness, the three physics gates, the hand-driven sweep, session supervision |
-| **Language model**<br/>Claude Sonnet 5, over MCP | the content of `hypothesize` and `implement`: kernel source and host-side parameters, and nothing else |
+| **Language model**<br/>Claude Sonnet 5, over MCP | the answers to `hypothesize`, delivered as `implement`'s inputs: kernel source and host-side parameters, and nothing else |
 | **Machine** | compilation, verification, benchmarking, every verdict, the ledger |
 
 No proposed kernel was hand-edited. A proposal either passed the machine's gates or was reverted.
 
-<span class="caption">Model: Claude Sonnet 5, driven through the Claude Code client at high reasoning effort; complete transcripts under `docs/paper/artifacts/claude_sessions/`.</span>
+<span class="caption">Model: Claude Sonnet 5, driven through the Claude Code client at high reasoning effort; complete transcript under `docs/paper/artifacts/claude_sessions/`.</span>
 
 ---
 
@@ -257,7 +257,7 @@ The problem was the **action space**. That version of `implement` accepted shade
 - fusion deletes a host-loop pipeline stage,
 - strip-mining changes the dispatch shape.
 
-Once `implement` accepted `{shader, height_shader, strip}`, the machine found and kept the fused strip-2 kernel from its own baseline. The plateau had been a property of my harness's action space, and the hardware still had headroom.
+Once `implement` accepted `{shader, height_shader, strip}`, the machine verified and kept the fused strip-2 kernel from its own baseline. The plateau had been a property of my harness's action space, and the hardware still had headroom.
 
 ---
 
@@ -271,7 +271,7 @@ The machine re-derives the numbers itself.
 
 # The machine measured its own baseline, judged the kernel, and kept it
 
-The Pi runs the Theodosia server; a laptop on the same network runs `drive_flood2_mcp.py`, driving the state machine through the whole cycle over MCP. The FSM measures its own baseline at 1,346.8 steps/s with gates green, receives the fused strip-2 kernel as experiment 1, compiles it, gates it, benchmarks it, and issues its own verdict:
+The Pi runs the Theodosia server; a laptop on the same network runs `drive_flood2_mcp.py`, driving the state machine through the whole cycle over MCP. The FSM measures its own baseline at 1,346.8 steps/s with gates green, receives the fused strip-2 kernel as experiment 1, compiles it, gates it, benchmarks it, and issues its own verdict, numeric fields rounded here to one decimal:
 
 ```json
 {"exp": 1, "fused": true, "strip": 2,
@@ -285,7 +285,7 @@ Every field in that record was measured and written by the machine on the Pi. Th
 
 # Then the driver cheats, and the server refuses to benchmark
 
-The driver resubmits the same kernel with rainfall injection doubled in one of the two cell updates. It compiles cleanly and breaks mass conservation. The gate fails it. The driver requests `benchmark` anyway:
+The driver resubmits the same kernel with rainfall injection doubled in one of the two cell updates. It compiles cleanly and breaks mass conservation. The gate fails it. The driver requests `benchmark` anyway (two advisory fields elided):
 
 ```json
 {"error": "invalid_transition",
@@ -311,7 +311,7 @@ The variant is ledgered as a revert with a null `steps_per_sec`. The caller does
 
 The kept kernel measured identically at the timer's resolution in every run. Baseline spread is about 0.3%, well inside the harness's 1% keep threshold; both figures are bounded by the millisecond timer.
 
-<span class="caption">Run of 2026-08-09. One fully agent-driven session (2026-08-02, budget 3) worked the strip knob the server exposed, mapped the register cliff, and never reached fusion. That session demonstrates the enforcement; it does not demonstrate discovery.</span>
+<span class="caption">Run of 2026-08-09. One fully agent-driven session (2026-08-02, a three-experiment budget) worked the strip knob the server exposed, mapped the register cliff, and never reached fusion. That session demonstrates the enforcement; it does not demonstrate discovery.</span>
 
 ---
 
@@ -382,7 +382,7 @@ The GPU split wins on both axes here, **30%** more simulation and **14%** more d
 
 A language model proposed kernels for this GPU, and a state machine decided what was true about them.
 
-That bought **883 simulation steps per second** beside a language model still decoding at **84%** of its solo rate, which beats every CPU-only arrangement I measured on both axes in the steady-state campaign.
+That bought **883 simulation steps per second** beside a language model still decoding at **84%** of its solo rate, which beats the best CPU-only arrangement I measured on both axes in the steady-state campaign.
 
 Benchmarking unverified code, the documented failure mode, needs a transition this graph does not have. The one loophole left, resampling a verified kernel through `fork_at`, is disclosed, and no session used it.
 

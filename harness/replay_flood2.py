@@ -8,7 +8,7 @@ import v3d_flood2_opt
 
 app = v3d_flood2_opt.build_flood2_app()
 _HERE = os.path.dirname(os.path.abspath(__file__))
-fused_src = open(os.path.join(_HERE, "pi", "flood", "fused2s.comp")).read()
+fused_src = open(os.path.join(_HERE, "..", "pi", "flood", "fused2s.comp")).read()
 
 steps = [
     ("characterize", {}),

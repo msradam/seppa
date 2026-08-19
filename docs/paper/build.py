@@ -200,6 +200,8 @@ tex = r"""\documentclass[conference]{IEEEtran}
 \usepackage{booktabs}
 \usepackage{calc}
 \usepackage{url}
+\Urlmuskip=0mu\relax
+\hyphenation{off-line}
 \usepackage{textcomp}
 \usepackage{fancyvrb}
 \usepackage{graphicx}

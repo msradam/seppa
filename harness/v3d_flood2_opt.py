@@ -24,7 +24,7 @@ import subprocess
 from burr.core import State, action, expr
 from burr.core.application import ApplicationBuilder
 
-BEST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "best_flood.comp")
+BEST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "best_flood.comp")
 
 RESEARCH = "/root/v3d-research"
 FLUX_SRC = f"{RESEARCH}/fsm_flood.comp"

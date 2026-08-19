@@ -42,6 +42,7 @@ addresses (lane contiguity matters more than load count on this GPU).
 g++ -O3 -o vkflood2 vkflood2.cpp -lvulkan
 glslangValidator -V fused2s.comp -o fused2s.spv
 STRIP=2 FUSED=1 FLUX_SPV=fused2s.spv ./vkflood2 256 400
+```
 
 Environment variables read by `vkflood2` (all optional):
 
@@ -55,13 +56,14 @@ Environment variables read by `vkflood2` (all optional):
 | `RAIN` | rainfall rate |
 | `DUMP_FULL` | dump the full-resolution depth grid |
 
-The two-pass baseline in the table above needs both shaders, so it is
+The two-pass baseline in the table above needs bonbibi's original
+`flux.comp` and `height.comp` (from the bonbibi repository; this
+directory carries only the variants), so it is
 `FLUX_SPV=flux.spv HEIGHT_SPV=height.spv ./vkflood2 256 400`.
 
 The benchmark scripts under this directory assume the tree they were run
 from, `RES=/root/v3d-research`, and a GGUF at `$RES/models/`. Adjust
 `RES` at the top of each script to re-run them elsewhere.
-```
 
 Expect all three gate lines to say yes. `DEM=<file>` loads real terrain
 exactly as the original harness does; `sim` as the third argument skips
@@ -84,5 +86,5 @@ in `vkflood2.cpp`):
 `fused2s.comp` still compiles through the v3dv register-allocator fallback
 ladder (the CSE'd neighbourhood loads hold ~18 vec2 values live). Trading
 some reloads for registers, or a shared-memory tile, might buy more; the
-seppa flood FSM (`v3d_flood_opt.py`, physics-gated) is the harness for
-that search.
+seppa flood FSM (`harness/v3d_flood2_opt.py`, physics-gated) is the
+harness for that search.

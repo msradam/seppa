@@ -13,4 +13,4 @@ commands to regenerate the raw data live and an environment record.
 | `01_reproduction_and_repeatability.ipynb` | Section VI (ledger, gate refusal, pass^5, agent session) | `mcp_flood2_recreation_2026-07-11.jsonl`, `passk_2026-08-09/`, `claude_sessions/20260802T150755Z/` |
 | `02_concurrency_envelope.ipynb` | Section VII, Tables IV-V, `gpu_retention.png` | `conc_steady_2026-08-10/`, `cpu_steady_2026-08-10/`, `genload2_2026-08-10/`, `ab_vkvisible_2026-08-10/` |
 
-Run them with the project environment: `uv sync && jupyter lab notebooks/`.
+Run them with the project environment: `uv sync && uv run jupyter lab notebooks/`.

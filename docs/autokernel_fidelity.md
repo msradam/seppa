@@ -23,7 +23,7 @@ upstream `program.md`.
    the agent to run `bench.py` and honestly `git reset --hard` on
    failure; nothing enforces it. The FSM makes the verdict a
    deterministic action the agent cannot influence. This inversion is
-   the point of the port (`phase1_harness_fsm.md`).
+   the point of the port (`notes/phase1_harness_fsm.md`).
 2. **Stop rule added.** Upstream loops forever under human supervision
    (l.212). The FSM stops on 3 consecutive non-improvements on
    gate-passing variants, or the experiment budget.

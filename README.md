@@ -60,7 +60,7 @@ Explore the results without any hardware:
 
 ```
 uv venv && uv sync
-jupyter lab notebooks/
+uv run jupyter lab notebooks/
 ```
 
 - `notebooks/01_reproduction_and_repeatability.ipynb` replays the
@@ -126,9 +126,14 @@ harness/     The optimization loop and everything that talks to it.
              passk_flood2.py, and replay_flood2.py are the scripted
              reproduction, the scored repeatability campaign, and the
              in-process replay; claude_driver.sh puts an LLM in the
-             proposer seat. The other v3d_*.py files are earlier FSM
-             targets (GEMM, llama.cpp matrix-vector, shader-only flood)
-             kept because the paper's Section V-C tells their story.
+             proposer seat. v3d_explore.py, v3d_llama_mmv.py, and
+             v3d_flood_opt.py are earlier FSM targets (GEMM, llama.cpp
+             matrix-vector, shader-only flood) kept because the paper's
+             Section V-C tells their story; v3d_fsm.py, v3d_verify.py,
+             v3d_drive.py, v3d_live.py, and v3d_coproc.py are the
+             phase-1 FSM, the correctness gate, the agent driver, the
+             SSH runner, and the thermal-guarded measurement FSM they
+             grew from.
 pi/          Everything that ran on the board: Vulkan/GLSL kernels, the
              vkflood2 evaluator, the CPU counterfactual, benchmark and
              spec-collection scripts. pi/flood/README.md has build

@@ -18,7 +18,7 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-FUSED = open(os.path.join(HERE, "pi", "flood", "fused2s.comp")).read()
+FUSED = open(os.path.join(HERE, "..", "pi", "flood", "fused2s.comp")).read()
 GOOD_LINE = "float wA = P[iA].x + pc.rain - outA + inA;"
 BROKEN = FUSED.replace(GOOD_LINE, GOOD_LINE.replace("pc.rain", "2.0 * pc.rain"))
 assert BROKEN != FUSED

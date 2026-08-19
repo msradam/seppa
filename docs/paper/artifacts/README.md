@@ -7,15 +7,16 @@ The measurement hardware is no longer live, so these files are the record.
 |---|---|---|
 | `conc_steady_2026-08-10/` | Steady-state GPU/CPU concurrency campaign | Table IV |
 | `cpu_steady_2026-08-10/` | CPU-only counterfactual, partitioned and oversubscribed | Table V |
-| `passk_2026-08-09/` | Five scored reproductions, one JSONL per run plus `summary.json` | Section 6 |
-| `ab_vkvisible_2026-08-10/` | `GGML_VK_VISIBLE_DEVICES` A/B, with the run script | Section 7 |
-| `genload2_2026-08-10/` | GPU retention against generic CPU loads | Section 7 |
+| `passk_2026-08-09/` | Five scored reproductions, one JSONL per run plus `summary.json` | Section VI |
+| `ab_vkvisible_2026-08-10/` | `GGML_VK_VISIBLE_DEVICES` A/B, with the run script | Section VII |
+| `genload2_2026-08-10/` | GPU retention against generic CPU loads | Section VII |
 | `specs_2026-08-10/` | `collect_specs.sh` output, `vulkaninfo` dump, `vcgencmd` | Tables I and II |
-| `mcp_flood2_recreation_2026-07-11.jsonl` | The machine-checked reproduction over MCP | Section 6 |
+| `system_2026-08-02/` | Pre/post OS-update system records (kernel 6.12 to 6.18; Mesa unchanged at 25.0.7) | Section VIII |
+| `mcp_flood2_recreation_2026-07-11.jsonl` | The machine-checked reproduction over MCP | Section VI |
 | `mcp_flood2_recreation_run1_2026-07-11.jsonl` | Aborted first attempt at the same reproduction; the driver crashed on an assertion before the refusal cycle, and its fused benchmark (2105.3 steps/s, 1.563x) is superseded by the completed transcript above | not cited |
-| `claude_sessions/` | Complete agent session transcripts | Section 4 |
-| `genload_bench_2026-08-09/` | Earlier generic-load run; source of the gate-log excerpt | Section 4 |
-| `conc_bench/`, `conc_bench2/`, `cpu_flood_bench/`, `cpu_flood_bench2/` | Superseded short-window campaigns, kept because Section 7 cites them | Section 7 |
+| `claude_sessions/` | Complete agent session transcripts | Section IV |
+| `genload_bench_2026-08-09/` | Earlier generic-load run; source of the gate-log excerpt | Section IV |
+| `conc_bench/`, `conc_bench2/`, `cpu_flood_bench/`, `cpu_flood_bench2/` | Superseded short-window campaigns; the paper cites `conc_bench2/` and `cpu_flood_bench/`, and the other two are kept as the full record | Sections VII and VIII |
 
 ## Reading the numbers
 

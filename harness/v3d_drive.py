@@ -28,7 +28,7 @@ from claude_agent_sdk import (
 )
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-VENV_PY = os.path.join(HERE, ".venv", "bin", "python")
+VENV_PY = os.path.join(HERE, "..", ".venv", "bin", "python")
 
 SYSTEM = """You are an autonomous GPU-kernel optimization agent. You optimize a
 Vulkan compute kernel for the Raspberry Pi 5 V3D GPU by driving a finite-state
