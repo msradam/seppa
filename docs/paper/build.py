@@ -40,6 +40,8 @@ for a, b in [
 ]:
     body_md = body_md.replace(f"Section {a}", f"Section {b}")
 
+body_md = body_md.replace("Section VII-A", "\\mbox{Section VII-A}")
+
 
 def rep(old, new):
     global body_md

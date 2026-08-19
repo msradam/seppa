@@ -84,7 +84,7 @@ in `vkflood2.cpp`):
 ## Known headroom
 
 `fused2s.comp` still compiles through the v3dv register-allocator fallback
-ladder (the CSE'd neighbourhood loads hold ~18 vec2 values live). Trading
+ladder (the CSE'd neighborhood loads hold ~18 vec2 values live). Trading
 some reloads for registers, or a shared-memory tile, might buy more; the
 seppa flood FSM (`harness/v3d_flood2_opt.py`, physics-gated) is the
 harness for that search.

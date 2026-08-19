@@ -9,7 +9,10 @@ existing prompt-driven kernel-optimization loop. The port moves the loop
 onto an explicit finite-state machine
 ([Burr](https://github.com/apache/burr)) and serves it to an LLM agent
 over the Model Context Protocol (MCP), the standard interface through
-which a model calls tools. The MCP server here is named Theodosia. The model proposes kernel and host-contract changes (the
+which a model calls tools. The MCP server is
+[Theodosia](https://github.com/msradam/theodosia) (Apache-2.0), a
+separate package of the author's that mounts a Burr application over
+MCP. The model proposes kernel and host-contract changes (the
 CPU-side setup: buffer layouts and dispatch shape); the machine owns
 compilation, verification against
 physics oracles, benchmarking, and the keep-or-revert verdict, and it

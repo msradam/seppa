@@ -133,12 +133,12 @@ platform and the GPU's compute limits, collected from the running board
 by \texttt{pi/collect\_specs.sh} (archived with the raw vulkaninfo
 dump). The limits are tight, and the scale is modest: the best kernel we
 measured sustains about 13 GFLOP/s in fp32, and that figure belongs to a
-dense matrix multiply (Section VII-A compares the processors on the
-stencil itself). The GPU is a second, slower engine that happens to be
-free. In Vulkan's terms, a dispatch is one launch of a kernel over the
-whole grid, and one invocation is one execution of the kernel by one GPU
-thread. Invocations are grouped into workgroups, and the hardware runs
-invocations in lockstep bundles of 16 called subgroups.
+dense matrix multiply (\mbox{Section VII-A} compares the processors on
+the stencil itself). The GPU is a second, slower engine that happens to
+be free. In Vulkan's terms, a dispatch is one launch of a kernel over
+the whole grid, and one invocation is one execution of the kernel by one
+GPU thread. Invocations are grouped into workgroups, and the hardware
+runs invocations in lockstep bundles of 16 called subgroups.
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{table}[!t]\caption{Platform, collected from the running board by \mbox{collect\_specs.sh}}\label{tab:platform}\centering\footnotesize\setlength{\tabcolsep}{2.5pt}\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}
@@ -174,8 +174,8 @@ Cooperative matrix & no \\
 
 The strange part is the driver: when a shader wants more registers than
 exist, v3dv does not fail. It walks a ladder of thirteen compile
-strategies {[}16{]}, disabling the optimizations that spend registers
-for speed one at a time: instruction scheduling, code motion, loop
+strategies {[}16{]}, disabling, one at a time, the optimizations that
+spend registers for speed: instruction scheduling, code motion, loop
 unrolling, load sorting, pipelining. It then halves the thread count,
 repeats the disables, and ends on a fallback scheduler, handing back
 whatever survives, sometimes several times slower.
@@ -184,10 +184,10 @@ whatever survives, sometimes several times slower.
 
 Kernel generation is now a standard LLM task. KernelBench {[}3{]}, the
 field's standard benchmark, only credits a speedup when the kernel also
-passes its correctness check; Kevin {[}17{]} trains a model with
-reinforcement learning that rewards kernels proving correct and fast,
-and TritonRL {[}18{]} puts the difficulty in its title, training a model
-to write kernels in Triton (a Python-like kernel language) ``without
+passes its correctness check. Kevin {[}17{]} trains a model with
+reinforcement learning that rewards kernels proving correct and fast.
+TritonRL {[}18{]} puts the difficulty in its title, training a model to
+write kernels in Triton (a Python-like kernel language) ``without
 cheating.'' The systems still cheat. CUDA-L1 {[}4{]} reports that 82 of
 its 250 RL-generated kernels (32.8\%) exploited stream-timing loopholes,
 arranging the GPU's work queues so the timed section ended before the
@@ -269,15 +269,15 @@ the budget.
 The division of labor was fixed before the sessions ran, and it is worth
 stating exactly. The author built the application and the harness, chose
 the physics gates, ran the hand-driven sweep of Section V-B, and
-supervised sessions. The language model, Claude Sonnet 5 (Anthropic),
-driven through the Claude Code client at high reasoning effort, answered
-each \texttt{hypothesize} prompt by writing \texttt{implement}'s inputs
-(kernel source and host-side parameters) and nothing else. Every
-measurement and verdict came from the machine, and no proposed kernel
-was edited by hand (transcript in
+supervised sessions. The language model was Claude Sonnet 5 (Anthropic),
+driven through the Claude Code client at high reasoning effort. It
+answered each \texttt{hypothesize} prompt by writing
+\texttt{implement}'s inputs, the kernel source and the host-side
+parameters, and nothing else. Every measurement and verdict came from
+the machine, and no proposed kernel was edited by hand (transcript in
 \texttt{docs/paper/artifacts/claude\_sessions/}). Concretely: the
-winning kernel came from the hand-driven sweep and the machine verified
-and reproduced it (Section VI); in the one fully agent-driven session
+winning kernel came from the hand-driven sweep, and the machine verified
+and reproduced it (Section VI). In the one fully agent-driven session
 the model wrote its own strip-mined shader pair for each strip value it
 tried, stayed inside the one parameter family the server had already
 named, and never proposed the fused kernel of Section V-B.
@@ -381,13 +381,13 @@ near 2 ns per invocation. That is about two clock cycles, the scale of
 starting a thread itself. Two hardware details shaped the final kernel.
 Strips run vertically. A subgroup's 16 lanes (its 16 invocations) are
 horizontal neighbors, so when each lane walks down its own short column,
-the subgroup's loads at every row stay on adjacent addresses. The kernel
-also consumes each flux value as it is produced; holding all four alive
-fails register allocation. The shipped kernel is 1.58x at 256x256: 1.574
-to 1.585 across the five scored reproductions, 1.571 in the July
-transcript quoted in Section VI, and 1.59x hand-timed in the sweep. It
-is 1.41x at 512x512 and 1.18x at 1024x1024, and it holds all gates over
-4,000 steps.
+the subgroup's loads at every row stay on adjacent addresses, the
+pattern the memory system serves most efficiently. The kernel also
+consumes each flux value as it is produced; holding all four alive fails
+register allocation. The shipped kernel is 1.58x at 256x256: 1.574 to
+1.585 across the five scored reproductions, 1.571 in the July transcript
+quoted in Section VI, and 1.59x hand-timed in the sweep. It is 1.41x at
+512x512 and 1.18x at 1024x1024, and it holds all gates over 4,000 steps.
 
 \subsection{Action-Space Limits}\label{action-space-limits}
 
@@ -404,12 +404,13 @@ kept the fused strip-2 kernel, starting from its own baseline (Section
 VI). A plateau can mean the search space is too small even when the
 hardware has headroom. Two other targets ran through the same gated
 loop, each behind its own correctness gate. A GEMM (dense matrix
-multiply) improved to 13.42 GFLOP/s over two rounds, and a de-unrolled
-llama.cpp matrix-vector kernel gained 28\% in end-to-end text-generation
-speed. The running notes record the matrix-vector result and the GEMM's
-final round, 12.56 to 13.42 GFLOP/s, whose shaders ship as
-\texttt{pi/gemm.comp} and \texttt{pi/gemm-best.comp}. None of it carries
-the archived logs that back Section VI.
+multiply) improved to 13.42 GFLOP/s over two rounds, and a llama.cpp
+matrix-vector kernel with its unrolled inner loop replaced by a plain
+loop gained 28\% in end-to-end text-generation speed. The running notes
+record the matrix-vector result and the GEMM's final round, 12.56 to
+13.42 GFLOP/s, whose shaders ship as \texttt{pi/gemm.comp} and
+\texttt{pi/gemm-best.comp}. None of it carries the archived logs that
+back Section VI.
 
 \section{Machine-Checked Reproduction over
 MCP}\label{machine-checked-reproduction-over-mcp}
@@ -500,18 +501,19 @@ The benchmark script \texttt{conc\_steady\_bench.sh}, under
 \texttt{pi/flood/}, measures three conditions: each kernel alone, decode
 alone, and each kernel looping while decode runs. Each decode-bearing
 phase gets a cooldown and then a soak of eight decode repetitions; the
-soak brings the chip to working temperature and its repetitions go
-unreported. Kernel-alone phases run straight from the cooldown: cool
-starts, finished before heat accumulates. The Pi's firmware defends
+soak brings the chip to working temperature, and its repetitions stay
+out of the tables. Kernel-alone phases run straight from the cooldown:
+cool starts, finished before heat accumulates. The Pi's firmware defends
 against heat by lowering clocks, gently past a soft temperature limit
 and sharply at a hard throttle, and the logs record which was active.
 The soak runs a fixed count instead of waiting on those flags, and the
-phases landed in different regimes. The concurrent phases ran
-soft-limited 70 to 79\% of the time and peaked at 76.3 C; decode alone
-reached 73.0 C, limited for 3\%. Each decode phase defines the
+phases landed in different regimes. Each decode phase defines the
 measurement window: llama-bench generates 64 tokens per repetition for
 20 repetitions, long enough for 12 to 28 flood completions, and a flood
-run counts only if it fits inside the window.
+run counts only if it fits inside the window. Inside those windows the
+concurrent phases ran under the soft limit 85 to 88\% of the time and
+carried the hard-throttle flag for another 10 to 13\%, peaking at 76.3
+C; decode alone reached 73.0 C, limited for 3\%.
 
 An earlier short-window campaign, preserved in \texttt{conc\_bench2/},
 read 711.9 steps/s concurrent with decode at 10.3, against this run's
@@ -524,11 +526,12 @@ cap engaging in both campaigns. The earlier campaign's window covered
 decode's first half-minute, before the cap settled: 711.9 ± 76.1 over
 its five completions, against 663.3 ± 34.4 for this run's completions
 over the same seconds. The segment's decode rates match as well, 10.32
-against 10.21; notebook 02 derives the alignment. The measured window
-reported here sits entirely in the capped regime. Within it the rate
-still climbs, from 818.6 steps/s over the first quarter to 919.1 over
-the last, so the concurrent rate reported is a window mean on a rising
-curve. Results from the steady-state run of 2026-08-10 are in
+against 10.21, the latter from this run's soak over those same seconds;
+notebook 02 derives the alignment. The measured window reported here
+sits entirely in the capped regime. Within it the rate still climbs,
+from 818.6 steps/s over the first quarter to 919.1 over the last, so the
+concurrent rate reported is a window mean on a rising curve. Results
+from the steady-state run of 2026-08-10 are in
 Table~\ref{tab:conc} (raw logs under
 \texttt{conc\_steady} in \texttt{docs/paper/artifacts/}).
 
@@ -617,16 +620,17 @@ always running. Oversubscribed, decode collapses 75\%: llama.cpp's
 workers synchronize every token, so losing one core stalls all four. The
 flood mean is inflated by bursts between decode repetitions, hence its ±
 181. Partitioned is the best CPU-only arrangement, and decode there pays
-a 29\% tax against the GPU split's 16\%. A third scheme, time-slicing,
-would flood about 23\% of the time to match 883 steps/s; it would cap
-decode at 8.8 t/s and freeze guidance during bursts. The GPU split beats
-the best measured CPU-only option on both axes: by 30\% on simulation
-(883.4 ± 47.1 vs 678.8 ± 10.6) and by 14\% on decode (9.6 ± 0.2 vs 8.4 ±
-0.1). The slower processor still wins, because the CPU has no spare
-cycles to sell. The margin is campaign-dependent, but the direction is
-not: in the earlier campaign the decode axis holds and the simulation
-axis ties within noise (Section VIII); no measured campaign puts the
-partitioned scheme ahead on either axis.
+a 29\% tax against the GPU split's 16\%, each tax measured against its
+own solo configuration. A third scheme, time-slicing, would flood about
+23\% of the time to match 883 steps/s; it would cap decode at 8.8 t/s
+and freeze guidance during bursts. The GPU split beats the best measured
+CPU-only option on both axes: by 30\% on simulation (883.4 ± 47.1 vs
+678.8 ± 10.6) and by 14\% on decode (9.6 ± 0.2 vs 8.4 ± 0.1). The slower
+processor still wins, because the CPU has no spare cycles to sell. The
+margin is campaign-dependent, but the direction is not: in the earlier
+campaign the decode axis holds and the simulation axis ties within noise
+(Section VIII); no measured campaign puts the partitioned scheme ahead
+on either axis.
 
 \section{Limitations}\label{limitations}
 
@@ -638,12 +642,14 @@ before, 1,348.6 ± 4.1 after. The board failed after the August campaign,
 so none of these quantities can be re-measured.
 
 The gates are necessary conditions: verification covers one storm
-scenario at one grid size. The keep decision rests on a single timing
-sample against a 1\% threshold. Across Section VI's five runs the
-baseline spread was about 0.3\%, and the kept kernel repeated to the
-timer's millisecond resolution; at 0.188 s that granularity is a 0.53\%
-step. The 3,852 steps/s CPU figure assumed a cache-resident 256x256
-working set and may not hold at larger grids.
+scenario at one grid size. What they are built to catch they did catch:
+the deliberately broken kernel of Section VI was refused in all five
+scored runs. The keep decision rests on a single timing sample against a
+1\% threshold. Across Section VI's five runs the baseline spread was
+about 0.3\%, and the kept kernel repeated to the timer's millisecond
+resolution; at 0.188 s that granularity is a 0.53\% step. The 3,852
+steps/s CPU figure assumed a cache-resident 256x256 working set and may
+not hold at larger grids.
 
 Section VII carries three asymmetries. The GPU kernel was tuned and the
 CPU counterfactual was not; \texttt{cpuflood.cpp} runs the original
@@ -668,11 +674,11 @@ here. The server's \texttt{fork\_at} utility rewinds to an earlier
 state; a caller could resample a marginal kernel until a draw cleared
 the 1\% threshold, \texttt{evaluate} would not notice, and no archived
 session did so. Full GPU offload of the language model is blocked by an
-upstream llama.cpp Vulkan defect. Numbers without an archived log (the
+upstream llama.cpp Vulkan defect. Some numbers have no archived log: the
 original application's 1,045 steps/s, the sweep's GFLOP/s column and
 hand-timed ratios, the 1.41x and 1.18x at larger grids, and the GEMM and
-matrix-vector results) come from the repository's dated running notes
-and shipped kernel files.
+matrix-vector results. These come from the repository's dated running
+notes and shipped kernel files.
 
 \section{The Sample Application}\label{the-sample-application}
 
@@ -697,8 +703,8 @@ kernels for the Raspberry Pi 5's integrated GPU, and a state machine the
 model cannot argue with decides what is true about them. On a real flood
 stencil this discipline produced a verified 1.58x, proposed in our
 hand-driven sweep and reproduced within 1\% by the machine five of five
-times, and in the steady-state campaign it holds in deployment: 883
-steps/s of simulation beside decode at 84\% of its solo speed. The
+times. In the steady-state campaign that advantage survives deployment:
+883 steps/s of simulation beside decode at 84\% of its solo speed. The
 evidence in this paper is the gate ledger. The suggestion is open-ended:
 commodity edge boards carry more usable silicon than their deployments
 exercise, and a loop that cannot misreport its own verdicts is a sound
@@ -717,7 +723,7 @@ Hierarchies. ACM Journal of Experimental Algorithmics 21, Article 1.5,
 2016.
 
 \bibitem{r3} A. Ouyang, S. Guo, et al.~KernelBench: Can LLMs Write Efficient
-GPU Kernels? arXiv:2502.10517, 2025.
+GPU Kernels? arXiv:2502.10517; ICML 2025.
 
 \bibitem{r4} X. Li et al.~CUDA-L1: Improving CUDA Optimization via
 Contrastive Reinforcement Learning. arXiv:2507.14111; ICLR 2026.
@@ -740,7 +746,8 @@ Challenges and Opportunities in Conversational Hardware Design. ACM/IEEE
 Workshop on Machine Learning for CAD (MLCAD), 2023.
 
 \bibitem{r11} Z. Zhou et al.~Edge Intelligence: Paving the Last Mile of
-Artificial Intelligence With Edge Computing. Proc. IEEE 107(8), 2019.
+Artificial Intelligence With Edge Computing. Proc. IEEE
+107(8):1738-1762, 2019.
 
 \bibitem{r12} S. Boddu and A. Mukherjee. Efficient Edge Deployment of
 Quantized YOLOv4-Tiny for Aerial Emergency Object Detection on Raspberry
@@ -777,12 +784,13 @@ Reward Hacking in Long-Horizon Coding Agents. arXiv:2605.21384, 2026.
 al.~Mathematical discoveries from program search with large language
 models. Nature 625:468-475, 2024.
 
-\bibitem{r22} A. Novikov, N. Vu, M. Eisenberger, et al.~AlphaEvolve: A coding
+\bibitem{r22} A. Novikov, N. Vũ, M. Eisenberger, et al.~AlphaEvolve: A coding
 agent for scientific and algorithmic discovery. Google DeepMind, 2025.
+arXiv:2506.13131.
 
 \bibitem{r23} S. Thakur, B. Ahmad, H. Pearce, B. Tan, B. Dolan-Gavitt, R.
 Karri, and S. Garg. VeriGen: A Large Language Model for Verilog Code
-Generation. ACM TODAES, 2024.
+Generation. ACM TODAES 29(3), Article 46, 2024.
 
 \bibitem{r24} W. L. Oberkampf and C. J. Roy. Verification and Validation in
 Scientific Computing. Cambridge University Press, 2010.
