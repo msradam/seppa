@@ -346,7 +346,7 @@ What the CPU pays, and what the GPU buys.
 
 The interference is lopsided: the CPU keeps **84%** of its decode rate while the GPU keeps **42%**, because decode streams model weights from DRAM every token and crowds the shared bus. Contention favors the optimized kernel, so **1.58x alone becomes 2.20x concurrent**, at identical decode cost.
 
-<span class="caption">Cooldown and decode soak before each phase; thermal regimes differ. An earlier campaign read 711.9, 19% below; its logs rule out my first explanation.</span>
+<span class="caption">Cooldown and decode soak before each phase. An earlier campaign read 711.9, 19% below: its window sat in decode's first half-minute, before the soft temperature limit settled. Aligned in time, the campaigns agree; the settled regime was measured once.</span>
 
 ---
 
@@ -370,7 +370,7 @@ The GPU split wins on both axes here, **30%** more simulation and **14%** more d
 
 # Limitations
 
-- One board and one grid family: the speedup shrinks from 1.58x at 256x256 to 1.18x at 1024x1024, so there is headroom I never reached.
+- One board and one grid family: the speedup shrinks from 1.58x at 256x256 to 1.18x at 1024x1024.
 - The gates cover one storm scenario at one grid size, and the keep decision rests on a single timing sample. They catch a kernel that is wrong; one that cuts corners inside the tolerance would pass.
 - The winning kernel came from my hand sweep, and the agent-driven session worked a knob the server had already exposed. The project shows the machine can verify; whether the model can find optimizations on its own stays untested.
 - Decode stays on the CPU; full GPU offload hits an upstream llama.cpp defect.

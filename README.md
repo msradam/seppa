@@ -152,4 +152,7 @@ docs/
              its unarchived numbers.
   autokernel_fidelity.md   Audit of the AutoKernel port, cited in
              Section IV.
+best_*.comp  Winning kernels persisted by the FSM (flood, GEMM, llama.cpp
+             matrix-vector), each headed by a provenance comment;
+             best_flood.comp is pi/flood/fused2s.comp under that header.
 ```

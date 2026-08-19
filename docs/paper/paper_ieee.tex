@@ -507,13 +507,22 @@ repetition for 20 repetitions, long enough for 12 to 28 flood
 completions, and a flood run counts only if it fits inside the window.
 
 An earlier short-window campaign, preserved in \texttt{conc\_bench2/},
-read up to 19\% differently in both directions. We first blamed a
-thermal transient, but the logs refute that: the earlier campaign ran
-cooler (68.7 C mean against 72.7 C, with less throttling) and still read
-lower. Within this window the rate also climbs, from 818.6 steps/s over
-the first quarter to 919.1 over the last, so the figure below is a
-window mean on a rising curve. Results from the steady-state run of
-2026-08-10 are in Table~\ref{tab:conc} (raw logs under
+read 711.9 steps/s concurrent with decode at 10.3, against this run's
+883.4 and 9.6. Aligning the two campaigns on time since decode began
+resolves the difference. Concurrent throughput follows a settling curve:
+near 73 C the firmware's soft temperature limit begins capping CPU
+clocks, decode slows from 10.2 to 9.6 tokens/s, its per-second memory
+traffic thins, and the flood rate climbs. The thermal logs record the
+cap engaging in both campaigns. The earlier campaign's window covered
+decode's first half-minute, before the cap settled: 711.9 ± 76.1 over
+its five completions, against 663.3 ± 34.4 for this run's completions
+over the same seconds. The segment's decode rates match as well, 10.32
+against 10.21; notebook 02 derives the alignment. The measured window
+below sits entirely in the capped regime. Within it the rate still
+climbs, from 818.6 steps/s over the first quarter to 919.1 over the
+last, so the figure below is a window mean on a rising curve. Results
+from the steady-state run of 2026-08-10 are in
+Table~\ref{tab:conc} (raw logs under
 \texttt{conc\_steady} in \texttt{docs/paper/artifacts/}).
 
 {\def\LTcaptype{none} % do not increment counter
@@ -630,14 +639,15 @@ set and may not hold at larger grids.
 Section VII carries three asymmetries. The GPU kernel was tuned and the
 CPU counterfactual was not; \texttt{cpuflood.cpp} runs the original
 two-pass scheme. The thermal operating points were not matched, so clock
-governance accounts for part of the 16\% decode cost. And the
-steady-state campaign is a single run: an earlier campaign at the same
-configuration, kept in \texttt{conc\_bench2/}, read 711.9 steps/s
-concurrent against this run's 883.4, a gap the logs do not explain.
-Under the earlier campaign the simulation margin over the partitioned
-scheme narrows to within noise (711.9 ± 76.1 against 678.8 ± 10.6). The
-decode margin holds in both campaigns (9.6 and 10.3 against 8.4), and no
-measured campaign puts the partitioned scheme ahead on either axis.
+governance accounts for part of the 16\% decode cost. And the settled
+regime was measured once: the earlier campaign in \texttt{conc\_bench2/}
+sampled the pre-cap transient (Section VII aligns the two), so no second
+measurement of the settled operating point exists. Taken at face value
+the earlier campaign still narrows the simulation margin over the
+partitioned scheme to within noise (711.9 ± 76.1 against 678.8 ± 10.6).
+The decode margin holds in both campaigns (9.6 and 10.3 against 8.4),
+and no measured campaign puts the partitioned scheme ahead on either
+axis.
 
 The winning kernel came from the hand-driven sweep, and the agent-driven
 session worked a knob the server itself exposed, so the loop's ability
