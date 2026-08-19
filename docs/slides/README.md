@@ -23,11 +23,10 @@ report.
 
 ## The theme
 
-IEEE publishes presentation templates for PowerPoint and Google Slides, not
-for Marp or LaTeX, so `themes/ieee.css` follows the corporate template's
-conventions, since IEEE publishes no Marp theme to convert: IEEE Blue title slide and
-section dividers, a blue rule above every content slide, and blue table
-headers. It carries no IEEE logo or wordmark, because the work is not an IEEE
+IEEE publishes presentation templates for PowerPoint and Google Slides
+only, so `themes/ieee.css` follows the corporate template's conventions:
+IEEE Blue title slide and section dividers, a blue rule above every
+content slide, and blue table headers. It carries no IEEE logo or wordmark, because the work is not an IEEE
 publication.
 
 - Palette: IEEE Blue is PMS 3015 C, `#00629b`, from the [IEEE brand colors
@@ -63,7 +62,7 @@ two-column layouts. `--image-scale 3` renders frames at 3840x2160. The deck is d
 1280x720, so anything less is upscaled by the player on a high-density display
 and reads as blurry even though the encode is lossless-looking. The frame
 PNGs are generated output that git ignores; the per-slide durations are
-tracked in `frames/concat.txt`, and `-t` set to their sum (819 today)
+tracked in `frames/concat.txt`, and `-t` set to their sum (823 today)
 trims the trailing entry that the concat demuxer would otherwise hold
 past the end.
 
