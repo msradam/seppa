@@ -279,7 +279,7 @@ the machine, and no proposed kernel was edited by hand (transcript in
 winning kernel came from the hand-driven sweep, and the machine verified
 and reproduced it (Section VI). In the one fully agent-driven session
 the model wrote its own strip-mined shader pair for each strip value it
-tried, stayed inside the one parameter family the server had already
+tried, worked only the strip parameter of the two the server had already
 named, and never proposed the fused kernel of Section V-B.
 
 For the flood target, \texttt{verify} runs the candidate kernel for 400
@@ -467,14 +467,16 @@ baselines 1,348.6 ± 4.1 steps/s, the kept kernel 2,127.7 in every run
 
 One session was fully agent-driven (2026-08-02, a three-experiment
 budget given to the proposer). The server's \texttt{characterize}
-payload names fixed per-invocation cost as the bound and exposes the
-strip parameter. The model therefore began with the bound named and that
-parameter exposed, so the session demonstrates the loop's enforcement
-alone. The model worked that parameter family, writing a fresh
-strip-mined shader pair for each value: strip 4 kept at 1,470.6, +8.8\%;
-strip 8 hit the register cliff and was reverted at 921.7; strip 6 probed
-it and was reverted at 1,298.7. It never reached fusion, and all of its
-reported numbers came from the machine.
+payload names fixed per-invocation cost as the bound and exposes both
+host-contract parameters, fusion and strip; the \texttt{hypothesize}
+prompt states on every turn that an empty \texttt{height\_shader}
+requests a fused single-dispatch step. The model therefore began with
+the bound named and both parameters exposed, so the session demonstrates
+the loop's enforcement alone. The model worked only the strip parameter,
+writing a fresh strip-mined shader pair for each value: strip 4 kept at
+1,470.6, +8.8\%; strip 8 hit the register cliff and was reverted at
+921.7; strip 6 probed it and was reverted at 1,298.7. It never reached
+fusion, and all of its reported numbers came from the machine.
 
 \section{Concurrent CPU and GPU
 Execution}\label{concurrent-cpu-and-gpu-execution}
@@ -511,9 +513,9 @@ phases landed in different regimes. Each decode phase defines the
 measurement window: llama-bench generates 64 tokens per repetition for
 20 repetitions, long enough for 12 to 28 flood completions, and a flood
 run counts only if it fits inside the window. Inside those windows the
-concurrent phases ran under the soft limit 85 to 88\% of the time and
-carried the hard-throttle flag for another 10 to 13\%, peaking at 76.3
-C; decode alone reached 73.0 C, limited for 3\%.
+concurrent phases ran soft-limited 85 to 88\% of the time and carried
+the hard-throttle flag for another 10 to 13\%, peaking at 76.3 C; decode
+alone reached 73.0 C, limited for 3\%.
 
 An earlier short-window campaign, preserved in \texttt{conc\_bench2/},
 read 711.9 steps/s concurrent with decode at 10.3, against this run's
@@ -668,17 +670,17 @@ both campaigns (9.6 and 10.3 against 8.4), and no measured campaign puts
 the partitioned scheme ahead on either axis.
 
 The winning kernel came from the hand-driven sweep, and the agent-driven
-session stayed inside the one parameter family the server itself named,
-so the loop's ability to discover optimizations on its own is untested
-here. The server's \texttt{fork\_at} utility rewinds to an earlier
-state; a caller could resample a marginal kernel until a draw cleared
-the 1\% threshold, \texttt{evaluate} would not notice, and no archived
-session did so. Full GPU offload of the language model is blocked by an
-upstream llama.cpp Vulkan defect. Some numbers have no archived log: the
-original application's 1,045 steps/s, the sweep's GFLOP/s column and
-hand-timed ratios, the 1.41x and 1.18x at larger grids, and the GEMM and
-matrix-vector results. These come from the repository's dated running
-notes and shipped kernel files.
+session worked only the strip parameter of the two the server itself
+named, so the loop's ability to discover optimizations on its own is
+untested here. The server's \texttt{fork\_at} utility rewinds to an
+earlier state; a caller could resample a marginal kernel until a draw
+cleared the 1\% threshold, \texttt{evaluate} would not notice, and no
+archived session did so. Full GPU offload of the language model is
+blocked by an upstream llama.cpp Vulkan defect. Some numbers have no
+archived log: the original application's 1,045 steps/s, the sweep's
+GFLOP/s column and hand-timed ratios, the 1.41x and 1.18x at larger
+grids, and the GEMM and matrix-vector results. These come from the
+repository's dated running notes and shipped kernel files.
 
 \section{The Sample Application}\label{the-sample-application}
 

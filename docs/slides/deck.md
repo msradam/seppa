@@ -376,7 +376,7 @@ Against the partitioned split the GPU wins on both axes, **30%** more simulation
 
 - One board and one grid family: the speedup shrinks from 1.58x at 256x256 to 1.18x at 1024x1024.
 - The gates cover one storm scenario at one grid size, and the keep decision rests on a single timing sample. They catch a kernel that is wrong; one that cuts corners inside the tolerance would pass, and Sarkar's correctness-illusion study (arXiv:2606.20128) finds this class of check systematically optimistic.
-- The winning kernel came from my hand sweep, and the agent-driven session stayed inside the one parameter family the server had already named. The project shows the machine can verify; whether the model can find optimizations on its own stays untested.
+- The winning kernel came from my hand sweep, and the agent-driven session worked only one of the two parameters the server had already named. The project shows the machine can verify; whether the model can find optimizations on its own stays untested.
 - Decode stays on the CPU; full GPU offload hits an upstream llama.cpp defect.
 - The board is dead. The scored campaigns re-derive from archived logs and two notebooks that still run; the hand-timed sweep column and the larger-grid ratios live in dated running notes.
 
