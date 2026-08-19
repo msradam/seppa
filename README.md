@@ -45,9 +45,9 @@ the Section VI transcripts.
   the harshest measured case.
 - **Other targets, same harness:** a GEMM kernel from 7.02 to 13.42
   GFLOP/s over two FSM rounds; llama.cpp's matrix-vector kernel
-  de-unrolled for +28% end-to-end decode. Both are recorded in dated
-  running notes (`docs/notes/`) and are not claimed at the flood
-  target's evidentiary standard.
+  de-unrolled for +28% end-to-end decode. The dated running notes
+  (`docs/notes/`) and the shipped kernels record them; neither is
+  claimed at the flood target's evidentiary standard.
 
 The paper (`docs/paper/paper.pdf`, built from `paper.md` by `build.py`)
 documents the method, the falsification sweep, and the measurement

@@ -61,9 +61,9 @@ VideoCore VII GPU (the V3D) that compute workloads rarely touch, and
 during CPU inference it idles. Two questions decide that idle GPU's
 worth: whether it can be made fast enough at a useful workload to be a
 co-processor, and whether it can run beside a busy CPU on a shared LPDDR
-bus. The case study (Section V) and its machine-checked reproduction
-(Section VI) take up the first question; the concurrency measurements
-(Section VII) take up the second.
+memory bus. The case study (Section V) and its machine-checked
+reproduction (Section VI) take up the first question; the concurrency
+measurements (Section VII) take up the second.
 
 The V3D is a mobile GPU with sparse documentation, and tuning habits
 learned on NVIDIA hardware, the target of most optimization literature,
@@ -378,14 +378,15 @@ register pressure. The sweep's own numbers size that cost: strip-2
 removes 65,536 invocations per step and saves about 140 microseconds,
 near 2 ns per invocation. That is about two clock cycles, the scale of
 starting a thread itself. Two hardware details shaped the final kernel.
-Strips run vertically: a subgroup's 16 lanes are horizontal neighbors,
-so when each lane walks down its own short column, the subgroup's loads
-at every row stay on adjacent addresses. The kernel also consumes each
-flux value as it is produced; holding all four alive fails register
-allocation. The shipped kernel is 1.58x at 256x256: 1.574 to 1.585
-across the five scored reproductions, 1.571 in the July transcript
-quoted in Section VI, and 1.59x hand-timed in the sweep. It is 1.41x at
-512x512 and 1.18x at 1024x1024, and it holds all gates over 4,000 steps.
+Strips run vertically: a subgroup's 16 lanes (its 16 invocations) are
+horizontal neighbors, so when each lane walks down its own short column,
+the subgroup's loads at every row stay on adjacent addresses. The kernel
+also consumes each flux value as it is produced; holding all four alive
+fails register allocation. The shipped kernel is 1.58x at 256x256: 1.574
+to 1.585 across the five scored reproductions, 1.571 in the July
+transcript quoted in Section VI, and 1.59x hand-timed in the sweep. It
+is 1.41x at 512x512 and 1.18x at 1024x1024, and it holds all gates over
+4,000 steps.
 
 \subsection{Action-Space Limits}\label{action-space-limits}
 
@@ -404,8 +405,9 @@ has headroom. Two other targets ran through the same gated loop, each
 behind its own correctness gate. A GEMM (dense matrix multiply) improved
 from 7.02 to 13.42 GFLOP/s over two rounds, and a de-unrolled llama.cpp
 matrix-vector kernel gained 28\% in end-to-end text-generation speed.
-Both are recorded only in the running notes, without the archived logs
-that back Section VI.
+The running notes record the matrix-vector result and the GEMM's final
+round; the 7.02 baseline is the shipped \texttt{pi/gemm.comp}. None of
+it carries the archived logs that back Section VI.
 
 \section{Machine-Checked Reproduction over
 MCP}\label{machine-checked-reproduction-over-mcp}
@@ -623,18 +625,18 @@ on either axis.
 
 The measured envelope is one board (Pi 5, V3D 7.1.10.2, Mesa v3dv
 25.0.7) and one grid family, and the speedup shrinks as the grid grows.
-An operating-system update (kernel 6.12 to 6.18) separates the July and
-August campaigns. Flood baselines agree across it: 1,346.8 before,
-1,348.6 ± 4.1 after. The board failed after the August campaign, so none
-of these quantities can be re-measured.
+An operating-system update (Linux kernel 6.12 to 6.18) separates the
+July and August campaigns. Flood baselines agree across it: 1,346.8
+before, 1,348.6 ± 4.1 after. The board failed after the August campaign,
+so none of these quantities can be re-measured.
 
 The gates are necessary conditions: verification covers one storm
 scenario at one grid size. The keep decision rests on a single timing
 sample against a 1\% threshold. Across Section VI's five runs the
 baseline spread was about 0.3\%, and the kept kernel repeated to the
-timer's millisecond resolution, which at 0.188 s is a 0.53\%
-quantization step. The 3,852 steps/s CPU figure assumed a cache-resident
-256x256 working set and may not hold at larger grids.
+timer's millisecond resolution; at 0.188 s that granularity is a 0.53\%
+step. The 3,852 steps/s CPU figure assumed a cache-resident 256x256
+working set and may not hold at larger grids.
 
 Section VII carries three asymmetries. The GPU kernel was tuned and the
 CPU counterfactual was not; \texttt{cpuflood.cpp} runs the original
@@ -662,7 +664,8 @@ GPU offload of the language model is blocked by an upstream llama.cpp
 Vulkan defect. Numbers without an archived log (the original
 application's 1,045 steps/s, the sweep's GFLOP/s column and hand-timed
 ratios, the 1.41x and 1.18x at larger grids, and the GEMM and
-matrix-vector results) come from the repository's dated running notes.
+matrix-vector results) come from the repository's dated running notes
+and shipped kernel files.
 
 \section{The Sample Application}\label{the-sample-application}
 
