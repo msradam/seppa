@@ -10,8 +10,10 @@ llama.cpp's CPU backend with its own NMSE thresholds (`test-backend-ops`).
 
 - `llama-completion`, `llama-bench`, `llama-server` with working V3D
   decode: ~5.5 t/s token generation on granite-4.0-1b Q4_0 at `-ngl 6`
-  (Pi 5, Mesa 25.0.7). CPU-only decode on the same board is 11.4 t/s soaked, 11.59 t/s from a cool start (`docs/paper/artifacts/`, conc_steady and ab_vkvisible), so
-  the value is co-processing: the GPU decodes while the CPU does other
+  (Pi 5, Mesa 25.0.7). CPU-only decode on the same board is faster:
+  11.4 t/s soaked, 11.59 t/s from a cool start
+  (`docs/paper/artifacts/`, conc_steady and ab_vkvisible). The value is
+  therefore co-processing: the GPU decodes while the CPU does other
   work.
 - `vkgemm_nmse` + `gemm.comp`: standalone 13.42 GFLOP/s SGEMM
   (43.7 GFLOP/s roofline) with a double-precision CPU-reference
@@ -50,11 +52,14 @@ allocator (minutes); results are disk-cached afterwards.
 
 - Coherent, NMSE-verified: `-ngl 6`, short prompts, via
   `llama-completion`, `llama-bench`, or `llama-server`.
-- NOT verified / known broken (upstream ggml-vulkan defect, reproducible
-  on llvmpipe, so it is independent of V3D): `-ngl` above 6, prompts beyond ~25
-  tokens, `GGML_VK_ALLOW_MM=1` (GPU prompt processing; per-op correct,
-  composed output wrong), and `llama-cli` (broken at this commit even on
-  CPU; use `llama-completion`).
+- NOT verified / known broken (upstream ggml-vulkan defect; it
+  reproduces on llvmpipe, so it is independent of V3D):
+  - `-ngl` above 6
+  - prompts beyond ~25 tokens
+  - `GGML_VK_ALLOW_MM=1`, the GPU prompt-processing path: each op is
+    correct alone, the composed output is wrong
+  - `llama-cli`: broken at this commit even on CPU; use
+    `llama-completion`
 
 To re-verify numerics on your board:
 
@@ -71,8 +76,9 @@ fallback); any FAIL means the GPU computed wrong numbers on your setup.
 
 - `setup-llama-v3d.sh`: one-shot build script
 - `llama-cpp-v3d-fixes.patch`: cap all >256-invocation workgroups (V3D
-  executes them silently wrong), gate the never-terminating multi-column
-  matvec pipeline compiles, gate flash attention (driver compiler abort)
+  executes them silently wrong), gate the multi-column matvec pipeline
+  compilations (they never terminate), gate flash attention (driver
+  compiler abort)
 - `llama-cpp-v3d-mmv-deunroll.patch`: de-unrolled `mul_mat_vec` shader:
   +28% decode (4.32 to 5.55 t/s); manual unrolling forces the v3dv
   register allocator off its best strategy

@@ -3,12 +3,13 @@
 Correctness-gated, LLM-driven GPU kernel optimization for the Raspberry
 Pi 5's integrated GPU (Broadcom VideoCore VII / V3D, Vulkan compute).
 
-Seppa is [AutoKernel](https://github.com/RightNow-AI/autokernel) (MIT), an
-existing prompt-driven kernel-optimization loop, ported onto an explicit
-finite-state machine ([Burr](https://github.com/apache/burr)) and served
-to an LLM agent over the Model Context Protocol, the standard interface
-through which a model calls tools; the MCP server here is named
-Theodosia. The model proposes kernel and host-contract changes (the
+Seppa is a port of
+[AutoKernel](https://github.com/RightNow-AI/autokernel) (MIT), an
+existing prompt-driven kernel-optimization loop. The port moves the loop
+onto an explicit finite-state machine
+([Burr](https://github.com/apache/burr)) and serves it to an LLM agent
+over the Model Context Protocol (MCP), the standard interface through
+which a model calls tools. The MCP server here is named Theodosia. The model proposes kernel and host-contract changes (the
 CPU-side setup: buffer layouts and dispatch shape); the machine owns
 compilation, verification against
 physics oracles, benchmarking, and the keep-or-revert verdict, and it
@@ -99,9 +100,9 @@ kernels.
 
 ## How it works
 
-The loop is a Burr application; each state is an `@action`, and
-transitions carry mutually exclusive guards, so the agent, which selects
-among reachable transitions over MCP, cannot bypass the gate:
+The loop is a Burr application: each state is an `@action`, and
+transitions carry mutually exclusive guards. The agent selects among
+reachable transitions over MCP, so it cannot bypass the gate:
 
 ```
 characterize -> baseline -> hypothesize -> implement -> compile -> verify

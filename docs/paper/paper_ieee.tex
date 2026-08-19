@@ -27,18 +27,18 @@ in the loop for optimizing GPU kernels, the small programs a GPU runs in
 parallel. The model proposes changes; a finite-state machine compiles,
 verifies against physics-based correctness gates, benchmarks, and
 decides keep or revert, and it refuses to benchmark any kernel that
-failed verification. On the flood-simulation stencil (a kernel in which
-each grid cell updates from its neighbors) of an offline flood-guidance
-application for the Raspberry Pi 5, a hand-driven sweep through the same
-gates produced a kernel 1.58x faster than the original. The machine
-re-measured and re-judged the result in five consecutive runs driven
-from a second computer, and in every run it refused to benchmark a
-kernel that failed its gate. With CPU inference running concurrently the
-advantage widens to 2.20x. The deployment sustains 9.6 tokens/s of
-language-model decode (token-by-token text generation) beside 883
-simulation steps per second, an operating point that beats the best
-measured CPU-only configuration on both axes in the steady-state
-campaign.
+failed verification. The target is the flood-simulation stencil (a
+kernel in which each grid cell updates from its neighbors) of an offline
+flood-guidance application for the Raspberry Pi 5. On that stencil, a
+hand-driven sweep through the same gates produced a kernel 1.58x faster
+than the original. The machine re-measured and re-judged the result in
+five consecutive runs driven from a second computer, and in every run it
+refused to benchmark a kernel that failed its gate. With CPU inference
+running concurrently the advantage widens to 2.20x. The deployment
+sustains 9.6 tokens/s of language-model decode (token-by-token text
+generation) beside 883 simulation steps per second, an operating point
+that beats the best measured CPU-only configuration on both axes in the
+steady-state campaign.
 \end{abstract}
 \begin{IEEEkeywords}
 GPU kernel optimization, LLM agents, correctness verification, edge computing, Vulkan
@@ -136,9 +136,9 @@ measured sustains about 13 GFLOP/s in fp32, and that figure belongs to a
 dense matrix multiply (Section VII-A compares the processors on the
 stencil itself). The GPU is a second, slower engine that happens to be
 free. In Vulkan's terms, a dispatch is one launch of a kernel over the
-whole grid; one invocation is one execution of the kernel by one GPU
-thread; invocations are grouped into workgroups, and the hardware runs
-them in lockstep bundles of 16 called subgroups.
+whole grid, and one invocation is one execution of the kernel by one GPU
+thread. Invocations are grouped into workgroups, and the hardware runs
+invocations in lockstep bundles of 16 called subgroups.
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{table}[!t]\caption{Platform, collected from the running board by \mbox{collect\_specs.sh}}\label{tab:platform}\centering\footnotesize\setlength{\tabcolsep}{2.5pt}\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}
@@ -175,8 +175,8 @@ Cooperative matrix & no \\
 The strange part is the driver: when a shader wants more registers than
 exist, v3dv does not fail. It walks a ladder of thirteen compile
 strategies {[}16{]}, disabling the optimizations that spend registers
-for speed (instruction scheduling, code motion, loop unrolling, load
-sorting, pipelining) one at a time. It then halves the thread count,
+for speed one at a time: instruction scheduling, code motion, loop
+unrolling, load sorting, pipelining. It then halves the thread count,
 repeats the disables, and ends on a fallback scheduler, handing back
 whatever survives, sometimes several times slower.
 
@@ -289,9 +289,9 @@ accuracy: the GPU result must match the same simulation run on the CPU
 in double precision, within a normalized mean-square error (NMSE) of
 1e-3. The tolerance forgives 32-bit rounding drift but sits six orders
 of magnitude above what correct kernels measure, so real bugs land far
-outside it. The second is conservation: the simulation adds water only
+outside it. The second is conservation. The simulation adds water only
 as rainfall and is built to conserve mass {[}1{]}, so total water on the
-grid must stay within 2\% of what rained in; correct kernels drift about
+grid must stay within 2\% of what rained in. Correct kernels drift about
 0.003\%. The third is plausibility: water flows downhill, so the deepest
 water must end up inside the terrain's basin. A passing gate prints this
 in the harness log (here a 4,000-step endurance run; \texttt{verify}
@@ -338,13 +338,13 @@ barrier between them. Strip-mining gives each GPU thread a short column
 of cells instead of one, spreading the fixed cost of starting a thread
 over more work. Every variant passed all three gates. Speeds come from
 400-step runs at 256x256 on the parameterized \texttt{vkflood2} harness.
-Its host loop is faster than the original application's when running
-identical kernels, about 1,345 steps/s against 1,045, and mixing the two
-would inflate every ratio, so every comparison in this paper is within
-\texttt{vkflood2}. Table~\ref{tab:sweep} shows the
-sweep. Percentages in the table are relative to its baseline, about
-1,345 steps/s (1.94 GFLOP/s); the packed variant's 1.93 is within noise
-of it, hence no change.
+Running identical kernels, its host loop is faster than the original
+application's, about 1,345 steps/s against 1,045. Mixing the two
+harnesses would inflate every ratio, so every comparison in this paper
+is within \texttt{vkflood2}. Table~\ref{tab:sweep} shows
+the sweep. Percentages in the table are relative to its baseline, about
+1,345 steps/s. That baseline is 1.94 GFLOP/s; the packed variant's 1.93
+is within noise of it, hence no change.
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{table}[!t]\caption{Falsification sweep: 400 steps at 256x256 in the \mbox{vkflood2} harness}\label{tab:sweep}\centering\footnotesize\setlength{\tabcolsep}{2.5pt}\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}
@@ -378,7 +378,7 @@ register pressure. The sweep's own numbers size that cost: strip-2
 removes 65,536 invocations per step and saves about 140 microseconds,
 near 2 ns per invocation. That is about two clock cycles, the scale of
 starting a thread itself. Two hardware details shaped the final kernel.
-Strips run vertically: a subgroup's 16 lanes (its 16 invocations) are
+Strips run vertically. A subgroup's 16 lanes (its 16 invocations) are
 horizontal neighbors, so when each lane walks down its own short column,
 the subgroup's loads at every row stay on adjacent addresses. The kernel
 also consumes each flux value as it is produced; holding all four alive
@@ -399,15 +399,16 @@ changes the buffer layout, fusion removes a host-loop stage, and
 strip-mining changes the dispatch shape: all host-program decisions.
 Once \texttt{implement} accepted the host parameters as well
 (\texttt{\{shader,\ height\_shader,\ strip\}}), the machine verified and
-kept the fused strip-2 kernel from its own baseline (Section VI). A
-plateau can mean the search space is too small even when the hardware
-has headroom. Two other targets ran through the same gated loop, each
-behind its own correctness gate. A GEMM (dense matrix multiply) improved
-from 7.02 to 13.42 GFLOP/s over two rounds, and a de-unrolled llama.cpp
-matrix-vector kernel gained 28\% in end-to-end text-generation speed.
-The running notes record the matrix-vector result and the GEMM's final
-round; the 7.02 baseline is the shipped \texttt{pi/gemm.comp}. None of
-it carries the archived logs that back Section VI.
+kept the fused strip-2 kernel, starting from its own baseline (Section
+VI). A plateau can mean the search space is too small even when the
+hardware has headroom. Two other targets ran through the same gated
+loop, each behind its own correctness gate. A GEMM (dense matrix
+multiply) improved from 7.02 to 13.42 GFLOP/s over two rounds, and a
+de-unrolled llama.cpp matrix-vector kernel gained 28\% in end-to-end
+text-generation speed. The running notes record the matrix-vector result
+and the GEMM's final round; the 7.02 baseline is the shipped
+\texttt{pi/gemm.comp}. None of it carries the archived logs that back
+Section VI.
 
 \section{Machine-Checked Reproduction over
 MCP}\label{machine-checked-reproduction-over-mcp}
@@ -456,7 +457,7 @@ the verdict, and the kept kernel.
 
 How repeatable is this? \texttt{passk\_flood2.py} runs the two-cycle
 reproduction k times from cool starts, each run gated to begin below 55
-C. A run passes when the baseline gates green inside 1,300 to 1,400
+C. A run passes when the baseline clears its gates inside 1,300 to 1,400
 steps/s, the fused kernel is kept at 1.5x or better, and the broken
 kernel is refused and nulled. Five of five runs passed on 2026-08-09:
 baselines 1,348.6 ± 4.1 steps/s, the kept kernel 2,127.7 in every run
@@ -465,11 +466,12 @@ baselines 1,348.6 ± 4.1 steps/s, the kept kernel 2,127.7 in every run
 One session was fully agent-driven (2026-08-02, a three-experiment
 budget given to the proposer). The server's \texttt{characterize}
 payload names fixed per-invocation cost as the bound and exposes the
-strip parameter, so the session demonstrates the loop's enforcement
-alone. The model worked the exposed knob: strip 4 kept at 1,470.6,
-+8.8\%; strip 8 hit the register cliff and was reverted at 921.7; strip
-6 probed it and was reverted at 1,298.7. It never reached fusion, and
-all of its reported numbers came from the machine.
+strip parameter. The model therefore began with the bound named and the
+knob exposed, so the session demonstrates the loop's enforcement alone.
+The model worked the exposed knob: strip 4 kept at 1,470.6, +8.8\%;
+strip 8 hit the register cliff and was reverted at 921.7; strip 6 probed
+it and was reverted at 1,298.7. It never reached fusion, and all of its
+reported numbers came from the machine.
 
 \section{Concurrent CPU and GPU
 Execution}\label{concurrent-cpu-and-gpu-execution}
@@ -493,27 +495,28 @@ raw logs under \texttt{ab\_vkvisible} in
 hidden-device configuration, which the application ships.
 
 The benchmark script \texttt{conc\_steady\_bench.sh}, under
-\texttt{pi/flood/}, measures each kernel alone (cool starts, finished
-before heat accumulates), decode alone, and each kernel looping while
-decode runs. Each decode-bearing phase gets a cooldown, then a soak of
-eight unreported decode repetitions that bring the chip to working
-temperature; kernel-alone phases run straight from the cooldown. The
-Pi's firmware defends against heat by lowering clocks, gently past a
-soft temperature limit and sharply at a hard throttle, and the logs
-record which was active. The soak runs a fixed count instead of waiting
-on those flags, and the phases landed in different regimes. The
-concurrent phases ran soft-limited 70 to 79\% of the time and peaked at
-76.3 C; decode alone reached 73.0 C, limited for 3\%. Each decode phase
-defines the measurement window: llama-bench generates 64 tokens per
-repetition for 20 repetitions, long enough for 12 to 28 flood
-completions, and a flood run counts only if it fits inside the window.
+\texttt{pi/flood/}, measures three conditions: each kernel alone, decode
+alone, and each kernel looping while decode runs. Each decode-bearing
+phase gets a cooldown and then a soak of eight decode repetitions; the
+soak brings the chip to working temperature and its repetitions go
+unreported. Kernel-alone phases run straight from the cooldown: cool
+starts, finished before heat accumulates. The Pi's firmware defends
+against heat by lowering clocks, gently past a soft temperature limit
+and sharply at a hard throttle, and the logs record which was active.
+The soak runs a fixed count instead of waiting on those flags, and the
+phases landed in different regimes. The concurrent phases ran
+soft-limited 70 to 79\% of the time and peaked at 76.3 C; decode alone
+reached 73.0 C, limited for 3\%. Each decode phase defines the
+measurement window: llama-bench generates 64 tokens per repetition for
+20 repetitions, long enough for 12 to 28 flood completions, and a flood
+run counts only if it fits inside the window.
 
 An earlier short-window campaign, preserved in \texttt{conc\_bench2/},
 read 711.9 steps/s concurrent with decode at 10.3, against this run's
 883.4 and 9.6. Aligning the two campaigns on time since decode began
-resolves the difference. Concurrent throughput follows a settling curve:
-near 73 C the firmware's soft temperature limit begins capping CPU
-clocks, decode slows from 10.2 to 9.6 tokens/s, its per-second memory
+resolves the difference. Concurrent throughput follows a settling curve.
+Near 73 C the firmware's soft temperature limit begins capping CPU
+clocks. Decode slows from 10.2 to 9.6 tokens/s, so its per-second memory
 traffic thins, and the flood rate climbs. The thermal logs record the
 cap engaging in both campaigns. The earlier campaign's window covered
 decode's first half-minute, before the cap settled: 711.9 ± 76.1 over
@@ -558,18 +561,19 @@ either kernel). Because the rate is still climbing across the window,
 \end{figure}
 
 Decode is also the GPU's worst case. Paired with a compute-bound CPU
-load (openssl SHA-256, four threads) the GPU keeps 99\% and the load
-keeps 88\% of its 16 KB-block throughput; paired with the memory-bound
-four-thread CPU flood the GPU keeps 92\% and the load keeps 75\%
-(continuous flood-simulation probes over cool-start 60 s windows, both
-sides logged under \texttt{genload2} in \texttt{docs/paper/artifacts/}).
-These two pairings also bound the thermal confound. Both ran at the same
-76.3 C with the soft limit active for 80\% and 70\% of their phases,
-against a solo phase that never left 57.6 C, and the GPU still kept 99\%
-and 92\%. Clock governance therefore does not explain decode's 42\% on
-its own. The GPU is the steadier side of every pairing except decode,
-which streams model weights from DRAM every token: interference tracks
-the CPU load's memory traffic.
+load (openssl SHA-256, four threads), the GPU keeps 99\% of its rate and
+the load keeps 88\% of its 16 KB-block throughput. Paired with the
+memory-bound four-thread CPU flood, the GPU keeps 92\% and the load
+keeps 75\%. Both pairings used continuous flood-simulation probes over
+cool-start 60 s windows, and both sides are logged under
+\texttt{genload2} in \texttt{docs/paper/artifacts/}. These two pairings
+also bound the thermal confound. Both ran at the same 76.3 C, with the
+soft limit active for 80\% of the openssl phases and 70\% of the flood
+phases; a solo phase never left 57.6 C. The GPU still kept 99\% and
+92\%. Clock governance therefore does not explain decode's 42\% on its
+own. The GPU is the steadier side of every pairing except decode, which
+streams model weights from DRAM every token: interference tracks the CPU
+load's memory traffic.
 
 \subsection{The CPU-Only
 Counterfactual}\label{the-cpu-only-counterfactual}
@@ -606,20 +610,20 @@ GPU concurrent, optimized (from above) & 883.4 ± 47.1 & 9.6 ± 0.2 \\
 }
 
 The idle-core number is real but unavailable: in deployment, decode is
-always running. Oversubscribed, decode collapses 75\% (llama.cpp's
-workers synchronize every token; losing one core stalls all four), and
-the flood mean is inflated by bursts between decode repetitions, hence
-its ± 181. Partitioned, the best CPU-only arrangement, decode pays a
-29\% tax against the GPU split's 16\%; time-slicing (flooding about 23\%
-of the time to match 883 steps/s) would cap decode at 8.8 t/s and freeze
-guidance during bursts. The GPU split beats the best measured CPU-only
-option on both axes: by 30\% on simulation (883.4 ± 47.1 vs 678.8 ±
-10.6) and by 14\% on decode (9.6 ± 0.2 vs 8.4 ± 0.1). The slower
-processor still wins, because the CPU has no spare cycles to sell. The
-margin is campaign-dependent, but the direction is not: in the earlier
-campaign the decode axis holds and the simulation axis ties within noise
-(Section VIII); no measured campaign puts the partitioned scheme ahead
-on either axis.
+always running. Oversubscribed, decode collapses 75\%: llama.cpp's
+workers synchronize every token, so losing one core stalls all four. The
+flood mean is inflated by bursts between decode repetitions, hence its ±
+181. Partitioned is the best CPU-only arrangement, and decode there pays
+a 29\% tax against the GPU split's 16\%. A third scheme, time-slicing,
+would flood about 23\% of the time to match 883 steps/s; it would cap
+decode at 8.8 t/s and freeze guidance during bursts. The GPU split beats
+the best measured CPU-only option on both axes: by 30\% on simulation
+(883.4 ± 47.1 vs 678.8 ± 10.6) and by 14\% on decode (9.6 ± 0.2 vs 8.4 ±
+0.1). The slower processor still wins, because the CPU has no spare
+cycles to sell. The margin is campaign-dependent, but the direction is
+not: in the earlier campaign the decode axis holds and the simulation
+axis ties within noise (Section VIII); no measured campaign puts the
+partitioned scheme ahead on either axis.
 
 \section{Limitations}\label{limitations}
 
@@ -648,11 +652,11 @@ measurement of the settled operating point exists. The partitioned
 counterfactual does replicate: 678.4 ± 63.3, 680.6 ± 22.9, and 678.8 ±
 10.6 steps/s across the three campaigns that measured it, with decode at
 8.38 and 8.41 in the two that used the shipped hidden-device
-configuration. Taken at face value the earlier campaign still narrows
-the simulation margin over the partitioned scheme to within noise (711.9
-± 76.1 against 678.8 ± 10.6). The decode margin holds in both campaigns
-(9.6 and 10.3 against 8.4), and no measured campaign puts the
-partitioned scheme ahead on either axis.
+configuration. Taken at face value, the earlier campaign still narrows
+the GPU split's simulation margin over the partitioned scheme to within
+noise: 711.9 ± 76.1 against 678.8 ± 10.6. The decode margin holds in
+both campaigns (9.6 and 10.3 against 8.4), and no measured campaign puts
+the partitioned scheme ahead on either axis.
 
 The winning kernel came from the hand-driven sweep, and the agent-driven
 session worked a knob the server itself exposed, so the loop's ability

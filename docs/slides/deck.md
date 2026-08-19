@@ -113,7 +113,7 @@ Collected from the running board by `pi/collect_specs.sh`, archived with the raw
 
 # Ask for too many registers and the driver does not fail; it quietly gets slower
 
-Asked for more registers than exist, `v3dv` recompiles with the register-hungry optimizations disabled one at a time, then with half the threads, then on a fallback scheduler, and hands back whatever survives. Sometimes several times slower.
+Asked for more registers than exist, `v3dv` recompiles with the register-hungry optimizations disabled one at a time, then with half the threads, then on a fallback scheduler. It hands back whatever survives. Sometimes several times slower.
 
 Two consequences for anyone optimizing this GPU:
 
@@ -190,7 +190,11 @@ Make verification a state transition instead of an instruction.
 
 The agent advances the loop through one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves. No sequence of legal calls reaches `benchmark` without a passing `verify`. The server does also expose a `fork_at` rewind that no session used, and a caller could abuse it to resample a marginal kernel; the 1% threshold would not catch that.
 
-For the flood target, `verify` runs 400 steps at 256x256 and applies three checks: accuracy against a double-precision CPU reference (NMSE below 1e-3), water totals within 2% of the rainfall, since the simulation conserves mass, and the deepest water inside the terrain basin, since water flows downhill.
+For the flood target, `verify` runs 400 steps at 256x256 and applies three checks:
+
+- accuracy against a double-precision CPU reference (NMSE below 1e-3)
+- water totals within 2% of the rainfall, since the simulation conserves mass
+- the deepest water inside the terrain basin, since water flows downhill
 
 ---
 
@@ -228,7 +232,7 @@ Five hypotheses went through the loop, and the two I believed most turned out wr
 
 Every variant passed all three gates. I would have started with the two memory-system hypotheses if I had been guessing, and the sweep priced them at no change and +5%.
 
-<span class="caption">Percentages are relative to the vkflood2 baseline, about 1,345 steps/s (1.94 GF/s); the packed variant's 1.93 is within noise of it.</span>
+<span class="caption">Percentages are relative to the vkflood2 baseline, about 1,345 steps/s. That baseline is 1.94 GF/s; the packed variant's 1.93 is within noise of it.</span>
 
 ---
 
@@ -257,7 +261,7 @@ The problem was the **action space**. That version of `implement` accepted shade
 - fusion deletes a host-loop pipeline stage,
 - strip-mining changes the dispatch shape.
 
-Once `implement` accepted `{shader, height_shader, strip}`, the machine verified and kept the fused strip-2 kernel from its own baseline. The plateau had been a property of my harness's action space, and the hardware still had headroom.
+Once `implement` accepted `{shader, height_shader, strip}`, the machine verified and kept the fused strip-2 kernel, starting from its own baseline. The plateau had been a property of my harness's action space, and the hardware still had headroom.
 
 ---
 
@@ -305,7 +309,7 @@ The variant is ledgered as a revert with a null `steps_per_sec`. The caller does
 
 | Pass condition | Result over 5 runs |
 |---|---|
-| Baseline gates green within 1,300 to 1,400 steps/s | <span class="pass">1,348.6 ± 4.1 steps/s</span> |
+| Baseline clears its gates within 1,300 to 1,400 steps/s | <span class="pass">1,348.6 ± 4.1 steps/s</span> |
 | Fused kernel kept at 1.5x or better | <span class="pass">2,127.7 steps/s every run, 1.574 to 1.585x</span> |
 | Broken kernel refused and nulled | <span class="pass">refused in all 5</span> |
 

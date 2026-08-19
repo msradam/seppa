@@ -59,12 +59,11 @@ ffmpeg -y -f concat -safe 0 -i frames/concat.txt -vf "format=yuv420p" \
 
 `--html` is required: without it Marp strips the inline HTML the deck uses for
 two-column layouts. `--image-scale 3` renders frames at 3840x2160. The deck is designed at
-1280x720, so anything less is upscaled by the player on a high-density display
-and reads as blurry even though the encode is lossless-looking. The frame
-PNGs are generated output that git ignores; the per-slide durations are
-tracked in `frames/concat.txt`, and `-t` set to their sum (855 today)
-trims the trailing entry that the concat demuxer would otherwise hold
-past the end.
+1280x720. Frames rendered smaller than 3840x2160 are upscaled by the player on
+a high-density display and read as blurry even though the encode is lossless-looking. The frame
+PNGs are generated output that git ignores. The per-slide durations are
+tracked in `frames/concat.txt`. Set `-t` to their sum (866 today);
+without it the concat demuxer holds the trailing entry past the end.
 
 Rebuilding `fsm.png` needs `pdflatex`, `pdftoppm`, and Pillow:
 

@@ -4,9 +4,9 @@ Executed Jupyter notebooks that derive the Section VI and VII results in the pap
 (`../docs/paper/paper.pdf`) from the raw artifacts committed under
 `../docs/paper/artifacts/`. They run offline; no hardware is needed.
 Shared log parsers live in `analysis_utils.py`. Each notebook opens with
-its own description of the experiment, the provenance of its input data
-(which script produced which directory, and when), and closes with the
-commands to regenerate the raw data live and an environment record.
+its own description of the experiment and the provenance of its input
+data (which script produced which directory, and when). Each closes with
+the commands to regenerate the raw data live and an environment record.
 
 | Notebook | Paper elements | Raw data |
 |---|---|---|
