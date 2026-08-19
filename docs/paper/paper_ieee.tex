@@ -105,7 +105,7 @@ here. Within that boundary, the paper reports:
   an action-space lesson: the first search plateaued because every
   winning change lived in the host program (the CPU-side code that
   allocates buffers and launches the kernel), outside what the machine
-  let the model edit (Section V-C);
+  let the model edit (\mbox{Section V-C});
 \item
   a machine-checked reproduction over MCP, repeated five times under a
   defined pass criterion, including the server's refusal to benchmark a
@@ -268,7 +268,7 @@ the budget.
 
 The division of labor was fixed before the sessions ran, and it is worth
 stating exactly. The author built the application and the harness, chose
-the physics gates, ran the hand-driven sweep of Section V-B, and
+the physics gates, ran the hand-driven sweep of \mbox{Section V-B}, and
 supervised sessions. The language model was Claude Sonnet 5 (Anthropic),
 driven through the Claude Code client at high reasoning effort. It
 answered each \texttt{hypothesize} prompt by writing
@@ -280,7 +280,7 @@ winning kernel came from the hand-driven sweep, and the machine verified
 and reproduced it (Section VI). In the one fully agent-driven session
 the model wrote its own strip-mined shader pair for each strip value it
 tried, worked only the strip parameter of the two the server had already
-named, and never proposed the fused kernel of Section V-B.
+named, and never proposed the fused kernel of \mbox{Section V-B}.
 
 For the flood target, \texttt{verify} runs the candidate kernel for 400
 steps at 256x256 and applies three checks. Each catches a different way

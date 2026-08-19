@@ -30,6 +30,8 @@ The Pi 5 pairs four Cortex-A76 CPU cores with a VideoCore VII GPU (V3D 7.1), the
 
 Tables~\ref{tab:platform} and \ref{tab:gpu} list the platform and the GPU's compute limits, collected from the running board by `pi/collect_specs.sh` (archived with the raw vulkaninfo dump). The limits are tight, and the scale is modest: the best kernel we measured sustains about 13 GFLOP/s in fp32, and that figure belongs to a dense matrix multiply (Section 7.1 compares the processors on the stencil itself). The GPU is a second, slower engine that happens to be free. In Vulkan's terms, a dispatch is one launch of a kernel over the whole grid, and one invocation is one execution of the kernel by one GPU thread. Invocations are grouped into workgroups, and the hardware runs invocations in lockstep bundles of 16 called subgroups.
 
+<!--TABLE:tab:platform|Platform, collected from the running board by \mbox{collect\_specs.sh}-->
+<!--TABLE:tab:gpu|GPU compute limits, collected live (vulkaninfo)-->
 <!--SPECS-->
 
 The strange part is the driver: when a shader wants more registers than exist, v3dv does not fail. It walks a ladder of thirteen compile strategies [16], disabling, one at a time, the optimizations that spend registers for speed: instruction scheduling, code motion, loop unrolling, load sorting, pipelining. It then halves the thread count, repeats the disables, and ends on a fallback scheduler, handing back whatever survives, sometimes several times slower.
@@ -44,15 +46,11 @@ A second line puts the evaluator outside the model instead of arguing with it. F
 
 ## 4. The Seppa Harness
 
-Seppa (Finnish seppä, smith) is a port of AutoKernel [15], an open-source kernel-optimization loop, onto a finite-state machine built with Apache Burr. Theodosia (an adapter that mounts a Burr state machine as an MCP server) serves it from the Pi itself. The graph is:
+Seppa (Finnish seppä, smith) is a port of AutoKernel [15], an open-source kernel-optimization loop, onto a finite-state machine built with Apache Burr. Theodosia (an adapter that mounts a Burr state machine as an MCP server) serves it from the Pi itself.
 
-```
-characterize -> baseline -> hypothesize -> implement
-  -> compile -> verify -> benchmark -> evaluate
-  -> log_variant -> (hypothesize | stop)
-```
+<!--FIG:fsm_fig-->
 
-with two guard edges to `log_variant`, on compile failure and on gate failure, and a third edge returning `implement` to `hypothesize` when the model submits nothing usable. The guards are ordinary code, from `v3d_flood2_opt.py`:
+Fig.~\ref{fig:fsm} shows the graph, with two guard edges to `log_variant`, on compile failure and on gate failure, and a third edge returning `implement` to `hypothesize` when the model submits nothing usable. The guards are ordinary code, from `v3d_flood2_opt.py`:
 
 ```
 ("compile_", "verify", expr("compile_ok")),
@@ -89,7 +87,9 @@ The simulation runs on a square grid of water depths, and each time step every c
 
 ### 5.2 Falsification Sweep
 
-We treated the bottleneck as something to test, one hypothesis at a time. Each plausible explanation for the kernel's speed became one shader variant, and every variant went through the same compile-verify-benchmark loop that judges the model's proposals. The ideas themselves are simple. Packing stores two values in one memory word so the kernel issues fewer loads. Fusion merges the two passes into a single kernel launch, removing the buffer and the synchronization barrier between them. Strip-mining gives each GPU thread a short column of cells instead of one, spreading the fixed cost of starting a thread over more work. Every variant passed all three gates. Speeds come from 400-step runs at 256x256 on the parameterized `vkflood2` harness. Running identical kernels, its host loop is faster than the original application's, about 1,345 steps/s against 1,045. Mixing the two harnesses would inflate every ratio, so every comparison in this paper is within `vkflood2`. Percentages in the table are relative to its baseline, about 1,345 steps/s. That baseline is 1.94 GFLOP/s; the packed variant's 1.93 is within noise of it, hence no change.
+We treated the bottleneck as something to test, one hypothesis at a time. Each plausible explanation for the kernel's speed became one shader variant, and every variant went through the same compile-verify-benchmark loop that judges the model's proposals. The ideas themselves are simple. Packing stores two values in one memory word so the kernel issues fewer loads. Fusion merges the two passes into a single kernel launch, removing the buffer and the synchronization barrier between them. Strip-mining gives each GPU thread a short column of cells instead of one, spreading the fixed cost of starting a thread over more work. Every variant passed all three gates. Speeds come from 400-step runs at 256x256 on the parameterized `vkflood2` harness. Running identical kernels, its host loop is faster than the original application's, about 1,345 steps/s against 1,045. Mixing the two harnesses would inflate every ratio, so every comparison in this paper is within `vkflood2`. Table~\ref{tab:sweep} shows the sweep. Percentages in the table are relative to its baseline, about 1,345 steps/s. That baseline is 1.94 GFLOP/s; the packed variant's 1.93 is within noise of it, hence no change.
+
+<!--TABLE:tab:sweep|Falsification sweep: 400 steps at 256x256 in the \mbox{vkflood2} harness-->
 
 | Variant | Hypothesis tested | Result |
 |-----------|---------|----------|
@@ -103,7 +103,7 @@ The outcome ran against the obvious expectation. Halving the flux pass's memory 
 
 ### 5.3 Action-Space Limits
 
-An early version of the harness let the model edit only the shader source, and a session run against this stencil under that restriction found nothing; we nearly concluded the kernel was at its limit. The restriction itself was the problem: every winning change in Table I lives outside the shader. Packing changes the buffer layout, fusion removes a host-loop stage, and strip-mining changes the dispatch shape: all host-program decisions. Once `implement` accepted the host parameters as well (`{shader, height_shader, strip}`), the machine verified and kept the fused strip-2 kernel, starting from its own baseline (Section 6). A plateau can mean the search space is too small even when the hardware has headroom. Two other targets ran through the same gated loop, each behind its own correctness gate. A GEMM (dense matrix multiply) improved to 13.42 GFLOP/s over two rounds, and a llama.cpp matrix-vector kernel with its unrolled inner loop replaced by a plain loop gained 28% in end-to-end text-generation speed. The running notes record the matrix-vector result and the GEMM's final round, 12.56 to 13.42 GFLOP/s, whose shaders ship as `pi/gemm.comp` and `pi/gemm-best.comp`. None of it carries the archived logs that back Section 6.
+An early version of the harness let the model edit only the shader source, and a session run against this stencil under that restriction found nothing; we nearly concluded the kernel was at its limit. The restriction itself was the problem: every winning change in Table~\ref{tab:sweep} lives outside the shader. Packing changes the buffer layout, fusion removes a host-loop stage, and strip-mining changes the dispatch shape: all host-program decisions. Once `implement` accepted the host parameters as well (`{shader, height_shader, strip}`), the machine verified and kept the fused strip-2 kernel, starting from its own baseline (Section 6). A plateau can mean the search space is too small even when the hardware has headroom. Two other targets ran through the same gated loop, each behind its own correctness gate. A GEMM (dense matrix multiply) improved to 13.42 GFLOP/s over two rounds, and a llama.cpp matrix-vector kernel with its unrolled inner loop replaced by a plain loop gained 28% in end-to-end text-generation speed. The running notes record the matrix-vector result and the GEMM's final round, 12.56 to 13.42 GFLOP/s, whose shaders ship as `pi/gemm.comp` and `pi/gemm-best.comp`. None of it carries the archived logs that back Section 6.
 
 ## 6. Machine-Checked Reproduction over MCP
 
@@ -143,7 +143,9 @@ The campaign turned up one configuration surprise first. With any Vulkan device 
 
 The benchmark script `conc_steady_bench.sh`, under `pi/flood/`, measures three conditions: each kernel alone, decode alone, and each kernel looping while decode runs. Each decode-bearing phase gets a cooldown and then a soak of eight decode repetitions; the soak brings the chip to working temperature, and its repetitions stay out of the tables. Kernel-alone phases run straight from the cooldown: cool starts, finished before heat accumulates. The Pi's firmware defends against heat by lowering clocks, gently past a soft temperature limit and sharply at a hard throttle, and the logs record which was active. The soak runs a fixed count instead of waiting on those flags, and the phases landed in different regimes. Each decode phase defines the measurement window: llama-bench generates 64 tokens per repetition for 20 repetitions, long enough for 12 to 28 flood completions, and a flood run counts only if it fits inside the window. Inside those windows the concurrent phases ran soft-limited 85 to 88% of the time and carried the hard-throttle flag for another 10 to 13%, peaking at 76.3 C; decode alone reached 73.0 C, limited for 3%.
 
-An earlier short-window campaign, preserved in `conc_bench2/`, read 711.9 steps/s concurrent with decode at 10.3, against this run's 883.4 and 9.6. Aligning the two campaigns on time since decode began resolves the difference. Concurrent throughput follows a settling curve. Near 73 C the firmware's soft temperature limit begins capping CPU clocks. Decode slows from 10.2 to 9.6 tokens/s, so its per-second memory traffic thins, and the flood rate climbs. The thermal logs record the cap engaging in both campaigns. The earlier campaign's window covered decode's first half-minute, before the cap settled: 711.9 ± 76.1 over its five completions, against 663.3 ± 34.4 for this run's completions over the same seconds. The segment's decode rates match as well, 10.32 against 10.21, the latter from this run's soak over those same seconds; notebook 02 derives the alignment. The measured window reported here sits entirely in the capped regime. Within it the rate still climbs, from 818.6 steps/s over the first quarter to 919.1 over the last, so the concurrent rate reported is a window mean on a rising curve. Results from the steady-state run of 2026-08-10 (raw logs under `conc_steady` in `docs/paper/artifacts/`):
+An earlier short-window campaign, preserved in `conc_bench2/`, read 711.9 steps/s concurrent with decode at 10.3, against this run's 883.4 and 9.6. Aligning the two campaigns on time since decode began resolves the difference. Concurrent throughput follows a settling curve. Near 73 C the firmware's soft temperature limit begins capping CPU clocks. Decode slows from 10.2 to 9.6 tokens/s, so its per-second memory traffic thins, and the flood rate climbs. The thermal logs record the cap engaging in both campaigns. The earlier campaign's window covered decode's first half-minute, before the cap settled: 711.9 ± 76.1 over its five completions, against 663.3 ± 34.4 for this run's completions over the same seconds. The segment's decode rates match as well, 10.32 against 10.21, the latter from this run's soak over those same seconds; notebook 02 derives the alignment. The measured window reported here sits entirely in the capped regime. Within it the rate still climbs, from 818.6 steps/s over the first quarter to 919.1 over the last, so the concurrent rate reported is a window mean on a rising curve. Results from the steady-state run of 2026-08-10 are in Table~\ref{tab:conc} (raw logs under `conc_steady` in `docs/paper/artifacts/`).
+
+<!--TABLE:tab:conc|Concurrent GPU flood and CPU LLM decode-->
 
 | Condition | GPU flood (steps/s) | CPU decode (t/s) |
 |---|---|---|
@@ -166,7 +168,9 @@ Decode is also the GPU's worst case (Fig.~\ref{fig:retention}). Paired with a co
 
 ### 7.1 The CPU-Only Counterfactual
 
-Four idle A76 cores run this stencil at 3,852 steps/s, well above the V3D's 2,128, so the GPU looks unnecessary. The CPU implementation, `cpuflood.cpp` in the same directory, is the same update written with OpenMP, and it passes the same three gates; its error against the double-precision reference is NMSE 1.46e-11, far inside the 1e-3 tolerance (gate logs in `cpu_flood_bench/`). The companion script `cpu_steady_bench.sh` measures it alone and sharing the cores with decode, pinned apart (flood on core 0, decode on cores 1 to 3) and oversubscribed with four threads each. The same soak-and-measure protocol applied; raw logs are under `cpu_steady` in `docs/paper/artifacts/`.
+Four idle A76 cores run this stencil at 3,852 steps/s, well above the V3D's 2,128, so the GPU looks unnecessary. The CPU implementation, `cpuflood.cpp` in the same directory, is the same update written with OpenMP, and it passes the same three gates; its error against the double-precision reference is NMSE 1.46e-11, far inside the 1e-3 tolerance (gate logs in `cpu_flood_bench/`). The companion script `cpu_steady_bench.sh` measures it alone and sharing the cores with decode, pinned apart (flood on core 0, decode on cores 1 to 3) and oversubscribed with four threads each. The same soak-and-measure protocol applied; raw logs are under `cpu_steady` in `docs/paper/artifacts/`. Table~\ref{tab:cpu} presents the outcome.
+
+<!--TABLE:tab:cpu|The CPU-only counterfactual-->
 
 | Condition | Flood (steps/s) | CPU decode (t/s) |
 |------------|--------|------|

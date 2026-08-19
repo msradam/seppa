@@ -1,123 +1,132 @@
 """Build paper.pdf from paper.md via the official IEEEtran LaTeX class.
-Usage: python3 build.py  (writes paper_ieee.tex, compiles paper.pdf)
+
+Usage:
+    python3 build.py            write paper_ieee.tex, compile paper.pdf
+    python3 build.py --check    validate paper.md and stop, writing nothing
+
+Edit paper.md freely; nothing here matches on prose. The build is driven by
+markers in the source:
+
+    <!--FIG:name-->             insert name.tex here as a figure float
+    <!--TABLE:label|Caption-->  caption and label for the next markdown table
+    <!--SPECS-->                two tables generated from the archived specs
+
+Write cross-references as raw LaTeX (Fig.~\\ref{fig:fsm}, Table~\\ref{tab:conc});
+pandoc passes them through. Section numbers written as "Section 5" or
+"Section 5.2" are converted to IEEE roman form from the actual headings, so
+renumbering a section needs no change here.
+
 IEEEtran.cls is vendored in this directory (CTAN, V1.8b).
 """
 
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 
-src = Path("paper.md").read_text()
+CHECK_ONLY = "--check" in sys.argv
+HERE = Path(__file__).parent
+src = (HERE / "paper.md").read_text()
 
-title = re.match(r"# (.+)", src).group(1)
+
+def die(msg):
+    raise SystemExit(f"build.py: {msg}")
+
+
+title_m = re.match(r"# (.+)", src)
+if not title_m:
+    die("paper.md must open with '# Title'")
+title = title_m.group(1)
+
+for marker in ("## Abstract", "## 1. Introduction", "## References"):
+    if marker not in src:
+        die(f"paper.md is missing the '{marker}' heading")
+
 abstract_md = src[
     src.index("## Abstract") + len("## Abstract") : src.index("## 1. Introduction")
 ].strip()
 body_md = src[src.index("## 1. Introduction") : src.index("## References")]
 refs_md = src[src.index("## References") :].split("\n", 1)[1].strip()
 
-# strip manual numbers; IEEEtran numbers headings IEEE-style (I., A.)
+# Section numbers come from the headings themselves, so renumbering the paper
+# does not need an edit here.
+ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
+sections = [int(n) for n in re.findall(r"^## (\d+)\. ", body_md, re.M)]
+subsections = re.findall(r"^### (\d+)\.(\d+) ", body_md, re.M)
+if not sections:
+    die("no '## N. Title' section headings found")
+xref = {f"{a}.{b}": f"{ROMAN[int(a)]}-{chr(64 + int(b))}" for a, b in subsections}
+xref.update({str(n): ROMAN[n] for n in sections})
+
 body_md = re.sub(r"^## \d+\. ", "# ", body_md, flags=re.M)
 body_md = re.sub(r"^### \d+\.\d+ ", "## ", body_md, flags=re.M)
-# textual cross-references -> IEEE roman style (longest first)
-body_md = body_md.replace("Sections 5 and 6 answer", "Sections V and VI answer")
-for a, b in [
-    ("5.1", "V-A"),
-    ("5.2", "V-B"),
-    ("5.3", "V-C"),
-    ("7.1", "VII-A"),
-    ("10", "X"),
-    ("11", "XI"),
-    ("2", "II"),
-    ("3", "III"),
-    ("4", "IV"),
-    ("5", "V"),
-    ("6", "VI"),
-    ("7", "VII"),
-    ("8", "VIII"),
-    ("9", "IX"),
-]:
-    body_md = body_md.replace(f"Section {a}", f"Section {b}")
-
-body_md = body_md.replace("Section VII-A", "\\mbox{Section VII-A}")
 
 
-def rep(old, new):
-    global body_md
-    assert old in body_md, f"missing: {old[:60]}"
-    body_md = body_md.replace(old, new)
+def to_roman(m):
+    plural, num = m.group(1), m.group(2)
+    if num not in xref:
+        die(f"cross-reference to a section that does not exist: 'Section{plural} {num}'")
+    return f"Section{plural} {xref[num]}"
 
 
-# the ASCII FSM sketch becomes the TikZ figure (raw latex passes through pandoc)
-rep(
-    """serves it from the Pi itself. The graph is:
-
-```
-characterize -> baseline -> hypothesize -> implement
-  -> compile -> verify -> benchmark -> evaluate
-  -> log_variant -> (hypothesize | stop)
-```
-
-with two guard edges to `log_variant`,""",
-    """serves it from the Pi itself.
-
-\\input{fsm_fig}
-
-Fig.~\\ref{fig:fsm} shows the graph, with two guard edges to `log_variant`,""",
+body_md = re.sub(
+    r"Sections (\d+) and (\d+)",
+    lambda m: f"Sections {xref[m.group(1)]} and {xref[m.group(2)]}",
+    body_md,
 )
-# tables become numbered floats; point the prose at them
-rep(
-    "every winning change in Table I lives outside the shader",
-    "every winning change in Table~\\ref{tab:sweep} lives outside the shader",
-)
-rep(
-    "so every comparison in this paper is within `vkflood2`.",
-    "so every comparison in this paper is within `vkflood2`. Table~\\ref{tab:sweep} shows the sweep.",
-)
-rep(
-    "Results from the steady-state run of 2026-08-10 (raw logs under",
-    "Results from the steady-state run of 2026-08-10 are in Table~\\ref{tab:conc} (raw logs under",
-)
-rep("`conc_steady` in `docs/paper/artifacts/`):", "`conc_steady` in `docs/paper/artifacts/`).")
-rep(
-    "The same soak-and-measure protocol applied; raw logs are under `cpu_steady` in `docs/paper/artifacts/`.",
-    "The same soak-and-measure protocol applied; raw logs are under `cpu_steady` in `docs/paper/artifacts/`. Table~\\ref{tab:cpu} presents the outcome.",
-)
+body_md = re.sub(r"Section(s?) (\d+(?:\.\d+)?)", to_roman, body_md)
+# a hyphenated roman subsection must not break across lines
+body_md = re.sub(r"Section (I?[VX]?I*-[A-Z])", r"\\mbox{Section \1}", body_md)
 
 
-# spec tables are generated from the archived system capture, not typed in
-_specs = json.loads(Path("artifacts/specs_2026-08-10/specs.json").read_text())
-_plat, _gpu = _specs["platform"], _specs["gpu"]
-_plat_rows = [
-    ("Model", _plat["model"]),
-    ("SoC", _plat["soc"]),
-    ("CPU", f"{_plat['cpu']} @ {_plat['cpu_clock_mhz']} MHz"),
-    ("RAM", f"{_plat['ram_gb']} GB LPDDR (shared with GPU)"),
-    ("OS / kernel", f"{_plat['os']}, {_plat['kernel']}"),
-    ("Firmware", _plat["firmware"]),
-]
-_gpu_rows = [
-    ("Device", _gpu["device"]),
-    ("Driver", _gpu["driver"] + " (v3dv)"),
-    ("Vulkan API", _gpu["vulkan_api"]),
-    ("Core clock", f"{_gpu['core_clock_mhz']} MHz"),
-    ("Max invocations / workgroup", str(_gpu["max_workgroup_invocations"])),
-    ("Shared memory / workgroup", f"{_gpu['max_shared_memory_bytes'] // 1024} KB"),
-    ("Subgroup (SIMD) width", str(_gpu["subgroup_size"])),
-    ("fp16 arithmetic", "yes" if _gpu["shader_float16"] else "no"),
-    ("Cooperative matrix", "yes" if _gpu["cooperative_matrix"] else "no"),
-]
+# <!--FIG:name--> becomes \input{name}
+def fig_sub(m):
+    name = m.group(1)
+    if not (HERE / f"{name}.tex").exists():
+        die(f"<!--FIG:{name}--> refers to {name}.tex, which does not exist")
+    return f"\\input{{{name}}}"
 
 
-def _md_table(rows):
-    out = ["| | |", "|---------|---------|"]
-    out += [f"| {k} | {v} |" for k, v in rows]
-    return "\n".join(out)
+body_md = re.sub(r"<!--FIG:([\w-]+)-->", fig_sub, body_md)
 
+# spec tables are generated from the archived capture, never typed in
+if "<!--SPECS-->" in body_md:
+    specs = json.loads((HERE / "artifacts/specs_2026-08-10/specs.json").read_text())
+    plat, gpu = specs["platform"], specs["gpu"]
+    rows = [
+        [
+            ("Model", plat["model"]),
+            ("SoC", plat["soc"]),
+            ("CPU", f"{plat['cpu']} @ {plat['cpu_clock_mhz']} MHz"),
+            ("RAM", f"{plat['ram_gb']} GB LPDDR (shared with GPU)"),
+            ("OS / kernel", f"{plat['os']}, {plat['kernel']}"),
+            ("Firmware", plat["firmware"]),
+        ],
+        [
+            ("Device", gpu["device"]),
+            ("Driver", gpu["driver"] + " (v3dv)"),
+            ("Vulkan API", gpu["vulkan_api"]),
+            ("Core clock", f"{gpu['core_clock_mhz']} MHz"),
+            ("Max invocations / workgroup", str(gpu["max_workgroup_invocations"])),
+            ("Shared memory / workgroup", f"{gpu['max_shared_memory_bytes'] // 1024} KB"),
+            ("Subgroup (SIMD) width", str(gpu["subgroup_size"])),
+            ("fp16 arithmetic", "yes" if gpu["shader_float16"] else "no"),
+            ("Cooperative matrix", "yes" if gpu["cooperative_matrix"] else "no"),
+        ],
+    ]
+    tables = "\n\n".join(
+        "\n".join(["| | |", "|---------|---------|"] + [f"| {k} | {v} |" for k, v in group])
+        for group in rows
+    )
+    body_md = body_md.replace("<!--SPECS-->", tables)
 
-assert "<!--SPECS-->" in body_md
-body_md = body_md.replace("<!--SPECS-->", _md_table(_plat_rows) + "\n\n" + _md_table(_gpu_rows))
+# each <!--TABLE:label|caption--> binds to the table that follows it
+captions = re.findall(r"<!--TABLE:([\w:]+)\|(.+?)-->", body_md)
+body_md = re.sub(r"<!--TABLE:[\w:]+\|.+?-->\n?", "", body_md)
+
+if leftover := re.findall(r"<!--(\w+)[:>]", body_md):
+    die(f"unrecognized marker(s) in paper.md: {sorted(set(leftover))}")
 
 
 def pandoc(text):
@@ -140,9 +149,16 @@ def pandoc(text):
 body = pandoc(body_md)
 abstract = pandoc(abstract_md).strip()
 
+n_tables = len(re.findall(r"\\begin\{longtable\}", body))
+if n_tables != len(captions):
+    die(
+        f"{n_tables} table(s) in the body but {len(captions)} <!--TABLE:...--> marker(s); "
+        "each markdown table needs one marker directly above it"
+    )
+
 # pandoc escapes the ~ in "Fig.~\ref{...}" while passing \ref through raw
 body = body.replace("\\textasciitilde{}\\ref", "~\\ref")
-# keep code blocks on one column
+# keep code blocks inside one column
 body = body.replace(
     "\\begin{verbatim}",
     "\\medskip\\noindent\\begin{minipage}{\\linewidth}\n"
@@ -151,29 +167,18 @@ body = body.replace(
 body = body.replace("\\end{verbatim}", "\\end{Verbatim}\n\\end{minipage}\\medskip")
 
 # tables: drop pandoc's minipage header cells, rewrap longtable (illegal in
-# two-column mode) as an IEEE table float with caption above
+# two-column mode) as an IEEE table float with the caption above
 body = re.sub(
     r"\\begin\{minipage\}\[[bt]\]\{\\linewidth\}\\raggedright\s*(.*?)\s*\\end\{minipage\}",
     r"\1",
     body,
     flags=re.S,
 )
-captions = iter(
-    [
-        (
-            "tab:platform",
-            "Platform, collected from the running board by \\mbox{collect\\_specs.sh}",
-        ),
-        ("tab:gpu", "GPU compute limits, collected live (vulkaninfo)"),
-        ("tab:sweep", "Falsification sweep: 400 steps at 256x256 in the \\mbox{vkflood2} harness"),
-        ("tab:conc", "Concurrent GPU flood and CPU LLM decode"),
-        ("tab:cpu", "The CPU-only counterfactual"),
-    ]
-)
+caption_iter = iter(captions)
 
 
 def table_open(_m):
-    lab, cap = next(captions)
+    lab, cap = next(caption_iter)
     return (
         "\\begin{table}[!t]\\caption{%s}\\label{%s}\\centering\\footnotesize"
         "\\setlength{\\tabcolsep}{2.5pt}"
@@ -186,9 +191,8 @@ body = body.replace("\\end{longtable}", "\\bottomrule\n\\end{tabular}\\end{table
 body = body.replace("\\noalign{}", "")
 body = re.sub(r"^\\end(first)?head\n", "", body, flags=re.M)
 body = re.sub(r"^\\end(last)?foot\n", "", body, flags=re.M)
-# pandoc's longtable footer rule lands right under the header once the
-# endhead/endlastfoot markers are stripped; the real bottom rule is added
-# at \end{tabular} above
+# pandoc's longtable footer rule lands under the header once those markers are
+# stripped; the real bottom rule is added at \end{tabular} above
 body = body.replace("\\midrule\n\\bottomrule", "\\midrule")
 body = body.replace("\\toprule\n\\bottomrule", "\\toprule")
 
@@ -196,6 +200,16 @@ bibitems = []
 for i, para in enumerate(re.split(r"\n\n+", pandoc(refs_md).strip()), 1):
     entry = re.sub(r"^\s*(\{\[\}|\[)\d+(\{\]\}|\])\s*", "", para.strip())
     bibitems.append(f"\\bibitem{{r{i}}} {entry}")
+
+# balance the final page's two reference columns
+TRIGGER = 16
+
+if CHECK_ONLY:
+    print(
+        f"build.py --check: {len(sections)} sections, {n_tables} tables, "
+        f"{len(bibitems)} references, markers resolved. paper.md is buildable."
+    )
+    raise SystemExit(0)
 
 tex = r"""\documentclass[conference]{IEEEtran}
 \usepackage{array}
@@ -226,23 +240,31 @@ tex = r"""\documentclass[conference]{IEEEtran}
 GPU kernel optimization, LLM agents, correctness verification, edge computing, Vulkan
 \end{IEEEkeywords}
 %s
-\IEEEtriggeratref{16}
+\IEEEtriggeratref{%d}
 \begin{thebibliography}{%d}
 \scriptsize
 %s
 \end{thebibliography}
 \end{document}
-""" % (title, abstract, body, len(bibitems), "\n\n".join(bibitems))
+""" % (title, abstract, body, TRIGGER, len(bibitems), "\n\n".join(bibitems))
 
-Path("paper_ieee.tex").write_text(tex)
+(HERE / "paper_ieee.tex").write_text(tex)
 for _ in range(2):
     r = subprocess.run(
         ["/Library/TeX/texbin/pdflatex", "-interaction=nonstopmode", "paper_ieee.tex"],
+        cwd=HERE,
         capture_output=True,
         text=True,
     )
 if r.returncode != 0:
     print("\n".join(ln for ln in r.stdout.splitlines() if ln.startswith("!") or "Error" in ln))
-    raise SystemExit(1)
-Path("paper_ieee.pdf").replace("paper.pdf")
-print("built paper.pdf")
+    die("pdflatex failed; paper.pdf left unchanged")
+
+overfull = (HERE / "paper_ieee.log").read_text().count("Overfull \\hbox")
+(HERE / "paper_ieee.pdf").replace(HERE / "paper.pdf")
+pages = subprocess.run(["pdfinfo", str(HERE / "paper.pdf")], capture_output=True, text=True).stdout
+pages = next((ln.split()[-1] for ln in pages.splitlines() if ln.startswith("Pages")), "?")
+print(
+    f"built paper.pdf: {pages} pages, {n_tables} tables, {len(bibitems)} references, "
+    f"{overfull} overfull boxes"
+)
