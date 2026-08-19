@@ -115,6 +115,9 @@ characterize -> baseline -> hypothesize -> implement -> compile -> verify
   experiment either way.
 - A run ends after three consecutive non-improvements on gate-passing
   variants, or at the experiment budget.
+- `harness/test_gate.py` checks the guard offline, no Pi needed: with
+  the gate stubbed to fail, `benchmark` is unreachable and the variant
+  ledgers as a revert (`uv run python harness/test_gate.py`).
 
 ## Layout
 
