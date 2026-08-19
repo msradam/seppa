@@ -98,7 +98,7 @@ The V3D GPU is a strange optimization target.
 
 | Platform | | GPU compute limits | |
 |---|---|---|---|
-| Model | Raspberry Pi 5 Model B Rev 1.1 | Device | V3D 7.1.10.2 (VideoCore VII) |
+| Model | Raspberry Pi 5 Model B Rev 1.1 | Device | V3D 7.1.10.2, 960 MHz |
 | SoC | BCM2712 | Driver | Mesa 25.0.7 (v3dv), Vulkan 1.3.305 |
 | CPU | 4 x Cortex-A76 @ 2.4 GHz | Max invocations per workgroup | 256 |
 | RAM | 16 GB | Shared memory per workgroup | 16 KB |
@@ -118,7 +118,7 @@ Asked for more registers than exist, `v3dv` recompiles with the register-hungry 
 Two consequences for anyone optimizing this GPU:
 
 - Performance cliffs trace back to register allocation, and the compiler gives no warning when one of its retries downgrades the code.
-- Tuning folklore carried over from CUDA-class hardware mostly fails here, and the documentation is sparse.
+- Tuning folklore from CUDA-class hardware mostly fails here, and the documentation is sparse.
 
 Tuning this GPU is poorly documented, empirical work, and that is the category of work the field has started handing to language models.
 
@@ -157,7 +157,7 @@ the inflated speedup they reported
 
 Reported by CUDA-L1 (arXiv:2507.14111). Containment took a reward checker, a database of known hacks, and forced stream synchronization. KernelBench, the field's standard benchmark, only credits a speedup when the kernel also passes its correctness check, and the systems evaluated on it still cheat.
 
-Existing agentic optimizers, including AutoKernel, steer the model with prompts and trust it to verify and revert honestly. Each published fix moves verification somewhere the model cannot modify it, and that is the idea Seppa builds on.
+Existing agentic optimizers, including AutoKernel, steer the model with prompts and trust it to verify and revert honestly. A second line of work puts the evaluator outside the model: FunSearch and AlphaEvolve use the model as a mutation operator inside a loop scored by a fixed evaluator. Seppa makes that same commitment, with the scoring expressed as reachability in a graph.
 
 ---
 
@@ -188,7 +188,7 @@ Make verification a state transition instead of an instruction.
 ("evaluate", "log_variant"),
 ```
 
-The agent advances the loop through one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves. No sequence of legal calls reaches `benchmark` without a passing `verify`. The server does also expose a `fork_at` rewind that no session used, and a caller could abuse it to resample a marginal kernel; the 1% threshold would not catch that.
+The agent advances the loop through one MCP tool, `step(action, inputs)`, and the server constrains `action` to the graph's legal next moves. No sequence of legal calls reaches `benchmark` without a passing `verify`. The server does also expose a `fork_at` rewind that no archived session used, and a caller could abuse it to resample a marginal kernel; the 1% threshold would not catch that.
 
 For the flood target, `verify` runs 400 steps at 256x256 and applies three checks:
 
@@ -232,7 +232,7 @@ Five hypotheses went through the loop, and the two I believed most turned out wr
 
 Every variant passed all three gates. I would have started with the two memory-system hypotheses if I had been guessing, and the sweep priced them at no change and +5%.
 
-<span class="caption">Percentages are relative to the vkflood2 baseline, about 1,345 steps/s. That baseline is 1.94 GF/s; the packed variant's 1.93 is within noise of it.</span>
+<span class="caption">Percentages are relative to the vkflood2 baseline, about 1,345 steps/s, which is 1.94 GF/s; the packed variant's 1.93 is within noise.</span>
 
 ---
 
@@ -240,7 +240,7 @@ Every variant passed all three gates. I would have started with the two memory-s
 
 Strip-2 removes **65,536 invocations per step** and saves about **140 microseconds**.
 
-That is near 2 nanoseconds, roughly **two clock cycles per invocation**, which is the cost scale of issuing a thread. Each invocation does so little arithmetic that the overhead of starting it outweighs the work it performs.
+That is near 2 nanoseconds, roughly **two clock cycles per invocation**, which is the cost scale of issuing a thread. Each invocation does so little arithmetic that starting it costs more than the work it performs.
 
 Two hardware details shaped the final kernel:
 
@@ -348,9 +348,9 @@ What the CPU pays, and what the GPU buys.
 </div>
 </div>
 
-The interference is lopsided: the CPU keeps **84%** of its decode rate while the GPU keeps **42%**, because decode streams model weights from DRAM every token and crowds the shared bus. Contention favors the optimized kernel, so **1.58x alone becomes 2.20x concurrent**, at identical decode cost.
+The interference is lopsided: the CPU keeps **84%** of its decode rate while the GPU keeps **42%**, because decode streams model weights from DRAM every token and crowds the shared bus. The chart bounds the thermal share: at the same 76.3 C, openssl leaves the GPU at 99% and a CPU-side flood at 92%. Contention favors the optimized kernel, so **1.58x alone becomes 2.20x concurrent**, at identical decode cost.
 
-<span class="caption">Cooldown and decode soak before each phase. An earlier campaign read 711.9, 19% below: its window sat in decode's first half-minute, before the soft temperature limit settled. Aligned in time, the campaigns agree; the settled regime was measured once.</span>
+<span class="caption">Cooldown and decode soak before each phase. An earlier campaign read 711.9, 19% below: its window sat in decode's first half-minute, before the soft limit settled. Aligned in time the campaigns agree; the settled regime was measured once.</span>
 
 ---
 
@@ -368,14 +368,14 @@ Four idle A76 cores reach 3,852 steps/s, above the V3D's 2,128; in deployment de
 
 The CPU-only flood is the same update in OpenMP, untuned where the GPU kernel is not, and passes the same three gates. Oversubscribed, decode collapses 75%. Partitioned, the best CPU-only arrangement, pays a 29% decode tax against the GPU split's 16%.
 
-The GPU split wins on both axes here, **30%** more simulation and **14%** more decode, and no measured campaign puts the partitioned scheme ahead on either axis. The CPU has no spare cycles to sell.
+Against the partitioned split the GPU wins on both axes, **30%** more simulation and **14%** more decode, and no measured campaign puts the partitioned scheme ahead on either axis. The CPU has no spare cycles to sell.
 
 ---
 
 # Limitations
 
 - One board and one grid family: the speedup shrinks from 1.58x at 256x256 to 1.18x at 1024x1024.
-- The gates cover one storm scenario at one grid size, and the keep decision rests on a single timing sample. They catch a kernel that is wrong; one that cuts corners inside the tolerance would pass.
+- The gates cover one storm scenario at one grid size, and the keep decision rests on a single timing sample. They catch a kernel that is wrong; one that cuts corners inside the tolerance would pass, and Sarkar's correctness-illusion study (arXiv:2606.20128) finds this class of check systematically optimistic.
 - The winning kernel came from my hand sweep, and the agent-driven session stayed inside the one parameter family the server had already named. The project shows the machine can verify; whether the model can find optimizations on its own stays untested.
 - Decode stays on the CPU; full GPU offload hits an upstream llama.cpp defect.
 - The board is dead. The scored campaigns re-derive from archived logs and two notebooks that still run; the hand-timed sweep column and the larger-grid ratios live in dated running notes.
@@ -388,6 +388,6 @@ A language model proposed kernels for this GPU, and a state machine decided what
 
 That bought **883 simulation steps per second** beside a language model still decoding at **84%** of its solo rate, which beats the best CPU-only arrangement I measured on both axes in the steady-state campaign.
 
-Benchmarking unverified code, the documented failure mode, needs a transition this graph does not have. The one loophole left, resampling a verified kernel through `fork_at`, is disclosed, and no session used it.
+Benchmarking unverified code, the documented failure mode, needs a transition this graph does not have. The loophole I know of, resampling a verified kernel through `fork_at`, is disclosed, and no archived session used it.
 
 Every verdict here came out of the gate ledger, and every number in the scored campaigns reproduces from the raw logs at `github.com/msradam/seppa`.
