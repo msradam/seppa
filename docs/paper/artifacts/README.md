@@ -23,7 +23,8 @@ The measurement hardware is no longer live, so these files are the record.
 Flood throughput is not stored as steps/s. Each run prints `steps=N time=Ts`,
 so steps/s is `N/T`. Concurrent phases additionally carry `llama_start=` and
 `llama_end=` markers, and a run counts only if it both began and finished
-inside that window, which is why the concurrent row counts (n=28, n=12, n=25,
+inside that window, so every counted run executed entirely under decode
+load, which is why the concurrent row counts (n=28, n=12, n=25,
 n=89) are smaller than the number of runs in the file. `notebooks/analysis_utils.py`
 implements this; `notebooks/02_concurrency_envelope.ipynb` reproduces the tables.
 

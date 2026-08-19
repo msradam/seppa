@@ -50,8 +50,8 @@ emergency-response and field settings, where power, connectivity, and
 budget are constrained {[}12{]} and inference must happen on-device once
 the network is gone {[}11{]}. A Pi 5 runs a quantized billion-parameter
 model (weights compressed to low-precision integers) on its CPU cores
-{[}8{]}, generating text one token, roughly a word fragment, at a time,
-in the phase called decode. AI capability is usually added with
+{[}8{]}. It generates text one token (roughly a word fragment) at a
+time, in the phase called decode. AI capability is usually added with
 dedicated hardware, a neural-processing add-on board (NPU HAT) or a USB
 accelerator {[}13{]}, which raises cost and adds a procurement
 dependency in a supply-constrained chip market {[}14{]}.
@@ -75,8 +75,8 @@ results. AutoKernel {[}15{]} is one. These loops steer the model with
 prompts and trust it to verify honestly and revert bad kernels, and
 Section III's related work shows that trust has a poor record. Seppa
 removes the trust by narrowing the model's role: the model proposes, and
-nothing else. A finite-state machine built on Apache Burr {[}5{]}, a
-Python state-machine library, owns compilation, verification,
+nothing else. A finite-state machine built on Apache Burr {[}5{]} (a
+Python state-machine library) owns compilation, verification,
 benchmarking, and the verdict, and refuses out-of-order requests. The
 machine is served over the Model Context Protocol (MCP) {[}6{]}, a
 standard interface through which a language model calls tools on a
@@ -124,9 +124,9 @@ GPU}\label{background-the-raspberry-pi-5-gpu}
 The Pi 5 pairs four Cortex-A76 CPU cores with a VideoCore VII GPU (V3D
 7.1), the block that also drives the desktop. There is no CUDA and no
 vendor compute toolchain; compute reaches the GPU only through Vulkan
-shaders, small programs the GPU runs many times in parallel, compiled by
-Mesa's v3dv driver {[}9{]}. In this paper, kernel means a GLSL compute
-shader.
+shaders (small programs the GPU runs many times in parallel), compiled
+by Mesa's v3dv driver {[}9{]}. In this paper, kernel means a GLSL
+compute shader.
 
 Tables~\ref{tab:platform} and \ref{tab:gpu} list the
 platform and the GPU's compute limits, collected from the running board
@@ -187,7 +187,7 @@ field's standard benchmark, only credits a speedup when the kernel also
 passes its correctness check; Kevin {[}17{]} trains a model with
 reinforcement learning that rewards kernels proving correct and fast,
 and TritonRL {[}18{]} puts the difficulty in its title, training a model
-to write kernels in Triton, a Python-like kernel language, ``without
+to write kernels in Triton (a Python-like kernel language) ``without
 cheating.'' The systems still cheat. CUDA-L1 {[}4{]} reports that 82 of
 its 250 RL-generated kernels (32.8\%) exploited stream-timing loopholes,
 arranging the GPU's work queues so the timed section ended before the
@@ -198,8 +198,8 @@ eventually learns to optimize the measurement itself.
 
 A weaker assumption sits underneath all of this: that a passing check
 means a correct kernel. Sarkar {[}19{]} tests the oracles these
-benchmarks use: the automated checks, here fixed-tolerance elementwise
-comparisons, that decide whether a kernel counts as correct. The study
+benchmarks use: the automated checks (here fixed-tolerance elementwise
+comparisons) that decide whether a kernel counts as correct. The study
 finds them systematically optimistic, with seeded-buggy kernels passing
 the benchmark oracle while failing a stricter one. SpecBench {[}20{]}
 states the general form: when oversight collapses onto an automated
@@ -223,10 +223,10 @@ machine instead.
 
 \section{The Seppa Harness}\label{the-seppa-harness}
 
-Seppa is a port of AutoKernel {[}15{]}, an open-source
-kernel-optimization loop, onto a finite-state machine built with Apache
-Burr. Theodosia, an adapter that mounts a Burr state machine as an MCP
-server, serves it from the Pi itself.
+Seppa (Finnish seppä, smith) is a port of AutoKernel {[}15{]}, an
+open-source kernel-optimization loop, onto a finite-state machine built
+with Apache Burr. Theodosia (an adapter that mounts a Burr state machine
+as an MCP server) serves it from the Pi itself.
 
 \input{fsm_fig}
 
@@ -476,15 +476,15 @@ Execution}\label{concurrent-cpu-and-gpu-execution}
 
 In deployment the GPU loops the simulation while the CPU computes
 shelter routes and decodes (Granite 4.0 1B on llama.cpp with
-\texttt{-ngl\ 0}, no layers offloaded to the GPU; 4 threads). Decode,
-the token-by-token generation phase, is memory-bound: its speed is set
+\texttt{-ngl\ 0}, no layers offloaded to the GPU; 4 threads). Decode
+(the token-by-token generation phase) is memory-bound: its speed is set
 by how fast model weights stream from memory, and that matters because
 the two processors share one LPDDR bus.
 
 The campaign turned up one configuration surprise first. With any Vulkan
 device visible, llama.cpp places CPU-resident model weights in memory
 set aside for GPU transfers (host-pinned and write-combined) even at
-\texttt{-ngl\ 0}, memory that is slow for the CPU reads that dominate
+\texttt{-ngl\ 0}; that memory is slow for the CPU reads that dominate
 decode. Hiding the device with \texttt{GGML\_VK\_VISIBLE\_DEVICES=99}
 takes decode from 9.68 to 11.59 tokens/s, a 20\% gain from an
 environment variable (A/B from cool starts, llama-bench, 5 repetitions;
@@ -677,8 +677,8 @@ computed. The application lives at \texttt{github.com/msradam/bonbibi}
 and was built as an Arm AI Optimization Challenge entry; the harness at
 \texttt{github.com/msradam/seppa}. Everything this paper claims was
 built for this course, on top of that application. Measurements used its
-Granite 4.0 1B configuration. The model file, a 1.63 B-parameter GGUF
-(llama.cpp's weight format), appears in llama-bench logs under a
+Granite 4.0 1B configuration. The model file (a 1.63 B-parameter GGUF,
+llama.cpp's weight format) appears in llama-bench logs under a
 granite-3B size label; the application has since moved to a larger
 model. Build commands are in \texttt{pi/flood/README.md}.
 

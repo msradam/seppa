@@ -1,7 +1,8 @@
 # AutoKernel-to-FSM fidelity audit (2026-08-09)
 
-Comparison of the upstream AutoKernel loop (RightNow-AI/autokernel,
-`program.md` B4 and `bench.py`) against the implemented FSM target
+Comparison of the upstream AutoKernel loop (RightNow-AI/autokernel:
+`program.md`, whose section B4 holds the loop rules, and `bench.py`)
+against the implemented FSM target
 (`v3d_flood2_opt.py`, the paper's subject). Line references are to
 upstream `program.md`.
 
@@ -14,7 +15,7 @@ upstream `program.md`.
 | correctness FAIL: revert immediately, never keep (l.273) | `verify -> log_variant` guard; `benchmark` unreachable; verdict forced to revert |
 | PASS + at least 1% gain: keep, new baseline (l.274, l.277) | `evaluate`: `sps > best * 1.01` updates `best_sps`/`best_variant`, persists winner |
 | PASS + same or worse: revert (l.275) | `evaluate` else-branch |
-| Correctness and timing from one execution (`bench.py`) | `run_gate` returns (gates, steps/s) from one run; `verify` returns that timing to the caller as `steps_per_sec_if_kept` whether or not the gates passed, and `benchmark` echoes it. The green verify gates entry into the ledger and the verdict; the caller still sees the number |
+| Correctness and timing from one execution (`bench.py`) | `run_gate` returns (gates, steps/s) from one run; `verify` returns that timing to the caller as `steps_per_sec_if_kept` whether or not the gates passed, and `benchmark` echoes it. A green verify gates the timing's entry into the ledger and the verdict; the ledger records the experiment either way, and the caller still sees the number |
 | Every experiment recorded (`results.tsv` via `orchestrate.py record`) | `variant_log` ledger entry per experiment with gate results and verdict |
 
 ## Deliberate deviations

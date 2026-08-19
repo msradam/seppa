@@ -6,8 +6,11 @@ Pi 5's integrated GPU (Broadcom VideoCore VII / V3D, Vulkan compute).
 Seppa is [AutoKernel](https://github.com/RightNow-AI/autokernel) (MIT), an
 existing prompt-driven kernel-optimization loop, ported onto an explicit
 finite-state machine ([Burr](https://github.com/apache/burr)) and served
-to an LLM agent over MCP (Theodosia). The model proposes kernel and
-host-contract changes; the machine owns compilation, verification against
+to an LLM agent over the Model Context Protocol, the standard interface
+through which a model calls tools; the MCP server here is named
+Theodosia. The model proposes kernel and host-contract changes (the
+CPU-side setup: buffer layouts and dispatch shape); the machine owns
+compilation, verification against
 physics oracles, benchmarking, and the keep-or-revert verdict, and it
 refuses out-of-order requests, so an unverified kernel can never reach a
 benchmark. The name is the Finnish word for smith (seppä, the epithet of
@@ -31,19 +34,21 @@ recomputes the Section VII tables from them, and notebook 01 replays
 the Section VI transcripts.
 
 - **Flood stencil (the paper's case study):** 1.58x at 256x256
-  (2,127.7 vs 1,348.6 steps/s) via a fused, strip-mined kernel, verified by
-  three physics gates (NMSE, mass conservation, basin pooling). The
+  (2,127.7 vs 1,348.6 steps/s) via a fused, strip-mined kernel (the two
+  per-step passes merged into one launch, two cells per thread), verified
+  by three physics gates (NMSE, normalized mean-square error against a
+  CPU reference; mass conservation; basin pooling). The
   machine re-derived the result over MCP five times out of five
   (`passk_flood2.py`), refusing each time to benchmark a deliberately
   mass-violating kernel.
 - **Concurrency (steady-state, thermally soaked):** with CPU LLM decode
-  saturating the cores, the optimized kernel sustains 883 steps/s while
+  (token generation) saturating the cores, the optimized kernel sustains 883 steps/s while
   decode keeps 84% of its solo rate; the kernel's advantage grows from
   1.58x alone to 2.20x under contention, and the split beats the best
   CPU-only scheme on both axes. Against generic CPU loads the GPU keeps
   99% (compute-bound) to 92% (memory-bound); a weight-streaming LLM is
   the harshest measured case.
-- **Other targets, same harness:** a GEMM kernel from 7.02 to 13.42
+- **Other targets, same harness:** a GEMM (dense matrix multiply) kernel from 7.02 to 13.42
   GFLOP/s over two FSM rounds; llama.cpp's matrix-vector kernel
   de-unrolled for +28% end-to-end decode. The dated running notes
   (`docs/notes/`) and the shipped kernels record them; neither is
@@ -101,9 +106,11 @@ among reachable transitions over MCP, cannot bypass the gate:
 ```
 characterize -> baseline -> hypothesize -> implement -> compile -> verify
                                  ^                                    |
-                                 |                          verify_ok / not verify_ok
-                                 |                                    |
-                 log_variant <- evaluate <- benchmark <--------------+
+                                 |                          verify_ok |
+                                 |                                    v
+                 log_variant <- evaluate <- benchmark <---------------+
+                      ^                                               |
+                      +---------------- not verify_ok ----------------+
 ```
 
 - `verify` runs the candidate on the real GPU under the target's oracle
@@ -148,7 +155,8 @@ docs/
   paper/     Paper source (paper.md), the build pipeline (build.py),
              the rendered paper.pdf, and archived raw logs and
              transcripts (artifacts/, see its README).
-  slides/    The 27-slide Marp deck, its IEEE theme, the narration
+  slides/    The 27-slide Marp deck (Markdown-rendered slides), its
+             IEEE theme, the narration
              script, and the silent video to record over (defense.mp4).
   notes/     Dated running notes and superseded planning documents,
              kept because the paper cites the notes as provenance for
