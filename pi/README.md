@@ -15,7 +15,7 @@ llama.cpp's CPU backend with its own NMSE thresholds (`test-backend-ops`).
   (`docs/paper/artifacts/`, conc_steady and ab_vkvisible). The value is
   therefore co-processing: the GPU decodes while the CPU does other
   work.
-- `vkgemm_nmse` + `gemm.comp`: standalone 13.42 GFLOP/s SGEMM
+- `vkgemm_nmse` + `gemm-best.comp`: standalone 13.42 GFLOP/s SGEMM
   (43.7 GFLOP/s roofline) with a double-precision CPU-reference
   correctness gate.
 
@@ -86,4 +86,5 @@ fallback); any FAIL means the GPU computed wrong numbers on your setup.
   (`GGML_VK_ALLOW_MM=1`), per-op verified, blocked for real use by the
   upstream defect above
 - `gemm-best.comp`, `vkgemm_nmse.cpp`: standalone SGEMM demo
-- `gemm.comp`: original 7.02 GFLOP/s baseline shader, kept for reference
+- `gemm.comp`: the 16-partial-accumulator shader the final FSM round
+  started from (12.56 GFLOP/s), kept for reference

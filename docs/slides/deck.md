@@ -315,7 +315,7 @@ The variant is ledgered as a revert with a null `steps_per_sec`. The caller does
 
 The kept kernel measured identically at the timer's resolution in every run. Baseline spread is about 0.3%, well inside the harness's 1% keep threshold; both figures are bounded by the millisecond timer.
 
-<span class="caption">Run of 2026-08-09. One fully agent-driven session (2026-08-02, a three-experiment budget) worked the strip knob the server exposed, mapped the register cliff, and never reached fusion. That session demonstrates the enforcement; it does not demonstrate discovery.</span>
+<span class="caption">Run of 2026-08-09. One fully agent-driven session (2026-08-02, a three-experiment budget) wrote its own strip-mined shader pair for each strip value it tried, mapped the register cliff, and never reached fusion. That session demonstrates the enforcement; it does not demonstrate discovery.</span>
 
 ---
 
@@ -376,7 +376,7 @@ The GPU split wins on both axes here, **30%** more simulation and **14%** more d
 
 - One board and one grid family: the speedup shrinks from 1.58x at 256x256 to 1.18x at 1024x1024.
 - The gates cover one storm scenario at one grid size, and the keep decision rests on a single timing sample. They catch a kernel that is wrong; one that cuts corners inside the tolerance would pass.
-- The winning kernel came from my hand sweep, and the agent-driven session worked a knob the server had already exposed. The project shows the machine can verify; whether the model can find optimizations on its own stays untested.
+- The winning kernel came from my hand sweep, and the agent-driven session stayed inside the one parameter family the server had already named. The project shows the machine can verify; whether the model can find optimizations on its own stays untested.
 - Decode stays on the CPU; full GPU offload hits an upstream llama.cpp defect.
 - The board is dead. The scored campaigns re-derive from archived logs and two notebooks that still run; the hand-timed sweep column and the larger-grid ratios live in dated running notes.
 

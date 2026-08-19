@@ -37,8 +37,8 @@ refused to benchmark a kernel that failed its gate. With CPU inference
 running concurrently the advantage widens to 2.20x. The deployment
 sustains 9.6 tokens/s of language-model decode (token-by-token text
 generation) beside 883 simulation steps per second, an operating point
-that beats the best measured CPU-only configuration on both axes in the
-steady-state campaign.
+that beats the strongest CPU-only arrangement measured (simulation and
+model on separate cores) on both axes in the steady-state campaign.
 \end{abstract}
 \begin{IEEEkeywords}
 GPU kernel optimization, LLM agents, correctness verification, edge computing, Vulkan
@@ -278,8 +278,9 @@ was edited by hand (transcript in
 \texttt{docs/paper/artifacts/claude\_sessions/}). Concretely: the
 winning kernel came from the hand-driven sweep and the machine verified
 and reproduced it (Section VI); in the one fully agent-driven session
-the model tuned only the strip parameter the server already exposed and
-never proposed the fused kernel of Section V-B.
+the model wrote its own strip-mined shader pair for each strip value it
+tried, stayed inside the one parameter family the server had already
+named, and never proposed the fused kernel of Section V-B.
 
 For the flood target, \texttt{verify} runs the candidate kernel for 400
 steps at 256x256 and applies three checks. Each catches a different way
@@ -403,12 +404,12 @@ kept the fused strip-2 kernel, starting from its own baseline (Section
 VI). A plateau can mean the search space is too small even when the
 hardware has headroom. Two other targets ran through the same gated
 loop, each behind its own correctness gate. A GEMM (dense matrix
-multiply) improved from 7.02 to 13.42 GFLOP/s over two rounds, and a
-de-unrolled llama.cpp matrix-vector kernel gained 28\% in end-to-end
-text-generation speed. The running notes record the matrix-vector result
-and the GEMM's final round; the 7.02 baseline is the shipped
-\texttt{pi/gemm.comp}. None of it carries the archived logs that back
-Section VI.
+multiply) improved to 13.42 GFLOP/s over two rounds, and a de-unrolled
+llama.cpp matrix-vector kernel gained 28\% in end-to-end text-generation
+speed. The running notes record the matrix-vector result and the GEMM's
+final round, 12.56 to 13.42 GFLOP/s, whose shaders ship as
+\texttt{pi/gemm.comp} and \texttt{pi/gemm-best.comp}. None of it carries
+the archived logs that back Section VI.
 
 \section{Machine-Checked Reproduction over
 MCP}\label{machine-checked-reproduction-over-mcp}
@@ -466,9 +467,10 @@ baselines 1,348.6 ± 4.1 steps/s, the kept kernel 2,127.7 in every run
 One session was fully agent-driven (2026-08-02, a three-experiment
 budget given to the proposer). The server's \texttt{characterize}
 payload names fixed per-invocation cost as the bound and exposes the
-strip parameter. The model therefore began with the bound named and the
-knob exposed, so the session demonstrates the loop's enforcement alone.
-The model worked the exposed knob: strip 4 kept at 1,470.6, +8.8\%;
+strip parameter. The model therefore began with the bound named and that
+parameter exposed, so the session demonstrates the loop's enforcement
+alone. The model worked that parameter family, writing a fresh
+strip-mined shader pair for each value: strip 4 kept at 1,470.6, +8.8\%;
 strip 8 hit the register cliff and was reverted at 921.7; strip 6 probed
 it and was reverted at 1,298.7. It never reached fusion, and all of its
 reported numbers came from the machine.
@@ -523,10 +525,10 @@ decode's first half-minute, before the cap settled: 711.9 ± 76.1 over
 its five completions, against 663.3 ± 34.4 for this run's completions
 over the same seconds. The segment's decode rates match as well, 10.32
 against 10.21; notebook 02 derives the alignment. The measured window
-below sits entirely in the capped regime. Within it the rate still
-climbs, from 818.6 steps/s over the first quarter to 919.1 over the
-last, so the figure below is a window mean on a rising curve. Results
-from the steady-state run of 2026-08-10 are in
+reported here sits entirely in the capped regime. Within it the rate
+still climbs, from 818.6 steps/s over the first quarter to 919.1 over
+the last, so the concurrent rate reported is a window mean on a rising
+curve. Results from the steady-state run of 2026-08-10 are in
 Table~\ref{tab:conc} (raw logs under
 \texttt{conc\_steady} in \texttt{docs/paper/artifacts/}).
 
@@ -560,20 +562,21 @@ either kernel). Because the rate is still climbing across the window,
 \label{fig:retention}
 \end{figure}
 
-Decode is also the GPU's worst case. Paired with a compute-bound CPU
-load (openssl SHA-256, four threads), the GPU keeps 99\% of its rate and
-the load keeps 88\% of its 16 KB-block throughput. Paired with the
+Decode is also the GPU's worst case
+(Fig.~\ref{fig:retention}). Paired with a compute-bound
+CPU load (openssl SHA-256, four threads), the GPU keeps 99\% of its rate
+and the load keeps 88\% of its 16 KB-block throughput. Paired with the
 memory-bound four-thread CPU flood, the GPU keeps 92\% and the load
 keeps 75\%. Both pairings used continuous flood-simulation probes over
 cool-start 60 s windows, and both sides are logged under
 \texttt{genload2} in \texttt{docs/paper/artifacts/}. These two pairings
 also bound the thermal confound. Both ran at the same 76.3 C, with the
 soft limit active for 80\% of the openssl phases and 70\% of the flood
-phases; a solo phase never left 57.6 C. The GPU still kept 99\% and
-92\%. Clock governance therefore does not explain decode's 42\% on its
-own. The GPU is the steadier side of every pairing except decode, which
-streams model weights from DRAM every token: interference tracks the CPU
-load's memory traffic.
+phases; a solo phase never rose above 57.6 C. The GPU still kept 99\%
+and 92\%. Clock governance therefore does not explain decode's 42\% on
+its own. The GPU is the steadier side of every pairing except decode,
+which streams model weights from DRAM every token: interference tracks
+the CPU load's memory traffic.
 
 \subsection{The CPU-Only
 Counterfactual}\label{the-cpu-only-counterfactual}
@@ -659,15 +662,15 @@ both campaigns (9.6 and 10.3 against 8.4), and no measured campaign puts
 the partitioned scheme ahead on either axis.
 
 The winning kernel came from the hand-driven sweep, and the agent-driven
-session worked a knob the server itself exposed, so the loop's ability
-to discover optimizations on its own is untested here. The server's
-\texttt{fork\_at} utility rewinds to an earlier state; a caller could
-resample a marginal kernel until a draw cleared the 1\% threshold,
-\texttt{evaluate} would not notice, and no archived session did so. Full
-GPU offload of the language model is blocked by an upstream llama.cpp
-Vulkan defect. Numbers without an archived log (the original
-application's 1,045 steps/s, the sweep's GFLOP/s column and hand-timed
-ratios, the 1.41x and 1.18x at larger grids, and the GEMM and
+session stayed inside the one parameter family the server itself named,
+so the loop's ability to discover optimizations on its own is untested
+here. The server's \texttt{fork\_at} utility rewinds to an earlier
+state; a caller could resample a marginal kernel until a draw cleared
+the 1\% threshold, \texttt{evaluate} would not notice, and no archived
+session did so. Full GPU offload of the language model is blocked by an
+upstream llama.cpp Vulkan defect. Numbers without an archived log (the
+original application's 1,045 steps/s, the sweep's GFLOP/s column and
+hand-timed ratios, the 1.41x and 1.18x at larger grids, and the GEMM and
 matrix-vector results) come from the repository's dated running notes
 and shipped kernel files.
 
@@ -679,8 +682,9 @@ explains the result in plain language, entirely offline. The model never
 makes a safety decision; it only narrates what the deterministic code
 computed. The application lives at \texttt{github.com/msradam/bonbibi}
 and was built as an Arm AI Optimization Challenge entry; the harness at
-\texttt{github.com/msradam/seppa}. Everything this paper claims was
-built for this course, on top of that application. Measurements used its
+\texttt{github.com/msradam/seppa}. That harness, the gates, the
+optimized kernel, and every measurement reported here are new work for
+this course, built on top of that application. Measurements used its
 Granite 4.0 1B configuration. The model file (a 1.63 B-parameter GGUF,
 llama.cpp's weight format) appears in llama-bench logs under a
 granite-3B size label; the application has since moved to a larger
