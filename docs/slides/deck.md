@@ -25,7 +25,7 @@ M.S. Computer Engineering, NYU Tandon School of Engineering
 <div class="cols">
 <div>
 
-1. **Motivation.** One board, two continuous workloads, four cores.
+1. **Motivation.** One board runs two continuous workloads on four cores.
 2. **Background.** What the Pi 5's GPU is and why it is hard to program.
 3. **The trust problem.** Why an LLM cannot be its own judge.
 4. **The harness.** Verification as a state transition.
@@ -35,7 +35,7 @@ M.S. Computer Engineering, NYU Tandon School of Engineering
 
 5. **Case study.** Optimizing a flood stencil, failures included.
 6. **Machine-checked evidence.** Reproduction and refusal over MCP.
-7. **Concurrency.** What the CPU pays and what the GPU buys.
+7. **Concurrency.** The cost of running both workloads at once.
 8. **Limitations and conclusions.**
 
 </div>
@@ -56,7 +56,7 @@ One board has to do two jobs at once, offline.
 # One Pi 5 runs a flood simulation and a language model, offline
 
 - The application simulates surface flooding over real terrain, finds shelter routes by mobility profile, and explains the result in plain language. Everything runs on-device once the network is gone.
-- Both halves are **continuous**: the simulation must keep stepping while the model keeps decoding.
+- Both halves run continuously: the simulation must keep stepping while the model keeps decoding.
 - Raspberry Pi class boards are common in emergency-response and field settings, where power, connectivity, and budget are all constrained.
 
 The usual answer is to add silicon: an NPU HAT or a USB accelerator. That raises cost and, in a supply-constrained chip market, adds a procurement dependency.
@@ -107,20 +107,20 @@ The V3D GPU is a strange optimization target.
 
 Collected from the running board by `pi/collect_specs.sh`, archived with the raw `vulkaninfo` dump. There is no CUDA and no vendor compute toolchain: compute reaches this GPU only through Vulkan compute shaders.
 
-**Best kernel measured: about 13 GFLOP/s fp32, on a dense matrix multiply** (recorded in the running notes only). The four CPU cores are often faster; Section 7 compares the two processors on the stencil. What the GPU offers is that it is otherwise idle.
+The best kernel I measured sustained about 13 GFLOP/s fp32, on a dense matrix multiply (recorded in the running notes only). The four CPU cores are often faster; Section 7 compares the two processors on the stencil. The GPU's advantage is that it is otherwise idle.
 
 ---
 
-# Ask for too many registers and the driver does not fail; it quietly gets slower
+# Asking for too many registers gives slower code instead of an error
 
-Asked for more registers than exist, `v3dv` recompiles with the register-hungry optimizations disabled one at a time, then with half the threads, then on a fallback scheduler. It hands back whatever survives. Sometimes several times slower.
+Asked for more registers than exist, `v3dv` recompiles with the register-hungry optimizations disabled one at a time, then with half the threads, then on a fallback scheduler. It hands back whatever survives, sometimes several times slower.
 
 Two consequences for anyone optimizing this GPU:
 
 - Performance cliffs trace back to register allocation, and the compiler gives no warning when one of its retries downgrades the code.
 - Tuning folklore from CUDA-class hardware mostly fails here, and the documentation is sparse.
 
-Tuning this GPU is poorly documented, empirical work, and that is the category of work the field has started handing to language models.
+Tuning this GPU is poorly documented, empirical work, which is what the field has started handing to language models.
 
 ---
 
@@ -132,7 +132,7 @@ Models that optimize kernels have a documented habit of faking the result.
 
 ---
 
-# LLM kernel optimizers demonstrably fake their speedups
+# LLM kernel optimizers have been caught faking speedups
 
 <div class="cols">
 <div>
@@ -157,7 +157,7 @@ the inflated speedup they reported
 
 Reported by CUDA-L1 (arXiv:2507.14111). Containment took a reward checker, a database of known hacks, and forced stream synchronization. KernelBench, the field's standard benchmark, only credits a speedup when the kernel also passes its correctness check, and the systems evaluated on it still cheat.
 
-Existing agentic optimizers, including AutoKernel, steer the model with prompts and trust it to verify and revert honestly. A second line of work puts the evaluator outside the model: FunSearch and AlphaEvolve use the model as a mutation operator inside a loop scored by a fixed evaluator. Seppa makes that same commitment, with the scoring expressed as reachability in a graph.
+Existing agentic optimizers, including AutoKernel, steer the model with prompts and trust it to verify and revert honestly. A second line of work puts the evaluator outside the model: FunSearch and AlphaEvolve use the model as a mutation operator inside a loop scored by a fixed evaluator. Seppa does the same, with the score expressed as reachability in a graph.
 
 ---
 
@@ -165,7 +165,7 @@ Existing agentic optimizers, including AutoKernel, steer the model with prompts 
 
 # 4. The Seppa harness
 
-Make verification a state transition instead of an instruction.
+Seppa puts verification inside the state machine, where the model cannot reach it.
 
 ---
 
@@ -244,18 +244,18 @@ That is near 2 nanoseconds, roughly **two clock cycles per invocation**, which i
 
 Two hardware details shaped the final kernel:
 
-- Strips run **vertically**, which keeps a subgroup's 16 lanes on adjacent addresses.
-- The kernel consumes each flux value **as it is produced**. Holding all four alive fails register allocation, the same cliff that took back the 4-cell variant.
+- Strips run vertically, which keeps a subgroup's 16 lanes on adjacent addresses.
+- The kernel consumes each flux value as it is produced. Holding all four alive fails register allocation, the same cliff that took back the 4-cell variant.
 
 The shipped kernel is **1.58x** at 256x256 (1.574 to 1.585 across the five scored runs; 1.571 in the July transcript). It is 1.41x at 512x512, 1.18x at 1024x1024, and holds all gates over 4,000 steps.
 
 ---
 
-# A plateau can mean your search space is too small
+# A plateau can mean the search space is too small
 
 An earlier session pointed the FSM at this stencil and came back empty. I nearly concluded the kernel was at its limit.
 
-The problem was the **action space**. That version of `implement` accepted shader text only, and every winning change lives outside the shader:
+The problem was the action space. That version of `implement` accepted shader text only, and every winning change lives outside the shader:
 
 - packing changes the buffer layout,
 - fusion deletes a host-loop pipeline stage,
@@ -273,7 +273,7 @@ The machine re-derives the numbers itself.
 
 ---
 
-# The machine measured its own baseline, judged the kernel, and kept it
+# The machine measured its own baseline and issued its own verdict
 
 The Pi runs the Theodosia server; a laptop on the same network runs `drive_flood2_mcp.py`, driving the state machine through the whole cycle over MCP. The FSM measures its own baseline at 1,346.8 steps/s with gates green, receives the fused strip-2 kernel as experiment 1, compiles it, gates it, benchmarks it, and issues its own verdict, numeric fields rounded here to one decimal:
 
@@ -323,7 +323,7 @@ The kept kernel measured identically at the timer's resolution in every run. Bas
 
 # 7. Concurrency
 
-What the CPU pays, and what the GPU buys.
+The deployment cost of running the simulation and the model together.
 
 ---
 
@@ -366,9 +366,9 @@ Four idle A76 cores reach 3,852 steps/s, above the V3D's 2,128; in deployment de
 | Oversubscribed: flood 4t + decode 4t | 857.1 ± 181.0 | 3.0 ± 0.3 |
 | **GPU concurrent, optimized** | **883.4 ± 47.1** | **9.6 ± 0.2** |
 
-The CPU-only flood is the same update in OpenMP, untuned where the GPU kernel is not, and passes the same three gates. Oversubscribed, decode collapses 75%. Partitioned, the best CPU-only arrangement, pays a 29% decode tax against the GPU split's 16%.
+The CPU-only flood is the same update in OpenMP, left untuned where the GPU kernel was tuned, and passes the same three gates. Oversubscribed, decode collapses 75%. Partitioned, the best CPU-only arrangement, pays a 29% decode tax against the GPU split's 16%.
 
-Against the partitioned split the GPU wins on both axes, **30%** more simulation and **14%** more decode, and no measured campaign puts the partitioned scheme ahead on either axis. The CPU has no spare cycles to sell.
+Against the partitioned split the GPU wins on both axes, **30%** more simulation and **14%** more decode, and no measured campaign puts the partitioned scheme ahead on either axis. The slower processor wins because the CPU is already fully committed.
 
 ---
 
