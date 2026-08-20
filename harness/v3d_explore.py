@@ -4,7 +4,7 @@ Unlike v3d_fsm.py (which walks a fixed variant table), the agent invents each
 edit: it rewrites gemm.comp (a tiled SGEMM for the Pi 5 V3D), which is compiled
 with glslangValidator and run by the self-contained vkgemm harness (correctness
 plus GFLOP/s), then kept or reverted on the measured number. The shipped
-gemm.comp does about 7 GFLOP/s against a 43.7 GFLOP/s roofline; the agent
+gemm.comp does 12.56 GFLOP/s against a 43.7 GFLOP/s roofline; the agent
 explores that gap (bigger tiles, wider loads, more register blocking) while
 staying correct and inside the 16 KB / 256-invocation envelope. The vkgemm check
 uses random inputs and a double-precision CPU-reference NMSE, so a kernel that
@@ -22,7 +22,7 @@ from burr.core.application import ApplicationBuilder
 
 # Persist the winning shader locally on every keep, so the research output (the
 # actual optimized kernel, not just the number) survives the run.
-BEST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "best_gemm.comp")
+BEST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "best_gemm.comp")
 
 PI_HOST = "root@pi.local"
 RESEARCH = "/root/v3d-research"

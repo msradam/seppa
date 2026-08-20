@@ -14,10 +14,10 @@ Protocol:
    input schema carefully.
 2. Each cycle: `hypothesize` (the response returns the current best
    kernel source, the experiment history, and the constraints), then
-   `implement` with your proposed kernel change, then `compile`,
+   `implement` with your proposed kernel change, then `compile_`,
    `verify`, `benchmark`, `evaluate`, `log_variant`.
 3. Every response lists the valid next actions. Never request an action
-   that is not listed. If `compile` or `verify` fails, the only valid
+   that is not listed. If `compile_` or `verify` fails, the only valid
    action is `log_variant`; the machine reverts the variant.
 4. Ground proposals in the stated constraints (V3D: 256 maximum
    invocations per workgroup, 16 KB shared memory, subgroup width 16,

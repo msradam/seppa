@@ -27,7 +27,7 @@ import subprocess
 from burr.core import State, action, expr
 from burr.core.application import ApplicationBuilder
 
-BEST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "best_mul_mat_vec.comp")
+BEST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "best_mul_mat_vec.comp")
 
 LLAMA = "/root/v3d-research/llama.cpp"
 SHADER = f"{LLAMA}/ggml/src/ggml-vulkan/vulkan-shaders/mul_mat_vec.comp"

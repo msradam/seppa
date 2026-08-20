@@ -1,20 +1,23 @@
 #!/usr/bin/env bash
 # Drive a Seppa optimization session with Claude as the proposer.
 #
-# Usage: ./claude_driver.sh [mcp-url]
-#   MODEL=claude-sonnet-5 EFFORT=high MAX_EXPERIMENTS=3 ./claude_driver.sh
+# Usage: ./claude_driver.sh <mcp-url>
+#   MODEL=claude-sonnet-5 EFFORT=high MAX_EXPERIMENTS=3 \
+#     ./claude_driver.sh http://<pi>:8000/mcp
 #
 # Uses the signed-in Claude Code session (subscription auth). The full
 # tool-call transcript is written as stream-json for the artifact record.
 set -euo pipefail
-cd "$(dirname "$0")"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$HERE/.." && pwd)"
+cd "$HERE"
 
 URL="${1:?usage: claude_driver.sh http://<pi>:8000/mcp}"
 MODEL="${MODEL:-claude-sonnet-5}"
 EFFORT="${EFFORT:-high}"
 MAX_EXPERIMENTS="${MAX_EXPERIMENTS:-3}"
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
-OUT="${OUT:-docs/paper/artifacts/claude_sessions/$STAMP}"
+OUT="${OUT:-$ROOT/docs/paper/artifacts/claude_sessions/$STAMP}"
 
 if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
     echo "ANTHROPIC_API_KEY is set; unset it so the run uses the signed-in session." >&2
@@ -34,7 +37,7 @@ printf '{"mcpServers":{"seppa":{"type":"http","url":"%s"}}}\n' "$URL" > "$OUT/mc
     echo "client=$(claude --version 2>/dev/null)"
 } > "$OUT/run_meta.txt"
 
-PROMPT="$(cat "$(dirname "$0")/claude_driver_prompt.md")
+PROMPT="$(cat "$HERE/claude_driver_prompt.md")
 
 Experiment budget for this session: $MAX_EXPERIMENTS."
 
