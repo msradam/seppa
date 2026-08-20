@@ -201,8 +201,8 @@ for i, para in enumerate(re.split(r"\n\n+", pandoc(refs_md).strip()), 1):
     entry = re.sub(r"^\s*(\{\[\}|\[)\d+(\{\]\}|\])\s*", "", para.strip())
     bibitems.append(f"\\bibitem{{r{i}}} {entry}")
 
-# balance the final page's two reference columns
-TRIGGER = 13
+# balance the final page's two reference columns; None when they fill naturally
+TRIGGER = None
 
 if CHECK_ONLY:
     print(
@@ -240,13 +240,20 @@ tex = r"""\documentclass[conference]{IEEEtran}
 GPU kernel optimization, LLM agents, correctness verification, edge computing, Vulkan
 \end{IEEEkeywords}
 %s
-\IEEEtriggeratref{%d}
+%s
 \begin{thebibliography}{%d}
 \scriptsize
 %s
 \end{thebibliography}
 \end{document}
-""" % (title, abstract, body, TRIGGER, len(bibitems), "\n\n".join(bibitems))
+""" % (
+    title,
+    abstract,
+    body,
+    f"\\IEEEtriggeratref{{{TRIGGER}}}" if TRIGGER else "%",
+    len(bibitems),
+    "\n\n".join(bibitems),
+)
 
 (HERE / "paper_ieee.tex").write_text(tex)
 for _ in range(2):
