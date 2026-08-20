@@ -13,7 +13,7 @@ duration 5
 file 'slide.007.png'
 duration 37
 file 'slide.008.png'
-duration 44
+duration 45
 file 'slide.009.png'
 duration 9
 file 'slide.010.png'
@@ -37,7 +37,7 @@ duration 44
 file 'slide.019.png'
 duration 11
 file 'slide.020.png'
-duration 34
+duration 35
 file 'slide.021.png'
 duration 44
 file 'slide.022.png'

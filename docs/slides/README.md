@@ -62,7 +62,7 @@ two-column layouts. `--image-scale 3` renders frames at 3840x2160. The deck is d
 1280x720. Frames rendered smaller than 3840x2160 are upscaled by the player on
 a high-density display and read as blurry even though the encode is lossless-looking. The frame
 PNGs are generated output that git ignores. The per-slide durations are
-tracked in `frames/concat.txt`. Set `-t` to their sum (845 today);
+tracked in `frames/concat.txt`. Set `-t` to their sum (847 today);
 without it the concat demuxer holds the trailing entry past the end.
 
 Rebuilding `fsm.png` needs `pdflatex`, `pdftoppm`, and Pillow:
