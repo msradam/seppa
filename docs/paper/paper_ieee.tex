@@ -57,12 +57,12 @@ and adds a procurement dependency in a supply-constrained chip market
 Less attention is given to silicon already on the board: the Pi 5 ships
 a VideoCore VII GPU (also referred to as the V3D) that compute workloads
 scarcely touch, and it idles during CPU inference. We explore two
-questions regarding the worth of the idle GPU. The first is whether it
-can be made fast enough at a useful workload to serve as a co-processor.
-The second is whether it can run alongside a busy CPU on a shared LPDDR
-memory bus. The case study (Section V) and its machine-checked
-reproduction (Section VI) answer the first; the concurrency metrics
-(Section VII) answer the second.
+questions regarding the worth of the idle GPU: first, whether it can be
+made sufficiently fast for a useful workload to be a co-processor;
+second, whether it can run alongside a busy CPU on a shared LPDDR memory
+bus. The case study (Section V) and its machine-checked reproduction
+(Section VI) answer the first; the concurrency metrics (Section VII)
+answer the second.
 
 The V3D is a mobile GPU with both limited power and limited
 documentation. Tuning habits learned on NVIDIA GPUs, the target of most
@@ -73,8 +73,8 @@ optimizers such as AutoKernel {[}15{]}, which are loops that place the
 model in charge of every step, including checking its own results. These
 optimizers guide the model with prompts and trust it to verify honestly
 and revert bad kernels, and Section III's related work shows that trust
-has a poor record. Seppa removes the need for that trust by narrowing
-the model's role: the model proposes, the server executes. A
+has a poor record. Seppa removes the need for overwhelming trust by
+narrowing the model's role: the model proposes, the server executes. A
 finite-state machine built on Apache Burr {[}5{]} (a Python
 state-machine library) owns compilation, verification, benchmarking, and
 the verdict. It refuses out-of-order requests. The machine is served
@@ -89,8 +89,8 @@ is the optimization target, and the application's CPU-GPU split is what
 we measure (Section IX describes the application).
 
 This paper shows that a machine can verify, reproduce, and gate the
-model's results. It does not show that the model can find good
-optimizations on its own. Within that scope, this paper reports:
+model's results. It does not demonstrate that the model can find good
+optimizations on its own. Given this, the paper reports:
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
@@ -206,11 +206,11 @@ Another option is to put the evaluator outside the model instead of
 arguing with it. AlphaEvolve {[}22{]} and FunSearch {[}21{]} use the
 model as a mutator inside a loop scored by a fixed evaluator.
 AlphaEvolve found a 48-multiplication procedure for 4x4 complex matrix
-multiplication, the first improvement in that setting in 56 years. Seppa
-makes the same structural commitment, keeping the scorer outside the
-model, with the scoring expressed as reachability in a graph instead of
-a fitness function (Section IV). In LLM-aided hardware design the same
-split appears with a human in it: Chip-Chat {[}10{]} carried
+multiplication, the first improvement in that setting in 56 years. The
+structural commitment to have the scorer outside of the model is the one
+Seppa makes, with the scoring expressed as reachability in a graph
+instead of a fitness function (Section IV). In LLM-aided hardware design
+the same split appears with a human in it: Chip-Chat {[}10{]} carried
 conversational design to tapeout with an engineer and a testbench
 closing the loop, and VeriGen {[}23{]} fine-tunes open models for
 Verilog. We close the loop with a state machine instead.
@@ -320,16 +320,16 @@ bottleneck was something other than register pressure.
 
 \subsection{Falsification Sweep}\label{falsification-sweep}
 
-We treated the bottleneck as something to test, one hypothesis at a
-time. Each plausible explanation for the kernel's speed became one
-shader variant, and each variant went through the same
-compile-verify-benchmark loop that judges the model's proposals. The
-ideas themselves are simple. Packing stores two values in one memory
-word so the kernel issues fewer loads. Fusion merges the two passes into
-a single kernel launch, removing the buffer and the synchronization
-barrier between them. Strip-mining gives each GPU thread a short column
-of cells instead of one, spreading the fixed cost of starting a thread
-over more work. Every variant passed all three gates.
+The bottleneck needed to be tested, one hypothesis at a time. Each
+plausible explanation for the kernel's speed became one shader variant,
+and each variant went through the same compile-verify-benchmark loop
+that judges the model's proposals. To describe the actions taken in the
+variants: Packing stores two values in one memory word so the kernel
+issues fewer loads. Fusion merges the two passes into a single kernel
+launch, removing the buffer and the synchronization barrier between
+them. Strip-mining gives each GPU thread a short column of cells instead
+of one, spreading the fixed cost of starting a thread over more work.
+Every variant passed all three gates.
 
 Speeds come from 400-step runs at 256x256 on the parameterized
 \texttt{vkflood2} harness. With identical kernels, the \texttt{vkflood2}
@@ -410,8 +410,8 @@ as \texttt{pi/gemm.comp} and \texttt{pi/gemm-best.comp}.
 \section{Machine-Checked Reproduction over
 MCP}\label{machine-checked-reproduction-over-mcp}
 
-The Pi runs the Theodosia server, which mounts the Seppa state machine
-built on Apache Burr. A laptop runs the driver script
+The Pi runs the Theodosia server, which mounts the Apache Burr-based
+Seppa state machine; a laptop runs the driver script
 \texttt{drive\_flood2\_mcp.py}, which connects over MCP and issues the
 loop's actions in order through the \texttt{step} tool. All measurement
 happens on the Pi, and the driver just issues requests.
@@ -419,7 +419,7 @@ happens on the Pi, and the driver just issues requests.
 The state machine measures its own baseline (1,346.8 steps/s on
 2026-07-11, gates green), receives the fused strip-2 kernel as
 experiment 1, compiles it, gates it, benchmarks 2,116.4 steps/s, and
-issues its own verdict. Numeric fields are rounded here to one decimal:
+issues its own verdict, numeric fields rounded here to one decimal:
 
 \medskip\noindent\begin{minipage}{\linewidth}
 \begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\scriptsize]
@@ -654,13 +654,13 @@ August campaign, so none of these quantities can be re-measured until
 new hardware is provisioned.
 
 The gates are necessary conditions: verification covers one storm
-scenario at one grid size. They caught what they were built to catch:
-the deliberately broken kernel of Section VI was refused in all five
-scored runs. The keep decision rests on a single timing sample against a
-1\% threshold. Across Section VI's five runs the baseline spread was
-about 0.3\%, and the kept kernel repeated to the timer's millisecond
-resolution; at the kept kernel's 0.188 s run time, that granularity is a
-0.53\% step.
+scenario at one grid size. They were able to catch what they were built
+to intercept: the deliberately broken kernel of Section VI was refused
+in all five scored runs. The keep decision rests on a single timing
+sample against a 1\% threshold. Across Section VI's five runs the
+baseline spread was about 0.3\%, and the kept kernel repeated to the
+timer's millisecond resolution; at the kept kernel's 0.188 s run time,
+that granularity is a 0.53\% step.
 
 The 3,852 steps/s CPU figure assumed a cache-resident 256x256 working
 set and may not hold at larger grids.
@@ -725,10 +725,10 @@ server decides what is true about them. On a real flood stencil, this
 discipline produced a verified 1.58x, proposed in our hand-driven sweep
 and reproduced within 1\% by the machine five of five times. That
 advantage survives deployment: in the steady-state campaign, 883 steps/s
-of simulation beside decode at 84\% of its solo speed. The implication
-is broader: commodity edge boards carry more usable silicon than their
-deployments exercise, and a loop that cannot misreport its own verdicts
-is a sound way to put that silicon to work.
+of simulation beside decode at 84\% of its solo speed. The suggestion is
+open-ended: commodity edge boards carry more usable silicon than their
+deployments exercise, and a loop that puts an AI model on rails is a
+sound way to put that silicon to work.
 
 \IEEEtriggeratref{16}
 \begin{thebibliography}{24}
