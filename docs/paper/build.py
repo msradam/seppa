@@ -202,7 +202,7 @@ for i, para in enumerate(re.split(r"\n\n+", pandoc(refs_md).strip()), 1):
     bibitems.append(f"\\bibitem{{r{i}}} {entry}")
 
 # balance the final page's two reference columns
-TRIGGER = 16
+TRIGGER = 13
 
 if CHECK_ONLY:
     print(

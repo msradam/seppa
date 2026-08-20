@@ -401,9 +401,10 @@ Two other targets ran through the same gated loop, each behind its own
 correctness gate. A GEMM (dense matrix multiply) improved to 13.42
 GFLOP/s over two rounds, and a llama.cpp matrix-vector kernel with its
 unrolled inner loop replaced by a plain loop gained 28\% in
-text-generation speed. The running notes record the matrix-vector result
-and the GEMM's final round, 12.56 to 13.42 GFLOP/s, and the shaders ship
-as \texttt{pi/gemm.comp} and \texttt{pi/gemm-best.comp}.
+text-generation speed on a partial-offload configuration (4.32 to 5.55
+tokens/s). The running notes record the matrix-vector result and the
+GEMM's final round, 12.56 to 13.42 GFLOP/s, and the shaders ship as
+\texttt{pi/gemm.comp} and \texttt{pi/gemm-best.comp}.
 
 \section{Machine-Checked Reproduction over
 MCP}\label{machine-checked-reproduction-over-mcp}
@@ -496,11 +497,14 @@ hidden-device configuration that the application ships.
 
 The benchmark script \texttt{conc\_steady\_bench.sh}, under
 \texttt{pi/flood/}, measures three conditions: each kernel alone, decode
-alone, and each kernel looping while decode runs. Each decode phase gets
-a cooldown, then a soak of eight decode repetitions that brings the chip
-to working temperature. The soak's own repetitions stay out of the
-tables. Kernel-alone phases run straight from the cooldown, so they
-finish before heat accumulates.
+alone, and each kernel looping while decode runs. The original kernel
+here is the packed two-pass pair of
+Table~\ref{tab:sweep}, which the sweep found
+indistinguishable from the pre-packing shaders and which every archived
+baseline uses. Each decode phase gets a cooldown, then a soak of eight
+decode repetitions that brings the chip to working temperature. The
+soak's own repetitions stay out of the tables. Kernel-alone phases run
+straight from the cooldown, so they finish before heat accumulates.
 
 Each decode phase defines the measurement window: llama-bench generates
 64 tokens per repetition for 20 repetitions, long enough for 12 to 28
@@ -529,12 +533,12 @@ The earlier campaign's window covered decode's first half-minute, before
 the cap settled: 711.9 ± 76.1 over its five completions, against 663.3 ±
 34.4 for this run's completions over the same seconds. The segment's
 decode rates match as well, 10.32 against 10.21, the latter from this
-run's soak over those same seconds; notebook 02 derives the alignment.
-The window reported here sits entirely in the capped regime, where the
-rate still climbs from 818.6 steps/s over the first quarter to 919.1
-over the last. The concurrent rate below is therefore a window mean on a
-rising curve. Results from the steady-state run of 2026-08-10 are in
-Table~\ref{tab:conc} (raw logs under
+run's soak, which covers those same seconds; notebook 02 derives the
+alignment. The window reported here sits entirely in the capped regime,
+where the rate still climbs from 818.6 steps/s over the first quarter to
+919.1 over the last. The concurrent rate below is therefore a window
+mean on a rising curve. Results from the steady-state run of 2026-08-10
+are in Table~\ref{tab:conc} (raw logs under
 \texttt{conc\_steady} in \texttt{docs/paper/artifacts/}).
 
 {\def\LTcaptype{none} % do not increment counter
@@ -572,18 +576,20 @@ Decode is also the GPU's worst case
 CPU load (openssl SHA-256, four threads), the GPU keeps 99\% of its rate
 and the load keeps 88\% of its 16 KB-block throughput. Paired with the
 memory-bound four-thread CPU flood, the GPU keeps 92\% and the load
-keeps 75\%. Both pairings used continuous flood-simulation probes over
-cool-start 60 s windows, and both sides are logged under
-\texttt{genload2} in \texttt{docs/paper/artifacts/}.
+keeps 75\%. Both pairings used continuous flood-simulation probes from
+cool starts: a 60 s window against the CPU flood, and a 358 s window
+against openssl, whose sweep of block sizes sets its own length. Both
+sides are logged under \texttt{genload2} in
+\texttt{docs/paper/artifacts/}.
 
 These two pairings also bound the thermal confound. Both ran at the same
 76.3 °C, with the soft limit active for 80\% of the openssl phases and
-70\% of the flood phases; a solo phase never rose above 57.6 °C. The GPU
-still kept 99\% and 92\%, so clock governance does not explain decode's
-42\% on its own. What separates the three loads is how much memory
-traffic each one generates: the heavier that traffic, the more the GPU
-loses, by 1\% against openssl, 8\% against the CPU flood, and 58\%
-against decode.
+70\% of the flood phases; the GPU's solo reference phase never rose
+above 57.6 °C. The GPU still kept 99\% and 92\%, so clock governance
+does not explain decode's 42\% on its own. What separates the three
+loads is how much memory traffic each one generates: the heavier that
+traffic, the more the GPU loses, by 1\% against openssl, 8\% against the
+CPU flood, and 58\% against decode.
 
 \subsection{The CPU-Only
 Counterfactual}\label{the-cpu-only-counterfactual}
@@ -687,8 +693,8 @@ agent-driven session worked only the strip parameter of the two the
 server itself named. The server's \texttt{fork\_at} utility rewinds to
 an earlier state, so a caller could resample a marginal kernel until one
 sample cleared the 1\% threshold, and \texttt{evaluate} would not
-notice. Theodosia exposes \texttt{fork\_at} on every mounted server, so
-this harness cannot switch it off; no archived session used it.
+notice. Theodosia lists \texttt{fork\_at} on every mounted server, and
+no archived session used it.
 
 Full GPU offload of the language model is blocked by an upstream
 llama.cpp Vulkan defect. Some numbers have no archived log: the original
@@ -710,8 +716,8 @@ Optimization Challenge entry for August 2026; the harness discussed in
 this paper is located at \texttt{github.com/msradam/seppa}. Measurements
 used the Granite 4.0 1B configuration of the representative application.
 The model file (a 1.63 B-parameter GGUF, llama.cpp's weight format)
-appears in earlier llama-bench logs under a granite-3B size label; the
-application has since moved to a larger model. Build commands are in
+appears in the archived llama-bench logs under a granite-3B size label;
+the application has since moved to a larger model. Build commands are in
 \texttt{pi/flood/README.md}.
 
 \section{Conclusion}\label{conclusion}
@@ -727,7 +733,7 @@ boards carry more usable silicon than their deployments exercise, and a
 loop that puts an AI model on rails is a sound way to leverage that very
 silicon.
 
-\IEEEtriggeratref{16}
+\IEEEtriggeratref{13}
 \begin{thebibliography}{24}
 \scriptsize
 \bibitem{r1} M. Guidolin, A. S. Chen, B. Ghimire, E. C. Keedwell, S.
