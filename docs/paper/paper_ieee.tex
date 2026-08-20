@@ -25,19 +25,19 @@ Most edge AI deployments on single-board computers like the Raspberry Pi
 leave the integrated GPU idle. We present Seppa, a harness that puts a
 large language model in the loop for optimizing GPU kernels. The model
 proposes changes, then a finite-state machine compiles, verifies against
-physics-based correctness gates, benchmarks, decides keep or revert, and
-refuses to benchmark any kernel that failed verification. The target is
-the flood-simulation stencil of an offline flood-guidance application, a
-kernel in which each grid cell updates from its neighbors. On that
-stencil, a hand-driven sweep through the same gates produced a kernel
-1.58x faster than the original. The machine re-measured and re-judged
-the result in five consecutive runs driven from a second computer, and
-in every run it refused to benchmark a kernel that failed its gate. With
-concurrent CPU inference, that 1.58x advantage widens to 2.20x. The
-deployment sustains 9.6 tokens/s of language-model decode alongside 883
-simulation steps per second, which beats the strongest CPU-only
-arrangement measured (simulation and model on separate cores) on both
-axes in the steady-state campaign.
+physics-based correctness gates, benchmarks, decides retention or
+reversion, and it refuses to benchmark any kernel that failed
+verification. The target is the flood-simulation stencil of an offline
+flood-guidance application, a kernel in which each grid cell updates
+from its neighbors. On that stencil, a hand-driven sweep through the
+same gates produced a kernel 1.58x faster than the original. The machine
+re-measured and re-judged the result in five consecutive runs driven
+from a second computer, and in every run it refused to benchmark a
+kernel that failed its gate. With concurrent CPU inference, the
+advantage widens to 2.20x. The deployment sustains 9.6 tokens/s of
+language-model decode alongside 883 simulation steps per second, which
+beats the strongest CPU-only arrangement measured (simulation and model
+on separate cores) in the steady-state experiment.
 \end{abstract}
 \begin{IEEEkeywords}
 GPU kernel optimization, LLM agents, correctness verification, edge computing, Vulkan
@@ -68,7 +68,7 @@ The V3D is a mobile GPU with both limited power and limited
 documentation. Tuning habits learned on NVIDIA GPUs, the target of most
 optimization literature, largely fail (Section II provides the
 background). Work of this kind is what the field has begun handing off
-to large language models (LLMs). Most existing tools are agentic AI
+to large language models (LLMs). The existing tools are agentic AI
 optimizers such as AutoKernel {[}15{]}, which are loops that place the
 model in charge of every step, including checking its own results. These
 optimizers guide the model with prompts and trust it to verify honestly
@@ -76,17 +76,17 @@ and revert bad kernels, and Section III's related work shows that trust
 has a poor record. Seppa removes the need for overwhelming trust by
 narrowing the model's role: the model proposes, the server executes. A
 finite-state machine built on Apache Burr {[}5{]} (a Python
-state-machine library) owns compilation, verification, benchmarking, and
-the verdict. It refuses out-of-order requests. The machine is served
-over the Model Context Protocol (MCP) {[}6{]}, the standard interface
-through which a language model calls tools on a server.
+state-machine library) owns compilation, verification, benchmarking,
+verdict, and refuses out-of-order requests. The machine is served over
+the Model Context Protocol (MCP) {[}6{]}, the standard interface through
+which a language model calls tools on a server.
 
 The representative workload is a flood simulation for an offline
 flood-guidance application {[}7{]}, which must run beside LLM narration
 on the same board. Its core kernel is a stencil, a computation that
 updates every cell of a grid from its neighbors each step. That kernel
 is the optimization target, and the application's CPU-GPU split is what
-we measure (Section IX describes the application).
+we measure (Section IX).
 
 This paper shows that a machine can verify, reproduce, and gate the
 model's results. It does not demonstrate that the model can find good
@@ -96,22 +96,20 @@ optimizations on its own. Given this, the paper reports:
 \def\labelenumi{\arabic{enumi}.}
 \tightlist
 \item
-  the optimization of a real flood stencil for the Pi's V3D GPU to 1.58x
-  under three physics gates, failed hypotheses included (Section V);
+  the optimization of a real flood stencil for the Pi's V3D GPU under
+  three physics gates to 1.58x, failed hypotheses included (Section V)
 \item
   an action-space lesson: the first search plateaued because every
   winning change lived in the host program (the CPU-side code that
   allocates buffers and launches the kernel), outside what the machine
-  let the model edit (\mbox{Section V-C});
+  let the model edit (\mbox{Section V-C})
 \item
-  a machine-checked reproduction over MCP, repeated five times under
-  defined pass criteria (Section VI);
+  a machine-verified reproduction over MCP, repeated five times under
+  defined pass criteria (Section VI)
 \item
   an interference measurement of the deployed configuration against a
-  gate-verified CPU-only counterfactual (Section VII). In the
-  steady-state campaign the CPU-GPU split beats the strongest CPU-only
-  arrangement on both axes; that arrangement gives the simulation and
-  the model separate cores.
+  gate-verified CPU-only experiment (Section VII). In the steady-state
+  campaign the CPU-GPU split beats the strongest CPU-only arrangement
 \end{enumerate}
 
 \section{Background: The Raspberry Pi 5
@@ -119,10 +117,10 @@ GPU}\label{background-the-raspberry-pi-5-gpu}
 
 The Pi 5 pairs four Cortex-A76 CPU cores with a VideoCore VII GPU (V3D
 7.1), the block that also drives the desktop. There is no CUDA and no
-vendor compute toolchain; compute reaches the GPU only through Vulkan
-shaders (small programs the GPU runs many times in parallel), compiled
-by Mesa's v3dv driver {[}9{]}. In this paper, kernel refers to a GLSL
-compute shader.
+vendor compute toolchain; compute reaches the GPU through Vulkan shaders
+(small programs the GPU runs many times in parallel), compiled by Mesa's
+v3dv driver {[}9{]}. In this paper, kernel refers to a GLSL compute
+shader.
 
 Tables~\ref{tab:platform} and \ref{tab:gpu} list the
 platform and the GPU's compute limits, collected from the running board
@@ -171,12 +169,11 @@ Cooperative matrix & no \\
 
 The driver exhibits some unusual behavior: when a shader wants more
 registers than actually exist, v3dv does not fail. It walks a ladder of
-thirteen compile strategies {[}16{]}, disabling, one at a time, the
+thirteen compile strategies {[}16{]}, disabling one at a time the
 optimizations that spend registers for speed: instruction scheduling,
 code motion, loop unrolling, load sorting, pipelining. It then halves
 the thread count, repeats the disables, and ends on a fallback
-scheduler, handing back whatever survives, sometimes several times
-slower.
+scheduler, handing back whatever survives.
 
 \section{Related Work}\label{related-work}
 
@@ -187,20 +184,19 @@ learning, and TritonRL {[}18{]} trains a model to write kernels in
 Triton (a Python-like kernel language) ``without cheating.'' In spite of
 this, CUDA-L1 {[}4{]} reports that 82 of its 250 RL-generated kernels
 (32.8\%) exploited stream-timing loopholes, arranging the GPU's work
-queues so the timed section ended before the real work did, and
-inflating the reported speedup to 18x. Containing it required a reward
-checker, a database of known hacks, and forced stream synchronization.
-When the reward is a measured value, the model learns to optimize the
-measurement itself.
+queues and inflating the reported speedup to 18x. Containment of this
+required a reward checker, a database of known hacks, and coerced stream
+synchronization. When the reward is a measured value, the model learns
+to optimize the measurement itself.
 
 A passing check does not indicate a correct kernel. Sarkar {[}19{]}
 tests the oracles these benchmarks use: the automated checks that decide
-whether a kernel counts as correct. The study finds them systematically
-optimistic, with seeded-buggy kernels passing the benchmark oracle while
-failing a stricter one. SpecBench {[}20{]} states generally: when
-oversight collapses onto an automated suite, the agent optimizes the
-suite. Our physics gates inherit the same weakness, which is noted in
-the limitations in Section VIII.
+whether a kernel counts as correct. The study finds that seeded-buggy
+kernels pass the benchmark oracle while failing a stricter one.
+SpecBench {[}20{]} states generally: when oversight collapses onto an
+automated suite, the agent optimizes the suite. Our physics gates
+inherit the same weakness, which is noted in the limitations in Section
+VIII.
 
 Another option is to put the evaluator outside the model instead of
 arguing with it. AlphaEvolve {[}22{]} and FunSearch {[}21{]} use the
@@ -209,27 +205,26 @@ AlphaEvolve found a 48-multiplication procedure for 4x4 complex matrix
 multiplication, the first improvement in that setting in 56 years. The
 structural commitment to have the scorer outside of the model is the one
 Seppa makes, with the scoring expressed as reachability in a graph
-instead of a fitness function (Section IV). In LLM-aided hardware design
-the same split appears with a human in it: Chip-Chat {[}10{]} carried
-conversational design to tapeout with an engineer and a testbench
-closing the loop, and VeriGen {[}23{]} fine-tunes open models for
-Verilog. We close the loop with a state machine instead.
+instead of a fitness function (Section IV). In LLM-aided hardware
+design, the same split occurs with a human-in-the-loop; Chip-Chat
+{[}10{]} leveraged conversational design to tapeout with an engineer and
+testbench, and VeriGen {[}23{]} fine-tunes open models for Verilog. We
+close the loop with a state machine instead.
 
 \section{The Seppa Harness}\label{the-seppa-harness}
 
 Seppa (Finnish seppä, smith) is a port of AutoKernel {[}15{]}, an
-open-source kernel-optimization loop, onto a finite-state machine built
+open-source kernel-optimization loop, to a finite-state machine built
 with Apache Burr. Theodosia, an adapter that mounts a Burr state machine
 as an MCP server, serves it from the Pi itself.
 
 \input{fsm_fig}
 
-Fig.~\ref{fig:fsm} shows the graph. Two guard edges lead
-to \texttt{log\_variant}, one on compile failure and one on gate
-failure, and a third edge, omitted from the figure, runs from
-\texttt{implement} back to \texttt{hypothesize} when the model submits
-nothing usable. The guards are ordinary code, from
-\texttt{v3d\_flood2\_opt.py}:
+Fig.~\ref{fig:fsm} shows the graph, with two guard edges
+to \texttt{log\_variant}, on compile failure and on gate failure, and a
+third edge, omitted from the figure, returning \texttt{implement} to
+\texttt{hypothesize} when the model submits nothing usable. The guards
+are ordinary code, from \texttt{v3d\_flood2\_opt.py}:
 
 \medskip\noindent\begin{minipage}{\linewidth}
 \begin{Verbatim}[frame=single,numbers=left,numbersep=3pt,framesep=1.6mm,fontsize=\scriptsize]
@@ -248,8 +243,8 @@ program, and an MCP client drives it through one tool,
 \texttt{step(action,\ inputs)}, receiving each state's result and the
 legal next actions; anything else is rejected. The server also exposes
 session utilities (\texttt{reset\_session}, \texttt{fork\_at}, resource
-reads) that no archived session used; Section VIII notes the resampling
-risk \texttt{fork\_at} would pose.
+reads); Section VIII notes the resampling risk \texttt{fork\_at} would
+pose.
 
 The port preserves AutoKernel's loop discipline (audited in
 \texttt{docs/autokernel\_fidelity.md}): one focused change per
@@ -263,7 +258,7 @@ gate-passing variants, or at the prescribed budget.
 
 The author built the application and the harness, chose the physics
 gates, ran the hand-driven sweep of \mbox{Section V-B}, and supervised
-the sessions. The language model was Anthropic Claude Sonnet 5, driven
+sessions. The language model was Anthropic Claude Sonnet 5, driven
 through the Claude Code client at high reasoning effort. It answered
 each \texttt{hypothesize} prompt by writing \texttt{implement}'s inputs,
 the kernel source and the host-side parameters, and nothing else. Every
@@ -272,12 +267,12 @@ was edited by hand (transcript in
 \texttt{docs/paper/artifacts/claude\_sessions/}). Concretely: the
 winning kernel came from the hand-driven sweep, and the machine verified
 and reproduced it (Section VI). In the one fully agent-driven session
-the model wrote its own shader pair for each strip value it tried. Of
-the two parameters the server had already named, it worked only strip,
-and it never proposed the fused kernel of \mbox{Section V-B}.
+the model wrote its own strip-mined shader pair for each strip value it
+tried, worked only the strip parameter of the two the server had already
+named, and never proposed the fused kernel of \mbox{Section V-B}.
 
 For the flood target, \texttt{verify} runs the candidate kernel for 400
-steps at 256x256 and applies three checks. Each enforces a different
+steps at 256x256 and applies three checks. Each catches a different
 standard of correctness, the usual approach in simulation verification
 {[}24{]}. First, accuracy: the GPU result must match the same simulation
 run on the CPU in double precision, within a normalized mean-square
@@ -313,9 +308,9 @@ every cell updates from its four neighbors, which is an access pattern
 called a stencil. The update takes two passes: a flux pass computes how
 much water flows across each cell boundary, and a height pass applies
 those flows to produce each cell's new depth. The original
-implementation ran about 1,045 steps/s at 256x256 (1.51 GFLOP/s). Both
-shaders compile without triggering Section II's fallback ladder, which
-means they never stress the register allocator. Therefore, the
+implementation ran about 1,045 steps/s at 256x256 (1.51 GFLOP/s), and
+both shaders compile without triggering Section II's fallback ladder,
+which means they never stress the register allocator. Therefore, the
 bottleneck was something other than register pressure.
 
 \subsection{Falsification Sweep}\label{falsification-sweep}
@@ -332,14 +327,14 @@ of one, spreading the fixed cost of starting a thread over more work.
 Every variant passed all three gates.
 
 Speeds come from 400-step runs at 256x256 on the parameterized
-\texttt{vkflood2} harness. With identical kernels, the \texttt{vkflood2}
-host loop is faster than the original application's, about 1,345 steps/s
-against 1,045. Every comparison in this paper is within
-\texttt{vkflood2} to avoid inflating the ratio by mixing the two
-harnesses. Table~\ref{tab:sweep} shows the sweep.
-Percentages in the table are relative to its baseline, about 1,345
-steps/s. That baseline is 1.94 GFLOP/s; the packed variant's 1.93 is
-within noise of it, hence no change.
+\texttt{vkflood2} harness. Running identical kernels, its host loop is
+faster than the original application's, about 1,345 steps/s against
+1,045. Every comparison in this paper is within \texttt{vkflood2} to
+avoid inflating the ratio by mixing the two harnesses.
+Table~\ref{tab:sweep} shows the sweep. Percentages in
+the table are relative to its baseline, about 1,345 steps/s. That
+baseline is 1.94 GFLOP/s; the packed variant's 1.93 is within noise of
+it, hence no change.
 
 {\def\LTcaptype{none} % do not increment counter
 \begin{table}[!t]\caption{Falsification sweep: 400 steps at 256x256 in the \mbox{vkflood2} harness}\label{tab:sweep}\centering\footnotesize\setlength{\tabcolsep}{2.5pt}\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}
@@ -375,7 +370,7 @@ the scale of starting a thread itself.
 
 Two hardware details shaped the final kernel. First, the strips run
 vertically. A subgroup's 16 lanes (its 16 invocations) are horizontal
-neighbors. When each lane walks down its own short column, the
+neighbors, so when each lane walks down its own short column, the
 subgroup's loads at every row stay on adjacent addresses, the pattern
 the memory system serves most efficiently. Second, the kernel consumes
 each flux value as it is produced, because holding all four alive fails
@@ -388,11 +383,11 @@ quoted in Section VI, and 1.59x hand-timed in the sweep. It is 1.41x at
 
 An earlier version of the harness permitted the model to edit only the
 shader source, and a session run against this stencil under that
-restriction found nothing. We nearly concluded that the kernel had hit
-its limit. The restriction itself was the problem: every winning change
-in Table~\ref{tab:sweep} lives outside the shader.
-Packing modifies the buffer layout, fusion removes a host-loop stage,
-and strip-mining changes the dispatch shape. All three are host-program
+restriction found nothing. We nearly concluded the kernel hit its limit.
+The restriction itself was the problem: every winning change in
+Table~\ref{tab:sweep} lives outside the shader. Packing
+modifies the buffer layout, fusion removes a host-loop stage, and
+strip-mining changes the dispatch shape, which were all host-program
 decisions. Once \texttt{implement} accepted the host parameters as well
 (\texttt{\{shader,\ height\_shader,\ strip\}}), the machine verified and
 kept the fused strip-2 kernel, starting from its own baseline (Section
@@ -401,8 +396,8 @@ hardware still has headroom.
 
 Two other targets ran through the same gated loop, each behind its own
 correctness gate. A GEMM (dense matrix multiply) improved to 13.42
-GFLOP/s over two rounds, and in a llama.cpp matrix-vector kernel,
-replacing the unrolled inner loop with a plain loop gained 28\% in
+GFLOP/s over two rounds, and a llama.cpp matrix-vector kernel with its
+unrolled inner loop replaced by a plain loop gained 28\% in
 text-generation speed. The running notes record the matrix-vector result
 and the GEMM's final round, 12.56 to 13.42 GFLOP/s, and the shaders ship
 as \texttt{pi/gemm.comp} and \texttt{pi/gemm-best.comp}.
@@ -447,15 +442,15 @@ elided):
 \end{Verbatim}
 \end{minipage}\medskip
 
-The variant is recorded as a revert with a null
-\texttt{steps\_per\_sec}. Gates and timing come from one execution, so
-the caller still sees the failing kernel's speed (\texttt{verify}
-reports it as \texttt{steps\_per\_sec\_if\_kept}); the green gate
-controls the ledger, the verdict, and the kept kernel.
+The variant is recorded as revert with a null \texttt{steps\_per\_sec}.
+Gates and timing come from one execution, so the caller still sees the
+failing kernel's speed (\texttt{verify} reports it as
+\texttt{steps\_per\_sec\_if\_kept}); the green gate controls the ledger,
+the verdict, and the kept kernel.
 
 To show repeatability, \texttt{passk\_flood2.py} runs the two-cycle
 reproduction k times from cool starts, each run held until the board
-drops below 55 °C. A run passes when the baseline clears its gates
+dropped below 55 °C. A run passes when the baseline clears its gates
 inside 1,300 to 1,400 steps/s, the fused kernel is kept at 1.5x or
 better, and the broken kernel is refused and nulled. Five of five runs
 passed on 2026-08-09: baselines 1,348.6 ± 4.1 steps/s, the kept kernel
@@ -465,7 +460,7 @@ passed on 2026-08-09: baselines 1,348.6 ± 4.1 steps/s, the kept kernel
 One session was fully agent-driven (2026-08-02, a three-experiment
 budget given to the proposer). The server's \texttt{characterize}
 payload names fixed per-invocation cost as the bound and exposes both
-host-contract parameters, fusion and strip. The \texttt{hypothesize}
+host-contract parameters: fusion and strip; the \texttt{hypothesize}
 prompt states on every turn that an empty \texttt{height\_shader}
 requests a fused single-dispatch step. The model began with the bound
 named and both parameters exposed, so the session demonstrates the
@@ -479,11 +474,11 @@ fusion, and all of its reported numbers came from the machine.
 Execution}\label{concurrent-cpu-and-gpu-execution}
 
 In deployment the GPU drives the simulation while the CPU computes
-shelter routes and runs the language model (Granite 4.0 1B on llama.cpp
-with \texttt{-ngl\ 0}, no layers offloaded to the GPU; 4 threads).
-Decode, the token-by-token generation phase, is memory-bound: its speed
-is set by how fast model weights stream from memory, which matters
-because the two processors share one LPDDR bus.
+shelter routes and decodes (Granite 4.0 1B on llama.cpp with
+\texttt{-ngl\ 0}, no layers offloaded to the GPU; 4 threads). Decode,
+the token-by-token generation phase, is memory-bound: its speed is set
+by how fast model weights stream from memory, which matters because the
+two processors share one LPDDR bus.
 
 The campaign first surfaced one configuration surprise. With any Vulkan
 device visible, llama.cpp places CPU-resident model weights in memory
@@ -504,10 +499,10 @@ to working temperature. The soak's own repetitions stay out of the
 tables. Kernel-alone phases run straight from the cooldown, so they
 finish before heat accumulates.
 
-Each decode phase defines the measurement window. The llama-bench tool
-generates 64 tokens per repetition for 20 repetitions, long enough for
-12 to 28 flood completions, and a flood run counts only if it fits
-inside that window.
+Each decode phase defines the measurement window: llama-bench generates
+64 tokens per repetition for 20 repetitions, long enough for 12 to 28
+flood completions, and a flood run counts only if it fits inside the
+window.
 
 The Pi's firmware defends against heat by lowering clocks, gently past a
 soft temperature limit and sharply at a hard throttle, and the logs
@@ -531,13 +526,12 @@ The earlier campaign's window covered decode's first half-minute, before
 the cap settled: 711.9 ± 76.1 over its five completions, against 663.3 ±
 34.4 for this run's completions over the same seconds. The segment's
 decode rates match as well, 10.32 against 10.21, the latter from this
-run's soak over those same seconds; notebook
-\texttt{02\_concurrency\_envelope.ipynb} in the repository derives the
-alignment. The window reported here sits entirely in the capped regime,
-where the rate still climbs from 818.6 steps/s over the first quarter to
-919.1 over the last. The concurrent rate below is therefore a window
-mean on a rising curve. Results from the steady-state run of 2026-08-10
-are in Table~\ref{tab:conc} (raw logs under
+run's soak over those same seconds; notebook 02 derives the alignment.
+The window reported here sits entirely in the capped regime, where the
+rate still climbs from 818.6 steps/s over the first quarter to 919.1
+over the last. The concurrent rate below is therefore a window mean on a
+rising curve. Results from the steady-state run of 2026-08-10 are in
+Table~\ref{tab:conc} (raw logs under
 \texttt{conc\_steady} in \texttt{docs/paper/artifacts/}).
 
 {\def\LTcaptype{none} % do not increment counter
@@ -573,15 +567,15 @@ either kernel). Because the rate is still climbing across the window,
 Decode is also the GPU's worst case
 (Fig.~\ref{fig:retention}). Paired with a compute-bound
 CPU load (openssl SHA-256, four threads), the GPU keeps 99\% of its rate
-and the load keeps 88\% of its solo throughput on 16 KB blocks. Paired
-with the memory-bound four-thread CPU flood, the GPU keeps 92\% and the
-load keeps 75\%. Both pairings used continuous flood-simulation probes
-over cool-start 60 s windows, and both sides are logged under
+and the load keeps 88\% of its 16 KB-block throughput. Paired with the
+memory-bound four-thread CPU flood, the GPU keeps 92\% and the load
+keeps 75\%. Both pairings used continuous flood-simulation probes over
+cool-start 60 s windows, and both sides are logged under
 \texttt{genload2} in \texttt{docs/paper/artifacts/}.
 
 These two pairings also bound the thermal confound. Both ran at the same
 76.3 °C, with the soft limit active for 80\% of the openssl phases and
-70\% of the flood phases. A solo phase never rose above 57.6 °C. The GPU
+70\% of the flood phases; a solo phase never rose above 57.6 °C. The GPU
 still kept 99\% and 92\%, so clock governance does not explain decode's
 42\% on its own. What separates the three loads is how much memory
 traffic each one generates: the heavier that traffic, the more the GPU
@@ -593,16 +587,16 @@ Counterfactual}\label{the-cpu-only-counterfactual}
 
 Four idle A76 cores run this stencil at 3,852 steps/s, well above the
 V3D's 2,128, so the GPU seems unnecessary. The CPU implementation,
-\texttt{cpuflood.cpp} in \texttt{pi/flood/}, is the same update written
-with OpenMP, and it passes the same three gates. Its error against the
+\texttt{cpuflood.cpp} in the same directory, is the same update written
+with OpenMP, and it passes the same three gates; its error against the
 double-precision reference is NMSE 1.46e-11, far inside the 1e-3
 tolerance (gate logs in \texttt{cpu\_flood\_bench/}).
 
-The companion script \texttt{cpu\_steady\_bench.sh} measures it alone,
-then sharing the cores with decode in two arrangements: pinned apart
-(flood on core 0, decode on cores 1 to 3), and oversubscribed with four
-threads each. The same soak-and-measure protocol applied; raw logs are
-under \texttt{cpu\_steady} in \texttt{docs/paper/artifacts/}.
+The companion script \texttt{cpu\_steady\_bench.sh} measures it alone
+and sharing the cores with decode, pinned apart (flood on core 0, decode
+on cores 1 to 3) and oversubscribed with four threads each. The same
+soak-and-measure protocol applied; raw logs are under
+\texttt{cpu\_steady} in \texttt{docs/paper/artifacts/}.
 Table~\ref{tab:cpu} presents the outcome.
 
 {\def\LTcaptype{none} % do not increment counter
@@ -697,20 +691,18 @@ application's 1,045 steps/s, the sweep's GFLOP/s column and hand-timed
 ratios, the 1.41x and 1.18x at larger grids, and the GEMM and
 matrix-vector results. These come from the repository's dated running
 notes and shipped kernel files. Recreation by the author is pending
-replacement hardware.
+hardware repair.
 
 \section{The Sample Application}\label{the-sample-application}
 
-The sample application {[}7{]}, designed to function offline, simulates
-surface flooding over real terrain {[}1{]}, finds shelter routes by
-mobility profile {[}2{]}, and explains the result in plain language. The
-model only narrates what the deterministic code computed and does not
-make a safety decision. The application lives at
+The sample application {[}7{]} simulates surface flooding over real
+terrain {[}1{]}, finds shelter routes by mobility profile {[}2{]}, and
+explains the result in plain language, designed to function in offline
+scenarios. The model only narrates what the deterministic code computed
+and does not make a safety decision. The application lives at
 \texttt{github.com/msradam/bonbibi} and was built as an Arm AI
 Optimization Challenge entry for August 2026; the harness discussed in
-this paper is located at \texttt{github.com/msradam/seppa}. The harness,
-the gates, the optimized kernel, and every measurement reported here are
-new work for this course, built on top of that application. Measurements
+this paper is located at \texttt{github.com/msradam/seppa}. Measurements
 used the Granite 4.0 1B configuration of the representative application.
 The model file (a 1.63 B-parameter GGUF, llama.cpp's weight format)
 appears in earlier llama-bench logs under a granite-3B size label; the
@@ -720,15 +712,15 @@ application has since moved to a larger model. Build commands are in
 \section{Conclusion}\label{conclusion}
 
 Seppa separates proposal from judgment: a language model suggests
-kernels for the Raspberry Pi 5's integrated GPU, and a state-machine MCP
+kernels for the Raspberry Pi 5's integrated GPU, and a state machine MCP
 server decides what is true about them. On a real flood stencil, this
 discipline produced a verified 1.58x, proposed in our hand-driven sweep
 and reproduced within 1\% by the machine five of five times. That
-advantage survives deployment: in the steady-state campaign, 883 steps/s
-of simulation beside decode at 84\% of its solo speed. The suggestion is
-open-ended: commodity edge boards carry more usable silicon than their
-deployments exercise, and a loop that puts an AI model on rails is a
-sound way to put that silicon to work.
+advantage survives deployment: 883 steps/s of simulation beside decode
+at 84\% of its solo speed. The suggestion is open-ended: commodity edge
+boards carry more usable silicon than their deployments exercise, and a
+loop that puts an AI model on rails is a sound way to leverage that very
+silicon.
 
 \IEEEtriggeratref{16}
 \begin{thebibliography}{24}
