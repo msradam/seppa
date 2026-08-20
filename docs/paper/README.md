@@ -47,6 +47,7 @@ stay at zero.
 `\IEEEtriggeratref` in `build.py` (the `TRIGGER` constant, currently `None`,
 so the macro is not emitted and the columns fill naturally) sets which
 reference starts the second column on the last page; set it to a reference
-number if the count changes and the final page looks lopsided. `fsm_fig.tex` holds the TikZ state-machine
-figure. The two spec tables are generated from the archived capture rather
-than typed, so they cannot drift from the measured hardware.
+number if the count changes and the final page looks lopsided. `fsm_fig.tex`
+holds the TikZ state-machine figure. The two spec tables are generated from
+the archived capture rather than typed, so they cannot drift from the
+measured hardware.
