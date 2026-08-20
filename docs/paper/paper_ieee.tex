@@ -127,9 +127,10 @@ Tables~\ref{tab:platform} and \ref{tab:gpu} list the
 platform and the GPU's compute limits, collected from the running board
 with \texttt{pi/collect\_specs.sh} (archived with the raw vulkaninfo
 dump). The limits are tight, and the scale is modest: the best kernel
-measured sustains about 13 GFLOP/s in fp32, and that figure belongs to a
-dense matrix multiply (\mbox{Section VII-A} compares the processors on
-the stencil itself). The GPU is a second, slower, but ``free'' engine.
+measured sustains about 13 GFLOP/s in fp32 (recorded in the running
+notes only), and that figure belongs to a dense matrix multiply
+(\mbox{Section VII-A} compares the processors on the stencil itself).
+The GPU is a second, slower, but ``free'' engine.
 
 In Vulkan's terms, a dispatch is one launch of a kernel over the whole
 grid, and an invocation is one execution of the kernel by one GPU
@@ -340,7 +341,7 @@ baseline is 1.94 GFLOP/s; the packed variant's 1.93 is within noise of
 it, hence no change.
 
 {\def\LTcaptype{none} % do not increment counter
-\begin{table}[!t]\caption{Falsification sweep: 400 steps at 256x256 in the \mbox{vkflood2} harness}\label{tab:sweep}\centering\footnotesize\setlength{\tabcolsep}{2.5pt}\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}
+\begin{table}[!t]\caption{Falsification sweep: 400 steps at 256x256 in the \mbox{vkflood2} harness, hand-timed and transcribed from the dated running notes (Section VIII)}\label{tab:sweep}\centering\footnotesize\setlength{\tabcolsep}{2.5pt}\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3667}}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3000}}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}@{}}
@@ -380,7 +381,8 @@ each flux value as it is produced, because holding all four alive fails
 register allocation. The shipped kernel is 1.58x at 256x256: 1.574 to
 1.585 across the five scored reproductions, 1.571 in the July transcript
 quoted in Section VI, and 1.59x hand-timed in the sweep. It is 1.41x at
-512x512 and 1.18x at 1024x1024, and it holds all gates over 4,000 steps.
+512x512 and 1.18x at 1024x1024, both hand-timed, and it holds all gates
+over 4,000 steps.
 
 \subsection{Action-Space Limits}\label{action-space-limits}
 

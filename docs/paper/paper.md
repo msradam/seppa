@@ -28,7 +28,7 @@ This paper shows that a machine can verify, reproduce, and gate the model's resu
 
 The Pi 5 pairs four Cortex-A76 CPU cores with a VideoCore VII GPU (V3D 7.1), the block that also drives the desktop. There is no CUDA and no vendor compute toolchain; compute reaches the GPU through Vulkan shaders (small programs the GPU runs many times in parallel), compiled by Mesa's v3dv driver [9]. In this paper, kernel refers to a GLSL compute shader.
 
-Tables~\ref{tab:platform} and \ref{tab:gpu} list the platform and the GPU's compute limits, collected from the running board with `pi/collect_specs.sh` (archived with the raw vulkaninfo dump). The limits are tight, and the scale is modest: the best kernel measured sustains about 13 GFLOP/s in fp32, and that figure belongs to a dense matrix multiply (Section 7.1 compares the processors on the stencil itself). The GPU is a second, slower, but "free" engine.
+Tables~\ref{tab:platform} and \ref{tab:gpu} list the platform and the GPU's compute limits, collected from the running board with `pi/collect_specs.sh` (archived with the raw vulkaninfo dump). The limits are tight, and the scale is modest: the best kernel measured sustains about 13 GFLOP/s in fp32 (recorded in the running notes only), and that figure belongs to a dense matrix multiply (Section 7.1 compares the processors on the stencil itself). The GPU is a second, slower, but "free" engine.
 
 In Vulkan's terms, a dispatch is one launch of a kernel over the whole grid, and an invocation is one execution of the kernel by one GPU thread. Invocations are grouped into workgroups, and the hardware runs invocations in lockstep bundles of 16 called subgroups.
 
@@ -93,7 +93,7 @@ The bottleneck needed to be tested, one hypothesis at a time. Each plausible exp
 
 Speeds come from 400-step runs at 256x256 on the parameterized `vkflood2` harness. Running identical kernels, its host loop is faster than the original application's, about 1,345 steps/s against 1,045. Every comparison in this paper is within `vkflood2` to avoid inflating the ratio by mixing the two harnesses. Table~\ref{tab:sweep} shows the sweep. Percentages in the table are relative to its baseline, about 1,345 steps/s. That baseline is 1.94 GFLOP/s; the packed variant's 1.93 is within noise of it, hence no change.
 
-<!--TABLE:tab:sweep|Falsification sweep: 400 steps at 256x256 in the \mbox{vkflood2} harness-->
+<!--TABLE:tab:sweep|Falsification sweep: 400 steps at 256x256 in the \mbox{vkflood2} harness, hand-timed and transcribed from the dated running notes (Section 8)-->
 
 | Variant | Hypothesis tested | Result |
 |-----------|---------|----------|
@@ -105,7 +105,7 @@ Speeds come from 400-step runs at 256x256 on the parameterized `vkflood2` harnes
 
 The outcome ran against the obvious expectation. Halving the flux pass's memory traffic changed nothing, and fusion bought only 5%. Fixed per-invocation cost dominated: each invocation does so little arithmetic that launch overhead overtakes it, and giving each thread two cells beat every memory-system optimization attempted; four cells gave the gain back to register pressure. The sweep's own numbers size that cost: strip-2 removes 65,536 invocations per step and saves about 140 microseconds, near 2 ns per invocation. That is about two clock cycles, the scale of starting a thread itself.
 
-Two hardware details shaped the final kernel. First, the strips run vertically. A subgroup's 16 lanes (its 16 invocations) are horizontal neighbors, so when each lane walks down its own short column, the subgroup's loads at every row stay on adjacent addresses, the pattern the memory system serves most efficiently. Second, the kernel consumes each flux value as it is produced, because holding all four alive fails register allocation. The shipped kernel is 1.58x at 256x256: 1.574 to 1.585 across the five scored reproductions, 1.571 in the July transcript quoted in Section 6, and 1.59x hand-timed in the sweep. It is 1.41x at 512x512 and 1.18x at 1024x1024, and it holds all gates over 4,000 steps.
+Two hardware details shaped the final kernel. First, the strips run vertically. A subgroup's 16 lanes (its 16 invocations) are horizontal neighbors, so when each lane walks down its own short column, the subgroup's loads at every row stay on adjacent addresses, the pattern the memory system serves most efficiently. Second, the kernel consumes each flux value as it is produced, because holding all four alive fails register allocation. The shipped kernel is 1.58x at 256x256: 1.574 to 1.585 across the five scored reproductions, 1.571 in the July transcript quoted in Section 6, and 1.59x hand-timed in the sweep. It is 1.41x at 512x512 and 1.18x at 1024x1024, both hand-timed, and it holds all gates over 4,000 steps.
 
 ### 5.3 Action-Space Limits
 
