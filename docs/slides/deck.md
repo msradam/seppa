@@ -13,7 +13,7 @@ footer: "A. M. Rahman · ECE-GY 9953 Advanced Project · NYU Tandon · Summer 20
 
 **Adam Munawar Rahman**
 
-ECE-GY 9953 Advanced Project · Adviser: Prof. Brandon Reagen
+ECE-GY 9953 Advanced Project · Advisor: Prof. Brandon Reagen
 M.S. Computer Engineering, NYU Tandon School of Engineering
 
 `github.com/msradam/seppa`
@@ -41,7 +41,7 @@ M.S. Computer Engineering, NYU Tandon School of Engineering
 </div>
 </div>
 
-The claim I will defend: every verdict here came from the gate ledger, which the model cannot write to.
+Everything here was measured and judged by the machine, never by the model.
 
 ---
 
