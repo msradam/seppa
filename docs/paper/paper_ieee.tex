@@ -35,9 +35,10 @@ re-measured and re-judged the result in five consecutive runs driven
 from a second computer, and in every run it refused to benchmark a
 kernel that failed its gate. With concurrent CPU inference, the
 advantage widens to 2.20x. The deployment sustains 9.6 tokens/s of
-language-model decode alongside 883 simulation steps per second, which
-beats the strongest CPU-only arrangement measured (simulation and model
-on separate cores) in the steady-state experiment.
+language-model decode (token-by-token text generation) alongside 883
+simulation steps per second, which beats the strongest CPU-only
+arrangement measured (simulation and model on separate cores) in the
+steady-state experiment.
 \end{abstract}
 \begin{IEEEkeywords}
 GPU kernel optimization, LLM agents, correctness verification, edge computing, Vulkan
@@ -48,11 +49,11 @@ Raspberry Pi class boards are a common platform for edge AI in
 emergency-response and field settings, where budget, connectivity, and
 power are constrained {[}12{]} and inference must happen on-device in
 network outages {[}11{]}. A Pi 5 can already run a quantized
-billion-parameter model on its CPU cores {[}8{]}. AI capability is
-usually added with dedicated hardware, such as a neural-processing
-add-on board (NPU HAT) or a USB accelerator {[}13{]}, which raises cost
-and adds a procurement dependency in a supply-constrained chip market
-{[}14{]}.
+billion-parameter model (weights compressed to low-precision integers)
+on its CPU cores {[}8{]}. AI capability is usually added with dedicated
+hardware, such as a neural-processing add-on board (NPU HAT) or a USB
+accelerator {[}13{]}, which raises cost and adds a procurement
+dependency in a supply-constrained chip market {[}14{]}.
 
 Less attention is given to silicon already on the board: the Pi 5 ships
 a VideoCore VII GPU (also referred to as the V3D) that compute workloads
@@ -168,12 +169,13 @@ Cooperative matrix & no \\
 }
 
 The driver exhibits some unusual behavior: when a shader wants more
-registers than actually exist, v3dv does not fail. It walks a ladder of
-thirteen compile strategies {[}16{]}, disabling one at a time the
-optimizations that spend registers for speed: instruction scheduling,
-code motion, loop unrolling, load sorting, pipelining. It then halves
-the thread count, repeats the disables, and ends on a fallback
-scheduler, handing back whatever survives.
+registers than actually exist (registers are the small on-chip slots
+that hold a thread's working values), v3dv does not fail. It walks a
+ladder of thirteen compile strategies {[}16{]}, disabling one at a time
+the optimizations that spend registers for speed: instruction
+scheduling, code motion, loop unrolling, load sorting, pipelining. It
+then halves the thread count, repeats the disables, and ends on a
+fallback scheduler, handing back whatever survives.
 
 \section{Related Work}\label{related-work}
 
@@ -311,7 +313,8 @@ those flows to produce each cell's new depth. The original
 implementation ran about 1,045 steps/s at 256x256 (1.51 GFLOP/s), and
 both shaders compile without triggering Section II's fallback ladder,
 which means they never stress the register allocator. Therefore, the
-bottleneck was something other than register pressure.
+bottleneck was something other than register pressure, the demand for
+more registers than the hardware has.
 
 \subsection{Falsification Sweep}\label{falsification-sweep}
 
@@ -594,8 +597,10 @@ tolerance (gate logs in \texttt{cpu\_flood\_bench/}).
 
 The companion script \texttt{cpu\_steady\_bench.sh} measures it alone
 and sharing the cores with decode, pinned apart (flood on core 0, decode
-on cores 1 to 3) and oversubscribed with four threads each. The same
-soak-and-measure protocol applied; raw logs are under
+on cores 1 to 3) and oversubscribed with four threads each. The table
+calls these arrangements partitioned and oversubscribed: partitioned
+gives each job its own cores, while oversubscribed lets both ask for all
+four. The same soak-and-measure protocol applied; raw logs are under
 \texttt{cpu\_steady} in \texttt{docs/paper/artifacts/}.
 Table~\ref{tab:cpu} presents the outcome.
 

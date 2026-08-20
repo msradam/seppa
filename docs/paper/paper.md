@@ -5,11 +5,11 @@ New York University. Code: `github.com/msradam/seppa`, `github.com/msradam/bonbi
 
 ## Abstract
 
-Most edge AI deployments on single-board computers like the Raspberry Pi leave the integrated GPU idle. We present Seppa, a harness that puts a large language model in the loop for optimizing GPU kernels. The model proposes changes, then a finite-state machine compiles, verifies against physics-based correctness gates, benchmarks, decides retention or reversion, and it refuses to benchmark any kernel that failed verification. The target is the flood-simulation stencil of an offline flood-guidance application, a kernel in which each grid cell updates from its neighbors. On that stencil, a hand-driven sweep through the same gates produced a kernel 1.58x faster than the original. The machine re-measured and re-judged the result in five consecutive runs driven from a second computer, and in every run it refused to benchmark a kernel that failed its gate. With concurrent CPU inference, the advantage widens to 2.20x. The deployment sustains 9.6 tokens/s of language-model decode alongside 883 simulation steps per second, which beats the strongest CPU-only arrangement measured (simulation and model on separate cores) in the steady-state experiment.
+Most edge AI deployments on single-board computers like the Raspberry Pi leave the integrated GPU idle. We present Seppa, a harness that puts a large language model in the loop for optimizing GPU kernels. The model proposes changes, then a finite-state machine compiles, verifies against physics-based correctness gates, benchmarks, decides retention or reversion, and it refuses to benchmark any kernel that failed verification. The target is the flood-simulation stencil of an offline flood-guidance application, a kernel in which each grid cell updates from its neighbors. On that stencil, a hand-driven sweep through the same gates produced a kernel 1.58x faster than the original. The machine re-measured and re-judged the result in five consecutive runs driven from a second computer, and in every run it refused to benchmark a kernel that failed its gate. With concurrent CPU inference, the advantage widens to 2.20x. The deployment sustains 9.6 tokens/s of language-model decode (token-by-token text generation) alongside 883 simulation steps per second, which beats the strongest CPU-only arrangement measured (simulation and model on separate cores) in the steady-state experiment.
 
 ## 1. Introduction
 
-Raspberry Pi class boards are a common platform for edge AI in emergency-response and field settings, where budget, connectivity, and power are constrained [12] and inference must happen on-device in network outages [11]. A Pi 5 can already run a quantized billion-parameter model on its CPU cores [8]. AI capability is usually added with dedicated hardware, such as a neural-processing add-on board (NPU HAT) or a USB accelerator [13], which raises cost and adds a procurement dependency in a supply-constrained chip market [14].
+Raspberry Pi class boards are a common platform for edge AI in emergency-response and field settings, where budget, connectivity, and power are constrained [12] and inference must happen on-device in network outages [11]. A Pi 5 can already run a quantized billion-parameter model (weights compressed to low-precision integers) on its CPU cores [8]. AI capability is usually added with dedicated hardware, such as a neural-processing add-on board (NPU HAT) or a USB accelerator [13], which raises cost and adds a procurement dependency in a supply-constrained chip market [14].
 
 Less attention is given to silicon already on the board: the Pi 5 ships a VideoCore VII GPU (also referred to as the V3D) that compute workloads scarcely touch, and it idles during CPU inference. We explore two questions regarding the worth of the idle GPU: first, whether it can be made sufficiently fast for a useful workload to be a co-processor; second, whether it can run alongside a busy CPU on a shared LPDDR memory bus. The case study (Section 5) and its machine-checked reproduction (Section 6) answer the first; the concurrency metrics (Section 7) answer the second.
 
@@ -36,7 +36,7 @@ In Vulkan's terms, a dispatch is one launch of a kernel over the whole grid, and
 <!--TABLE:tab:gpu|GPU compute limits, collected live (vulkaninfo)-->
 <!--SPECS-->
 
-The driver exhibits some unusual behavior: when a shader wants more registers than actually exist, v3dv does not fail. It walks a ladder of thirteen compile strategies [16], disabling one at a time the optimizations that spend registers for speed: instruction scheduling, code motion, loop unrolling, load sorting, pipelining. It then halves the thread count, repeats the disables, and ends on a fallback scheduler, handing back whatever survives.
+The driver exhibits some unusual behavior: when a shader wants more registers than actually exist (registers are the small on-chip slots that hold a thread's working values), v3dv does not fail. It walks a ladder of thirteen compile strategies [16], disabling one at a time the optimizations that spend registers for speed: instruction scheduling, code motion, loop unrolling, load sorting, pipelining. It then halves the thread count, repeats the disables, and ends on a fallback scheduler, handing back whatever survives.
 
 ## 3. Related Work
 
@@ -85,7 +85,7 @@ pooling: max depth=111.718 at (127,127)
 
 ### 5.1 The Workload
 
-The simulation runs on a square grid of water depths, and each time step every cell updates from its four neighbors, which is an access pattern called a stencil. The update takes two passes: a flux pass computes how much water flows across each cell boundary, and a height pass applies those flows to produce each cell's new depth. The original implementation ran about 1,045 steps/s at 256x256 (1.51 GFLOP/s), and both shaders compile without triggering Section 2's fallback ladder, which means they never stress the register allocator. Therefore, the bottleneck was something other than register pressure.
+The simulation runs on a square grid of water depths, and each time step every cell updates from its four neighbors, which is an access pattern called a stencil. The update takes two passes: a flux pass computes how much water flows across each cell boundary, and a height pass applies those flows to produce each cell's new depth. The original implementation ran about 1,045 steps/s at 256x256 (1.51 GFLOP/s), and both shaders compile without triggering Section 2's fallback ladder, which means they never stress the register allocator. Therefore, the bottleneck was something other than register pressure, the demand for more registers than the hardware has.
 
 ### 5.2 Falsification Sweep
 
@@ -186,7 +186,7 @@ These two pairings also bound the thermal confound. Both ran at the same 76.3 °
 
 Four idle A76 cores run this stencil at 3,852 steps/s, well above the V3D's 2,128, so the GPU seems unnecessary. The CPU implementation, `cpuflood.cpp` in the same directory, is the same update written with OpenMP, and it passes the same three gates; its error against the double-precision reference is NMSE 1.46e-11, far inside the 1e-3 tolerance (gate logs in `cpu_flood_bench/`).
 
-The companion script `cpu_steady_bench.sh` measures it alone and sharing the cores with decode, pinned apart (flood on core 0, decode on cores 1 to 3) and oversubscribed with four threads each. The same soak-and-measure protocol applied; raw logs are under `cpu_steady` in `docs/paper/artifacts/`. Table~\ref{tab:cpu} presents the outcome.
+The companion script `cpu_steady_bench.sh` measures it alone and sharing the cores with decode, pinned apart (flood on core 0, decode on cores 1 to 3) and oversubscribed with four threads each. The table calls these arrangements partitioned and oversubscribed: partitioned gives each job its own cores, while oversubscribed lets both ask for all four. The same soak-and-measure protocol applied; raw logs are under `cpu_steady` in `docs/paper/artifacts/`. Table~\ref{tab:cpu} presents the outcome.
 
 <!--TABLE:tab:cpu|The CPU-only counterfactual-->
 
