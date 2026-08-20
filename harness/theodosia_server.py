@@ -1,17 +1,20 @@
-"""Mount the Phase-1 V3D FSM as an MCP server (Theodosia).
+"""Mount a V3D optimization FSM as an MCP server (Theodosia).
 
 Run ON the Pi:
     python theodosia_server.py                 # stdio (for a local MCP client)
     python theodosia_server.py --http          # streamable-http on 0.0.0.0:8000
+
+One flag picks the target: --flood2 (the paper's flood stencil, shaders plus
+host contract), --explore (GEMM), --llama-mmv (llama.cpp mul_mat_vec), --flood
+(the earlier shader-only flood target), --live (phase-1 FSM over SSH).
 
 The laptop agent connects an MCP client to http://<pi>:8000/mcp and drives the
 loop via the single generic step(action, inputs) tool. Theodosia constrains the
 action to the graph's enum and refuses out-of-order calls, so the agent cannot
 skip VERIFY or reach BENCHMARK on a kernel that failed correctness.
 
-Default is replay mode (canned variants) so the server is pokeable without the
-Pi toolchain. Live mode is wired by passing a run_fn into build_app that shells
-out to test-backend-ops / MNN; see v3d_live.py.
+With no target flag the server runs in replay mode (canned variants), so it is
+pokeable without the Pi toolchain.
 """
 
 from __future__ import annotations

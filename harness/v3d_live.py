@@ -3,13 +3,13 @@
 Each variant names an op and a backend; the run_fn SSH-runs llama.cpp's
 `test-backend-ops test -o <OP> -b <BACKEND>` on the Pi, captures the real
 stdout + returncode, and hands them to the v3d_verify gate. No shader rebuild
-yet (Phase 2): this exercises the gate against real hardware, where V3D matmul
-aborts on the 16 KB shared-memory wall and CPU passes.
+here: this exercises the gate against real hardware, where V3D matmul aborts on
+the 16 KB shared-memory wall and CPU passes.
 
 `ts` here is a placeholder (inverse wall-clock of the correctness run) so a
 passing op has *a* monotonic number to benchmark; the real perf metric is
-llama-bench decode t/s, wired in Phase 2. V3D ops abort before benchmark, so
-their ts is never used.
+llama-bench decode t/s, which v3d_llama_mmv.py implements. V3D ops abort before
+benchmark, so their ts is never used.
 """
 
 from __future__ import annotations

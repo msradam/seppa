@@ -1,7 +1,8 @@
 # Draft upstream report (for ggml-org/llama.cpp, relates to #20029 / #20465)
 
-Not yet posted anywhere. Post as a new issue or a comment on #20029 after
-review; it contains only facts verified on our hardware this week.
+> **Note on this document:** a draft written in July 2026 and never posted.
+> It records what was verified on the board at the time. The board is no
+> longer running, so nothing here can be re-checked against that hardware.
 
 ---
 

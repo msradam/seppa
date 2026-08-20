@@ -18,7 +18,7 @@ Two independent halves, matching the two ways a kernel gets checked on V3D:
 edge: benchmarking is unreachable unless this returns verify_ok and (when an
 output tensor is available) verify_complete.
 
-Thresholds and mechanisms sourced in ../v3d-investigation/docs/verification_design.md.
+Thresholds and mechanisms sourced in ../docs/notes/verification_design.md.
 """
 
 from __future__ import annotations

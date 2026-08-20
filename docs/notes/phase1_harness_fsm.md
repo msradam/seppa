@@ -1,10 +1,11 @@
 # Phase 1, Agent Harness → FSM Mapping (single-kernel V3D optimization)
 
 > **Note on this document:** planning doc, kept for the FSM/guard design
-> rationale. The implemented target op is a standalone GEMM shader
+> rationale. This phase's target op was a standalone GEMM shader
 > (`best_gemm.comp` / `pi/gemm.comp`), not `MUL_MAT` inside llama.cpp/MNN as
-> described below — see `README.md` → Results for what was actually built
-> and measured.
+> described below; the paper's target is the flood stencil
+> (`harness/v3d_flood2_opt.py`) — see `README.md` → Results for what was
+> actually built and measured.
 
 **Scope:** the smallest complete thing. One V3D kernel, optimized by an *LLM agent* driving AutoKernel's edit→verify→keep/revert loop through a Burr FSM served by Theodosia, correctness-gated by NMSE-vs-CPU. No concurrency, no multi-kernel orchestration, no offload scheduling. Those are later phases and are explicitly out of scope here.
 

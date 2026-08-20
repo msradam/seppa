@@ -5,7 +5,7 @@
 # temperature and throttle-register log per phase. Run ON the Pi:
 #   OUT=/tmp/genload_bench bash genload_bench.sh
 set -u
-R=/root/v3d-research
+RES=/root/v3d-research
 OUT=${OUT:-/tmp/genload_bench}
 STEPS=${STEPS:-4000}
 mkdir -p "$OUT"
@@ -22,7 +22,7 @@ tlog() {
     while :; do echo "$(date +%s) $(vcgencmd measure_temp) $(vcgencmd get_throttled)"; sleep 1; done
 }
 gpu_run() {
-    (cd "$R" && STRIP=2 FUSED=1 FLUX_SPV=fused2s.spv ./vkflood2 256 "$STEPS")
+    (cd "$RES" && STRIP=2 FUSED=1 FLUX_SPV=fused2s.spv ./vkflood2 256 "$STEPS")
 }
 
 phase() {
@@ -47,12 +47,12 @@ wait "$OPID"
 endphase
 
 phase cpuflood_alone
-(cd "$R" && for _ in 1 2 3; do echo "t=$(stamp)"; OMP_NUM_THREADS=4 ./cpuflood 256 "$STEPS" sim; done) \
+(cd "$RES" && for _ in 1 2 3; do echo "t=$(stamp)"; OMP_NUM_THREADS=4 ./cpuflood 256 "$STEPS" sim; done) \
     > "$OUT/cpuflood4t_alone.log" 2>&1
 endphase
 
 phase cpuflood_conc
-(cd "$R" && while :; do echo "t=$(stamp)"; OMP_NUM_THREADS=4 ./cpuflood 256 "$STEPS" sim; done) \
+(cd "$RES" && while :; do echo "t=$(stamp)"; OMP_NUM_THREADS=4 ./cpuflood 256 "$STEPS" sim; done) \
     > "$OUT/cpuflood4t_conc.log" 2>&1 & CPID=$!
 sleep 2
 for _ in 1 2 3; do echo "t=$(stamp)"; gpu_run; done > "$OUT/gpu_during_cpuflood.log" 2>&1

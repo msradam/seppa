@@ -3,9 +3,11 @@
 > **Note on this document:** planning doc. The NMSE-vs-CPU-oracle principle
 > and the anti-gaming guard predicates below are exactly what
 > `v3d_verify.py` implements. The concrete harness differs from what's
-> described here: the implemented oracle is a small dedicated program
-> (`pi/vkgemm_nmse.cpp` — random inputs, double-precision CPU reference,
-> prints `correct=yes NMSE=...`), not llama.cpp's `test-backend-ops`. The
+> described here: each target brings its own oracle. The GEMM target uses a
+> small dedicated program (`pi/vkgemm_nmse.cpp` — random inputs,
+> double-precision CPU reference, prints `correct=yes NMSE=...`); the
+> llama.cpp matrix-vector target does use `test-backend-ops`; the paper's
+> flood target uses `vkflood2`'s three physics gates. The
 > design reasoning (why an in-process CPU oracle beats a torch reference,
 > why NMSE energy-normalization catches partial-output cheating for free)
 > carries over unchanged.

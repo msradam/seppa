@@ -1,5 +1,10 @@
 # Session notes: llama.cpp GPU decode on V3D
 
+> **Note on this document:** a dated running log, kept as written. The
+> paper cites it as the provenance for figures that have no archived log.
+> Entries describe the board as it was at the time, including a live server
+> and next experiments that were never run; the board is no longer running.
+
 One lesson per entry. Confirmed wins and dead ends both, with why.
 Hardware: Pi 5, V3D 7.1.10.2, Mesa 25.0.7-2+rpt4, llama.cpp bb28c1f.
 All work lives on the Pi in `/root/v3d-research/llama.cpp`, branch

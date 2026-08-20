@@ -1,6 +1,6 @@
 # Seppa: AutoKernel Ported to the V3D GPU
 
-**Framework:** Seppa (`github.com/msradam/Seppa`), AutoKernel (`RightNow-AI/autokernel`, MIT) ported to a Burr finite-state machine
+**Framework:** Seppa (`github.com/msradam/seppa`), AutoKernel (`RightNow-AI/autokernel`, MIT) ported to a Burr finite-state machine
 **Target:** Raspberry Pi 5, Broadcom VideoCore VII (V3D 7.1.10.2), Vulkan compute
 **Driver:** Burr FSM exposed as an MCP server by Theodosia, driven by an LLM agent
 **Status:** built and running on the Pi 5.
@@ -8,10 +8,11 @@
 > **Note on this document:** this is the original design/planning writeup, kept
 > for its rationale (why AutoKernel's pieces map the way they do, the V3D
 > tiering, the verification design). The system that actually got built and
-> measured is simpler than the MNN/llama.cpp-integrated plan below: the
-> optimization target is a standalone GEMM shader (`best_gemm.comp`,
-> baseline `pi/gemm.comp`), evaluated by a small dedicated harness
-> (`pi/vkgemm_nmse.cpp`), not an op inside MNN or llama.cpp's `mul_mat`. The
+> measured is simpler than the MNN/llama.cpp-integrated plan below: this
+> phase's optimization target was a standalone GEMM shader
+> (`best_gemm.comp`, baseline `pi/gemm.comp`), evaluated by a small dedicated
+> harness (`pi/vkgemm_nmse.cpp`), not an op inside MNN or llama.cpp's
+> `mul_mat`, and the paper's target is the flood stencil. The
 > FSM, the correctness-first design principle, and the Theodosia/MCP
 > architecture described here are what was actually implemented. See
 > `README.md` → Results for the measured numbers and `README.md` → Layout
