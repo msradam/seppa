@@ -64,6 +64,7 @@ allocator (minutes); results are disk-cached afterwards.
 To re-verify numerics on your board:
 
 ```
+cd ~/llama-v3d/llama.cpp/build-vulkan
 bin/export-graph-ops -m model.gguf -fa off -o ops.txt
 GGML_VK_MMV_MAX_COLS=1 GGML_VK_DISABLE_FLASH_ATTN=1 \
   bin/test-backend-ops test -b Vulkan0 --test-file ops.txt

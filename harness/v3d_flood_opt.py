@@ -22,7 +22,7 @@ PI_HOST = "root@pi.local"
 RES = "/root/v3d-research"
 FLUX = f"{RES}/flux.comp"
 HEIGHT = f"{RES}/height.comp"
-BEST_DIR = os.path.dirname(os.path.abspath(__file__))
+BEST_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 
 _GFLOPS = re.compile(r"([\d.]+)\s+GFLOP/s")
 _NMSE = re.compile(r"correct\(NMSE vs CPU\)=(yes|no)\s+NMSE=([0-9.eE+\-]+)")

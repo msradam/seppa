@@ -12,7 +12,8 @@ recorded; the FSM keeps sampling until it has N valid trials, then aggregates.
 
 Each trial runs CPU LLM decode (memory-bound) concurrently with GPU GEMM
 (compute-bound) via coproc_trial.sh on the Pi, capturing both rates + temp +
-throttle flags. Run: python v3d_coproc.py [n_trials]
+throttle flags. That trial script lived on the board and is not archived here;
+no paper campaign depends on it. Run: python v3d_coproc.py [n_trials]
 """
 
 from __future__ import annotations

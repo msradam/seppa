@@ -175,10 +175,10 @@ harness/     The optimization loop and everything that talks to it.
              phase-1 FSM, the correctness gate, the agent driver, the
              SSH runner, and the thermal-guarded measurement FSM they
              grew from.
-pi/          Everything that ran on the board: Vulkan/GLSL kernels, the
-             vkflood2 evaluator, the CPU counterfactual, benchmark and
-             spec-collection scripts. pi/flood/README.md has build
-             commands and the kernel inventory.
+pi/          The board-side material behind the measurements: Vulkan/GLSL
+             kernels, the vkflood2 evaluator, the CPU counterfactual,
+             benchmark and spec-collection scripts. pi/flood/README.md has
+             build commands and the kernel inventory.
 notebooks/   Two executed notebooks that re-derive the paper's Section VI
              and VII results from the archived logs, plus the shared
              parsers (analysis_utils.py). They run offline.

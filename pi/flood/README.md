@@ -61,6 +61,10 @@ The two-pass baseline in the table above needs bonbibi's original
 directory carries only the variants), so it is
 `FLUX_SPV=flux.spv HEIGHT_SPV=height.spv ./vkflood2 256 400`.
 
+The benchmark scripts here take the packed pair (`flux2`/`height2`) as
+their original instead, because the sweep found the two indistinguishable
+(1.93 against 1.94 GF/s) and every archived baseline uses the packed pair.
+
 The benchmark scripts under this directory assume the tree they were run
 from, `RES=/root/v3d-research`, and a GGUF at `$RES/models/`. Adjust
 `RES` at the top of each script to re-run them elsewhere.
