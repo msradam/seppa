@@ -8,6 +8,8 @@ dependencies = [
     "theodosia>=0.8",
     "claude-agent-sdk>=0.2",
     "numpy>=1.26",
+    "mcp>=1.28",
+    "anyio>=4.14",
 ]
 
 [tool.ruff]
