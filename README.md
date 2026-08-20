@@ -27,12 +27,28 @@ beside the CPU. The sample application is
 [Bonbibi](https://github.com/msradam/bonbibi), which runs a flood
 simulation on the GPU while the CPU runs routing and a language model.
 
+## What this project added
+
+Bonbibi is a separate and earlier project, built as an Arm AI
+Optimization Challenge entry for August 2026. It supplies the workload
+and the starting point: the two-pass flood shaders this project takes as
+its optimization target are Bonbibi's originals, and `pi/flood/` carries
+only the variants measured against them.
+
+This repository is the advanced-project work built on top of that: the
+finite-state machine and the physics gates it enforces, the MCP server
+that puts a language model in the proposer seat, the falsification sweep
+that located the real bottleneck, the machine-checked reproduction and
+the five-run repeatability campaign, the concurrency and CPU-only
+counterfactual measurements, and the paper reporting them.
+
 ## Results
 
 All measured on a Pi 5 (V3D 7.1.10.2, Mesa v3dv 25.0.7); every kernel
 was kept only after passing its target's correctness oracle (for the
 flood stencil, three physics gates against a double-precision CPU
-reference). Raw logs and transcripts for the flood-stencil and
+reference). The board is no longer running, so the archived logs are
+the record. Raw logs and transcripts for the flood-stencil and
 concurrency claims are in `docs/paper/artifacts/`; notebook 02
 recomputes the Section VII tables from them, and notebook 01 replays
 the Section VI transcripts.
@@ -56,7 +72,8 @@ the Section VI transcripts.
 - **Other targets, same harness:** a GEMM (dense matrix multiply) kernel to
   13.42 GFLOP/s over two FSM rounds, the final round from 12.56 (the 7.02
   first-round baseline is unarchived); llama.cpp's matrix-vector kernel
-  de-unrolled for +28% end-to-end decode. The dated running notes
+  de-unrolled for +28% decode on a partial-offload configuration
+  (4.32 to 5.55 t/s at `-ngl 6`). The dated running notes
   (`docs/notes/`) and the shipped kernels record them; neither is
   claimed at the flood target's evidentiary standard.
 
@@ -81,6 +98,10 @@ uv run jupyter lab notebooks/
   tables and the generic-load results from the raw benchmark logs.
 
 ## Running against a Pi
+
+The board these numbers came from is no longer running, so this path
+reproduces the setup on another Pi 5 rather than re-running the archived
+campaigns.
 
 On the Pi (needs `glslangValidator`, a Vulkan-enabled Mesa, and the
 harness binaries; build commands in `pi/flood/README.md`):
@@ -110,13 +131,13 @@ transitions carry mutually exclusive guards. The agent selects among
 reachable transitions over MCP, so it cannot bypass the gate:
 
 ```
-characterize -> baseline -> hypothesize -> implement -> compile -> verify
-                                 ^                                    |
-                                 |                          verify_ok |
-                                 |                                    v
-                 log_variant <- evaluate <- benchmark <---------------+
-                      ^                                               |
-                      +---------------- not verify_ok ----------------+
+characterize -> baseline -> hypothesize -> implement -> compile_ -> verify
+                                 ^                                     |
+                                 |                           verify_ok |
+                                 |                                     v
+                    stop <- log_variant <- evaluate <- benchmark <-----+
+                                 ^                                     |
+                                 +----------- not verify_ok -----------+
 ```
 
 - `verify` runs the candidate on the real GPU under the target's oracle
@@ -125,7 +146,10 @@ characterize -> baseline -> hypothesize -> implement -> compile -> verify
   guarded by `verify_ok`.
 - `evaluate` keeps a variant only if it beats the best by more than 1%;
   the winner is persisted, and the ledger (`variant_log`) records every
-  experiment either way.
+  experiment that reached `compile_`, keep or revert.
+- A failed compile and a failed gate both route to `log_variant`, so the
+  attempt is still ledgered. An `implement` call carrying no shader is
+  rejected and returns to `hypothesize` without a ledger entry.
 - A run ends after three consecutive non-improvements on gate-passing
   variants, or at the experiment budget.
 - `harness/test_gate.py` checks the guard offline, no Pi needed: with
@@ -142,7 +166,8 @@ harness/     The optimization loop and everything that talks to it.
              passk_flood2.py, and replay_flood2.py are the scripted
              reproduction, the scored repeatability campaign, and the
              in-process replay; claude_driver.sh puts an LLM in the
-             proposer seat. v3d_explore.py, v3d_llama_mmv.py, and
+             proposer seat, on the prompt in claude_driver_prompt.md.
+             v3d_explore.py, v3d_llama_mmv.py, and
              v3d_flood_opt.py are earlier FSM targets (GEMM, llama.cpp
              matrix-vector, shader-only flood) kept because the paper's
              Section V-C tells their story; v3d_fsm.py, v3d_verify.py,
@@ -162,14 +187,15 @@ docs/
              the rendered paper.pdf, and archived raw logs and
              transcripts (artifacts/, see its README).
   slides/    The 27-slide Marp deck (Markdown-rendered slides), its
-             IEEE theme, the narration
-             script, and the silent video to record over (defense.mp4).
-  notes/     Dated running notes and superseded planning documents,
-             kept because the paper cites the notes as provenance for
-             its unarchived numbers.
+             IEEE theme, the narration script, and the silent
+             slide-timing cut the talk was recorded over (defense.mp4).
+  notes/     Dated running notes, superseded planning documents, and an
+             unposted upstream bug report, kept because the paper cites
+             the notes as provenance for its unarchived numbers.
   autokernel_fidelity.md   Audit of the AutoKernel port, cited in
              Section IV.
 best_*.comp  Winning kernels persisted by the FSM (flood, GEMM, llama.cpp
              matrix-vector), each headed by a provenance comment;
-             best_flood.comp is pi/flood/fused2s.comp under that header.
+             best_flood.comp is pi/flood/fused2s.comp under that header,
+             and best_gemm.comp is byte-identical to pi/gemm-best.comp.
 ```

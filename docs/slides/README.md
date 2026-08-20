@@ -16,8 +16,8 @@ report.
 - `fonts/`: Open Sans, vendored (SIL Open Font License, see
   `fonts/LICENSE-OpenSans.txt`).
 - `narration.md`: per-slide cue times and suggested narration.
-- `defense.mp4`: the slides on the `narration.md` schedule, silent, for
-  narrating over.
+- `defense.mp4`: the slides on the `narration.md` schedule, silent. The
+  submitted talk is this cut with the narration recorded over it.
 - `fsm.png`: the state-machine figure, built from `fsm_standalone.tex`.
 - `gpu_retention.png`: the retention chart, produced by notebook 02.
 

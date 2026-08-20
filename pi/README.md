@@ -80,7 +80,7 @@ fallback); any FAIL means the GPU computed wrong numbers on your setup.
   compilations (they never terminate), gate flash attention (driver
   compiler abort)
 - `llama-cpp-v3d-mmv-deunroll.patch`: de-unrolled `mul_mat_vec` shader:
-  +28% decode (4.32 to 5.55 t/s); manual unrolling forces the v3dv
+  +28% decode at `-ngl 6` (4.32 to 5.55 t/s); manual unrolling forces the v3dv
   register allocator off its best strategy
 - `llama-cpp-v3d-mm-path.patch`: opt-in tiled-matmul path
   (`GGML_VK_ALLOW_MM=1`), per-op verified, blocked for real use by the
