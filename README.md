@@ -29,13 +29,12 @@ simulation on the GPU while the CPU runs routing and a language model.
 
 ## What this project added
 
-Bonbibi is a separate and earlier project, built as an Arm AI
-Optimization Challenge entry for August 2026. It supplies the workload
-and the starting point: the two-pass flood shaders this project takes as
-its optimization target are Bonbibi's originals, and `pi/flood/` carries
-only the optimized shader variants, not those originals.
+The Bonbibi work was the hackathon: an Arm AI Optimization Challenge
+entry for August 2026. It supplies the workload and the starting point,
+and the two-pass flood shaders this project optimizes are its originals;
+`pi/flood/` carries only the optimized variants, not those originals.
 
-This repository is the advanced-project work built on top of that: the
+Everything in this repository is the advanced-project work that followed: the
 finite-state machine and the physics gates it enforces, the MCP server
 that puts a language model in the proposer seat, the falsification sweep
 that located the real bottleneck, the machine-checked reproduction and
