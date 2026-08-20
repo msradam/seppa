@@ -47,8 +47,8 @@ GPU kernel optimization, LLM agents, correctness verification, edge computing, V
 
 Raspberry Pi class boards are a common platform for edge AI in
 emergency-response and field settings, where budget, connectivity, and
-power are constrained {[}12{]} and inference must happen on-device in
-network outages {[}11{]}. A Pi 5 can already run a quantized
+power are constrained {[}12{]} and inference must happen on-device
+during network outages {[}11{]}. A Pi 5 can already run a quantized
 billion-parameter model (weights compressed to low-precision integers)
 on its CPU cores {[}8{]}. AI capability is usually added with dedicated
 hardware, such as a neural-processing add-on board (NPU HAT) or a USB
@@ -311,11 +311,11 @@ every cell updates from its four neighbors, which is an access pattern
 called a stencil. The update takes two passes: a flux pass computes how
 much water flows across each cell boundary, and a height pass applies
 those flows to produce each cell's new depth. The original
-implementation ran about 1,045 steps/s at 256x256 (1.51 GFLOP/s), and
-both shaders compile without triggering Section II's fallback ladder,
-which means they never stress the register allocator. Therefore, the
-bottleneck was something other than register pressure, the demand for
-more registers than the hardware has.
+implementation ran about 1,045 steps/s at 256x256 (1.51 GFLOP/s, running
+notes only), and both shaders compile without triggering Section II's
+fallback ladder, which means they never stress the register allocator.
+Therefore, the bottleneck was something other than register pressure,
+the demand for more registers than the hardware has.
 
 \subsection{Falsification Sweep}\label{falsification-sweep}
 
@@ -366,8 +366,8 @@ The outcome ran against the obvious expectation. Halving the flux pass's
 memory traffic changed nothing, and fusion bought only 5\%. Fixed
 per-invocation cost dominated: each invocation does so little arithmetic
 that launch overhead overtakes it, and giving each thread two cells beat
-every memory-system optimization attempted; four cells gave the gain
-back to register pressure. The sweep's own numbers size that cost:
+every memory-system optimization attempted; four cells gave part of the
+gain back to register pressure. The sweep's own numbers size that cost:
 strip-2 removes 65,536 invocations per step and saves about 140
 microseconds, near 2 ns per invocation. That is about two clock cycles,
 the scale of starting a thread itself.
@@ -401,12 +401,13 @@ hardware still has headroom.
 
 Two other targets ran through the same gated loop, each behind its own
 correctness gate. A GEMM (dense matrix multiply) improved to 13.42
-GFLOP/s over two rounds, and a llama.cpp matrix-vector kernel with its
-unrolled inner loop replaced by a plain loop gained 28\% in
-text-generation speed on a partial-offload configuration (4.32 to 5.55
-tokens/s). The running notes record the matrix-vector result and the
-GEMM's final round, 12.56 to 13.42 GFLOP/s, and the shaders ship as
-\texttt{pi/gemm.comp} and \texttt{pi/gemm-best.comp}.
+GFLOP/s over two rounds, and in llama.cpp (the program that runs the
+language model), replacing a matrix-vector kernel's unrolled inner loop
+with a plain loop gained 28\% in text-generation speed on a
+partial-offload configuration (4.32 to 5.55 tokens/s). The running notes
+record the matrix-vector result and the GEMM's final round, 12.56 to
+13.42 GFLOP/s, and the shaders ship as \texttt{pi/gemm.comp} and
+\texttt{pi/gemm-best.comp}.
 
 \section{Machine-Checked Reproduction over
 MCP}\label{machine-checked-reproduction-over-mcp}
@@ -505,8 +506,9 @@ Table~\ref{tab:sweep}, which the sweep found
 indistinguishable from the pre-packing shaders and which every archived
 baseline uses. Each decode phase gets a cooldown, then a soak of eight
 decode repetitions that brings the chip to working temperature. The
-soak's own repetitions stay out of the tables. Kernel-alone phases run
-straight from the cooldown, so they finish before heat accumulates.
+soak's own repetitions stay out of the tables, though the campaign
+alignment below reuses their aggregate decode rate. Kernel-alone phases
+run straight from the cooldown, so they finish before heat accumulates.
 
 Each decode phase defines the measurement window: llama-bench generates
 64 tokens per repetition for 20 repetitions, long enough for 12 to 28
@@ -525,8 +527,10 @@ peaking at 76.3 °C. Decode alone reached 73.0 °C and was limited for
 An earlier short-window campaign, preserved in \texttt{conc\_bench2/},
 read 711.9 steps/s concurrent with decode at 10.3, against this run's
 883.4 and 9.6. Aligning the two campaigns on time since decode began
-resolves the difference. Concurrent throughput follows a settling curve.
-Near 73 °C the firmware's soft limit begins capping CPU clocks, decode
+resolves the difference: the two windows sample different points on one
+settling curve, so the readings differ without conflicting. The curve is
+thermal, and it moves the two rates in opposite directions. Near 73 °C
+the firmware's soft limit begins capping CPU clocks, this run's decode
 slows from 10.2 to 9.6 tokens/s, its per-second memory traffic thins,
 and the flood rate climbs. The thermal logs record the cap engaging in
 both campaigns.
@@ -735,7 +739,7 @@ boards carry more usable silicon than their deployments exercise, and a
 loop that puts an AI model on rails is a sound way to leverage that very
 silicon.
 
-\IEEEtriggeratref{13}
+%
 \begin{thebibliography}{24}
 \scriptsize
 \bibitem{r1} M. Guidolin, A. S. Chen, B. Ghimire, E. C. Keedwell, S.
