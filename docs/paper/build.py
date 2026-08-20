@@ -250,17 +250,19 @@ GPU kernel optimization, LLM agents, correctness verification, edge computing, V
 
 (HERE / "paper_ieee.tex").write_text(tex)
 for _ in range(2):
+    # pdflatex logs are not UTF-8 when a warning echoes a multibyte source line
     r = subprocess.run(
         ["/Library/TeX/texbin/pdflatex", "-interaction=nonstopmode", "paper_ieee.tex"],
         cwd=HERE,
         capture_output=True,
         text=True,
+        errors="replace",
     )
 if r.returncode != 0:
     print("\n".join(ln for ln in r.stdout.splitlines() if ln.startswith("!") or "Error" in ln))
     die("pdflatex failed; paper.pdf left unchanged")
 
-overfull = (HERE / "paper_ieee.log").read_text().count("Overfull \\hbox")
+overfull = (HERE / "paper_ieee.log").read_text(errors="replace").count("Overfull \\hbox")
 (HERE / "paper_ieee.pdf").replace(HERE / "paper.pdf")
 pages = subprocess.run(["pdfinfo", str(HERE / "paper.pdf")], capture_output=True, text=True).stdout
 pages = next((ln.split()[-1] for ln in pages.splitlines() if ln.startswith("Pages")), "?")

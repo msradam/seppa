@@ -253,7 +253,7 @@ The shipped kernel is **1.58x** at 256x256 (1.574 to 1.585 across the five score
 
 # A plateau can mean the search space is too small
 
-An earlier session pointed the FSM at this stencil and came back empty. I nearly concluded the kernel was at its limit.
+An earlier session pointed the state machine at this stencil and came back empty. I nearly concluded the kernel was at its limit.
 
 The problem was the action space. That version of `implement` accepted shader text only, and every winning change lives outside the shader:
 
@@ -275,7 +275,7 @@ The machine re-derives the numbers itself.
 
 # The machine measured its own baseline and issued its own verdict
 
-The Pi runs the Theodosia server; a laptop on the same network runs `drive_flood2_mcp.py`, driving the state machine through the whole cycle over MCP. The FSM measures its own baseline at 1,346.8 steps/s with gates green, receives the fused strip-2 kernel as experiment 1, compiles it, gates it, benchmarks it, and issues its own verdict, numeric fields rounded here to one decimal:
+The Pi runs the Theodosia server; a laptop on the same network runs `drive_flood2_mcp.py`, driving the state machine through the whole cycle over MCP. The state machine measures its own baseline at 1,346.8 steps/s with gates green, receives the fused strip-2 kernel as experiment 1, compiles it, gates it, benchmarks it, and issues its own verdict, numeric fields rounded here to one decimal:
 
 ```json
 {"exp": 1, "fused": true, "strip": 2,
@@ -336,7 +336,7 @@ The deployment cost of running the simulation and the model together.
 |---|---|---|
 | Optimized alone | 2,128.0 ± 1.7 | |
 | Original alone | 1,351.4 ± 0.5 | |
-| Decode alone (soaked) | | 11.4 |
+| Decode alone | | 11.4 |
 | **Concurrent, optimized** | **883.4 ± 47.1** | **9.6** |
 | Concurrent, original | 401.8 ± 8.3 | 9.6 |
 
@@ -348,7 +348,7 @@ The deployment cost of running the simulation and the model together.
 </div>
 </div>
 
-The interference is lopsided: the CPU keeps **84%** of its decode rate while the GPU keeps **42%**, because decode streams model weights from DRAM every token and crowds the shared bus. The chart bounds the thermal share: at the same 76.3 C, openssl leaves the GPU at 99% and a CPU-side flood at 92%. Contention favors the optimized kernel, so **1.58x alone becomes 2.20x concurrent**, at identical decode cost.
+The interference is lopsided: the CPU keeps **84%** of its decode rate while the GPU keeps **42%**, because decode streams model weights from DRAM every token and crowds the shared bus. The chart bounds the thermal share: at the same 76.3 °C, openssl leaves the GPU at 99% and a CPU-side flood at 92%. Contention favors the optimized kernel, so **1.58x alone becomes 2.20x concurrent**, at identical decode cost.
 
 <span class="caption">Cooldown and decode soak before each phase. An earlier campaign read 711.9, 19% below: its window sat in decode's first half-minute, before the soft limit settled. Aligned in time the campaigns agree; the settled regime was measured once.</span>
 
