@@ -4,7 +4,7 @@ Run ON the Pi:
     python theodosia_server.py                 # stdio (for a local MCP client)
     python theodosia_server.py --http          # streamable-http on 0.0.0.0:8000
 
-One flag picks the target: --flood2 (the paper's flood stencil, shaders plus
+Pick one target flag: --flood2 (the paper's flood stencil, shaders plus
 host contract), --explore (GEMM), --llama-mmv (llama.cpp mul_mat_vec), --flood
 (the earlier shader-only flood target), --live (phase-1 FSM over SSH).
 

@@ -33,7 +33,7 @@ Bonbibi is a separate and earlier project, built as an Arm AI
 Optimization Challenge entry for August 2026. It supplies the workload
 and the starting point: the two-pass flood shaders this project takes as
 its optimization target are Bonbibi's originals, and `pi/flood/` carries
-only the variants measured against them.
+only the optimized shader variants, not those originals.
 
 This repository is the advanced-project work built on top of that: the
 finite-state machine and the physics gates it enforces, the MCP server
@@ -166,11 +166,11 @@ harness/     The optimization loop and everything that talks to it.
              passk_flood2.py, and replay_flood2.py are the scripted
              reproduction, the scored repeatability campaign, and the
              in-process replay; claude_driver.sh puts an LLM in the
-             proposer seat, on the prompt in claude_driver_prompt.md.
-             v3d_explore.py, v3d_llama_mmv.py, and
-             v3d_flood_opt.py are earlier FSM targets (GEMM, llama.cpp
-             matrix-vector, shader-only flood) kept because the paper's
-             Section V-C tells their story; v3d_fsm.py, v3d_verify.py,
+             proposer seat, using the prompt in claude_driver_prompt.md.
+             v3d_explore.py, v3d_llama_mmv.py, and v3d_flood_opt.py are
+             earlier FSM targets (GEMM, llama.cpp matrix-vector,
+             shader-only flood) kept because the paper's Section V-C
+             tells their story; v3d_fsm.py, v3d_verify.py,
              v3d_drive.py, v3d_live.py, and v3d_coproc.py are the
              phase-1 FSM, the correctness gate, the agent driver, the
              SSH runner, and the thermal-guarded measurement FSM they
